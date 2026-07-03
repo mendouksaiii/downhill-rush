@@ -190,6 +190,11 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import RAPIER from 'rapier3d';
+import {
+  createDefaultOverseerProfile,
+  createOverseerRuntime,
+  updateOverseerProfile
+} from './overseer-core.mjs';
 
 /* ============================== CONSTANTS ============================== */
 const CHUNK = 60;                 // chunk length (m)
@@ -210,6 +215,7 @@ const CLEAN_RAMP = 0.5;           // extra passive accel/s earned by a clean str
 const SPIN_RATE = 5.0, FLIP_RATE = 5.4;   // trick rotation speeds (rad/s)
 const TRICK_OFF = 0.9;            // landing this far (rad) from level = stumble, not death
 const SHIELD_TIME = 1.6;          // green speed gems grant a short trap grace window
+const OVERSEER_KEY = 'dr_overseer_profile_v1';
 const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 /* ============================== RNG / NOISE ============================ */
@@ -776,6 +782,9 @@ function genChunk(ci){
   if(chunks.has(ci)) return;
   const z0=ci*CHUNK, rng=mulberry32(hashSeed(ci,runSeed));
   const density=Math.min(1, 0.18 + z0/2400);
+  const directive=overseer && state==='riding'
+    ? overseer.chooseDirective({ci,z0,density,speed:game.speed||START_SPEED})
+    : {kind:'calm', archetype:'judge', intensity:0, fairness:1, telegraph:1, params:{trapChanceScale:1}};
   const ramps=[], obstacles=[];
 
   // --- ramps
@@ -794,9 +803,11 @@ function genChunk(ci){
   const pits=[], walls=[];
   if(ci>=4){
     const prevTrap=(pitsByChunk.get(ci-1)?.length||0)+(wallsByChunk.get(ci-1)?.length||0);
-    const trapChance=prevTrap?0.08:THREE.MathUtils.clamp(0.32+density*0.28,0.32,0.58);
+    const trapScale=directive.params?.trapChanceScale ?? 1;
+    const trapChance=prevTrap?0.08:THREE.MathUtils.clamp((0.32+density*0.28)*trapScale,0.12,0.78);
+    const pitWeight=directive.params?.pitBias ?? (directive.kind==='technical'?0.36:0.55);
     const t=rng();
-    if(t<trapChance*0.55){
+    if(t<trapChance*pitWeight){
       for(let a=0;a<6;a++){
         const expectedSpeed=THREE.MathUtils.clamp(START_SPEED+z0*0.018,20,MAX_SPEED*0.78);
         const len=THREE.MathUtils.clamp(expectedSpeed*0.12 + density*2.5 + rng()*1.8,4.2,9.6);
@@ -805,7 +816,10 @@ function genChunk(ci){
       }
     } else if(t<trapChance){
       for(let a=0;a<6;a++){
-        const w={z0:z0+10+rng()*(CHUNK-24), len:2.6, h:2.4+rng()*1.6, gapX:rng()*12-6, gapW:4.6+rng()*1.4};
+        const gapBonus=directive.params?.gapBonus ?? 0;
+        const tighten=directive.params?.tightenGap ?? 0;
+        const w={z0:z0+10+rng()*(CHUNK-24), len:2.6, h:2.4+rng()*1.6, gapX:rng()*12-6,
+          gapW:THREE.MathUtils.clamp(4.6+rng()*1.4+gapBonus-tighten,3.4,6.6)};
         if(ramps.every(r=>w.z0+w.len<r.z0-6 || w.z0>r.z0+r.len+26)){ walls.push(w); break; }
       }
     }
@@ -849,7 +863,8 @@ function genChunk(ci){
 
   // --- powerup gems (retry placement so ramp chunks still get gems)
   const powerups=[];
-  if(pits.length && rng()<0.5){
+  const baitChance=directive.kind==='bait'?0.9:0.5;
+  if(pits.length && rng()<baitChance && !directive.params?.suppressBait){
     // rage bait: a gem line leading straight across the hole
     const p=pits[0], rimY=baseH(p.x,p.z0-1.5)+1.4;
     for(let k=0;k<3;k++)
@@ -857,7 +872,7 @@ function genChunk(ci){
         phase:rng()*6.28, fixedY:rimY});
   }
   if(ci>=3 && rng()<0.6){
-    const t=rng(), type=t<0.4?'green':(t<0.75?'blue':'red');
+    const t=rng(), type=directive.params?.preferGreenGem?'green':(t<0.4?'green':(t<0.75?'blue':'red'));
     for(let a=0;a<6;a++){
       const px=rng()*14-7, pz=z0+6+rng()*(CHUNK-12);
       if(clearOfRamps(px,pz,ramps) && pitDepthAt(px,pz)<0.4){
@@ -957,7 +972,7 @@ function genChunk(ci){
       cols.push(phys.createCollider(cd));
     }
   }
-  chunks.set(ci,{group, obstacles, geoms, powerups, cols});
+  chunks.set(ci,{group, obstacles, geoms, powerups, cols, directive});
 }
 
 function dropChunk(ci){
@@ -1172,10 +1187,25 @@ let jumpsSeen=0;
 let hitstopUntil=0, dispScore=0, deathT0=0, deathFinal=0;
 let squashT=9, dipT=9, dipAmp=0, steerCam=0, apexF=0, fovKick=0, tiltSm=0;
 let riderCrouch=0, riderExtend=0;
+let overseerProfile=loadOverseerProfile(), overseer=null, lastDeathCause='unknown';
+
+function loadOverseerProfile(){
+  try{
+    const raw=localStorage.getItem(OVERSEER_KEY);
+    if(raw) return {...createDefaultOverseerProfile(), ...JSON.parse(raw)};
+  }catch(e){}
+  return createDefaultOverseerProfile();
+}
+function saveOverseerProfile(){
+  try{ localStorage.setItem(OVERSEER_KEY, JSON.stringify(overseerProfile)); }catch(e){}
+}
+function overseerEvent(event){ if(overseer) overseer.observe(event); }
 
 function resetRun(startState){
   runSeed=(Math.random()*1e9)|0;
   seedNoise(runSeed);
+  overseer=createOverseerRuntime({seed:runSeed, profile:overseerProfile});
+  lastDeathCause='unknown';
   for(const ci of [...chunks.keys()]) dropChunk(ci);
   for(const p of pieces){ scene.remove(p.mesh); p.mesh.geometry.dispose?.(); }
   pieces=[];
@@ -1194,6 +1224,7 @@ function resetRun(startState){
   steerCam=0; apexF=0; fovKick=0; riderCrouch=0; riderExtend=0; tiltSm=0;
   comboFlame.style.transform='scale(1)';
   clearParticles();
+  state=startState;
   manageChunks(game.z, game.speed);
   game.y=terrainH(game.x,game.z); game.prevGY=game.y;
   physTeleport(game.x, game.y, game.z);
@@ -1203,7 +1234,6 @@ function resetRun(startState){
   bikeTilt.scale.set(1,1,1);
   bikeTilt.visible=true;
   camera.position.set(0, game.y+5, game.z-9);
-  state=startState;
   deathEl.classList.add('hidden');
   titleEl.classList.toggle('hidden', startState!=='title');
   ringWrap.style.display='none';
@@ -1236,8 +1266,10 @@ const pieceGeos=[wheelGeo, wheelGeo, new THREE.BoxGeometry(0.16,0.16,1.6),
   new THREE.IcosahedronGeometry(0.22,0), new THREE.BoxGeometry(0.36,0.6,0.26),
   new THREE.BoxGeometry(0.1,0.48,0.1), new THREE.BoxGeometry(0.1,0.48,0.1),
   new THREE.BoxGeometry(0.11,0.5,0.11), new THREE.BoxGeometry(0.11,0.5,0.11)];
-function crash(){
+function crash(cause='impact'){
   if(state!=='riding') return;
+  lastDeathCause=cause;
+  overseerEvent({type:'crash', cause});
   state='crashed';
   sfx.crash(); shake=1.2;
   hitstopUntil=performance.now()+70;          // impact freeze, then eased slow-mo
@@ -1280,6 +1312,16 @@ function showDeath(){
   $('dCombo').textContent=game.topCombo;
   $('dTime').textContent=fmtT(game.runT);
   $('dRank').classList.add('hidden');
+  if(overseer){
+    const summary=overseer.finishRun({
+      score:game.score,
+      distance:game.z-game.dist0,
+      runT:game.runT,
+      deathCause:lastDeathCause
+    });
+    overseerProfile=updateOverseerProfile(overseerProfile, summary);
+    saveOverseerProfile();
+  }
   submitRun(game.runT, game.score, game.z-game.dist0);
   deathEl.classList.remove('hidden');
   canRestartAt=performance.now()+400;
@@ -1305,18 +1347,23 @@ function resolveLanding(kind){
   // kind: 'perfect'|'good'|'miss'
   game.pendingLand=null;
   const airPts=Math.floor(game.airTime/0.5)*10;
-  if(airPts>0){ game.score+=airPts; popup('AIR +'+airPts,'air',46); }
+  if(airPts>0){ game.score+=airPts; popup('AIR +'+airPts,'air',46); overseerEvent({type:'style', points:airPts}); }
   if(kind==='perfect'){
     game.speed=Math.min(game.speed*1.15, MAX_SPEED);
     game.combo++; game.topCombo=Math.max(game.topCombo,game.combo);
-    game.score+=100*mult();
-    popup('PERFECT! +'+Math.round(100*mult()),'perfect');
+    const pts=Math.round(100*mult());
+    game.score+=pts;
+    overseerEvent({type:'landing', quality:'perfect'});
+    overseerEvent({type:'style', points:pts});
+    popup('PERFECT! +'+pts,'perfect');
     screenFlash(); sfx.perfect(); shake=Math.min(shake+0.18,0.5);
     hitstopUntil=performance.now()+60; fovKick=5;
   } else if(kind==='good'){
     game.speed=Math.min(game.speed*1.05, MAX_SPEED);
+    overseerEvent({type:'landing', quality:'good'});
     popup('GOOD','good'); sfx.good();
   } else {
+    overseerEvent({type:'landing', quality:'miss'});
     stepDownCombo();
   }
   updateComboHUD();
@@ -1325,6 +1372,7 @@ function resolveLanding(kind){
 function stumble(msg){
   const g=game;
   g.speed=Math.max(9, g.speed*0.5);
+  overseerEvent({type:'stumble', reason:msg});
   stepDownCombo('STREAK HIT');
   g.cleanT=0; shake=Math.max(shake,0.55);
   popup(msg,'danger'); sfx.fault();
@@ -1356,6 +1404,7 @@ function onLandContact(){
     if(partial>=0.35){
       const pts=Math.round(80*partial*mult());
       g.score+=pts; popup('STYLE +'+pts,'air',-34);
+      overseerEvent({type:'style', points:pts, trick:true, partial:true});
     }
     stumble('CASED IT!'); return;
   }
@@ -1363,6 +1412,7 @@ function onLandContact(){
     const units=Math.abs(nF)+nS;
     const pts=Math.round((300*Math.abs(nF)+150*nS)*mult());
     g.score+=pts;
+    overseerEvent({type:'style', points:pts, trick:true, full:true});
     g.speed=Math.min(g.speed*(1+0.05*units), MAX_SPEED);
     const name=nF!==0?(nF>0?'BACKFLIP':'FRONTFLIP'):'SPIN';
     popup((units>1?name+' ×'+units:name)+'  +'+pts,'perfect',-40);
@@ -1370,6 +1420,7 @@ function onLandContact(){
   } else if(partial>=0.35){
     const pts=Math.round(60*partial*mult());
     g.score+=pts;
+    overseerEvent({type:'style', points:pts, trick:true, partial:true});
     popup('STYLE +'+pts,'air',-34);
   }
   g.trickFlip=0; g.trickSpin=0;
@@ -1525,7 +1576,7 @@ function checkObstacles(){
       if(dz>4||dz<-4) continue;
       const alt=game.y-terrainH(game.x,game.z);
       const dx=o.x-game.x, d=Math.hypot(dx,dz);
-      if(!phys && d<o.r+0.45 && alt<o.h){ crash(); return; }   // solid-world handles hits
+      if(!phys && d<o.r+0.45 && alt<o.h){ crash('obstacle'); return; }   // solid-world handles hits
       if(!o.passed && dz<-0.3){
         o.passed=true;
         if(Math.abs(dx)<o.r+1.5 && Math.abs(dx)>=o.r+0.35 && alt<o.h+0.5){
@@ -1533,6 +1584,7 @@ function checkObstacles(){
           if(gameT-game.nearChainT<2) game.nearChain++; else game.nearChain=1;
           game.nearChainT=gameT;
           game.score+=50*mult();
+          overseerEvent({type:'gate', result:'clean'});
           popup(game.nearChain>1?('DANGER ×'+game.nearChain+'  +'+Math.round(50*mult())):('CLOSE! +'+Math.round(50*mult())),'danger',game.nearChain>1?-38:0);
           sfx.whoosh();
         }
@@ -1550,6 +1602,7 @@ function endPower(){
 }
 function applyPower(type){
   const g=game;
+  overseerEvent({type:'pickup', power:type});
   if(type==='blue'){
     if(g.power && g.power.type!=='blue'){       // maintain the active effect: refresh its timer
       g.power.t=POWER_DUR;
@@ -1641,12 +1694,13 @@ function update(dt){
   if(!god && ax>TRACK_SOFT){
     g.speed=Math.max(g.speed-g.speed*1.3*dt, 9);
     shake=Math.max(shake,0.12);
-    if(ax>TRACK_HARD){ crash(); return; }
+    if(ax>TRACK_HARD){ crash('offtrack'); return; }
   }
   // steering
   const target=god?Math.sin(gameT*0.4)*0.15:readSteer();
   g.steer+=(target-g.steer)*Math.min(1,dt*8);
   const steerSpd=(6+g.speed*0.13)*(g.airborne?0.4:1);
+  if(!god && overseer) overseer.tick(dt, g);
   manageChunks(g.z,g.speed);
 
   let tLand=9;
@@ -1668,7 +1722,7 @@ function update(dt){
       const ratio=m.z/dz;
       if(ratio<0.25 && g.speed>25){
         if(absorbShield()){ g.cleanT=0; }
-        else { crash(); return; }
+        else { crash('wall'); return; }
       } else if(ratio<0.45 && g.speed>38){
         stumble('CLIPPED!');
       } else if(ratio<0.65){
@@ -1685,7 +1739,7 @@ function update(dt){
           if(pitDepthAt(g.x,g.z)>4) g.z+=7;
           return;
         }
-        crash(); return;
+        crash('pit'); return;
       }   // fell into a rage pit
       if(wasAir) onLandContact();
       g.vy=0;
@@ -1928,6 +1982,11 @@ resetRun('title');
 window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk,
   airTap, doJump, predictLand, onLandContact, applyPower, absorbShield, camera, bikeRoot,
   get state(){ return state; },
+  get overseer(){ return overseer; },
+  get overseerProfile(){ return overseerProfile; },
+  resetOverseerProfile(){ overseerProfile=createDefaultOverseerProfile(); saveOverseerProfile(); return overseerProfile; },
+  overseerEvent,
+  finishOverseerRun(cause='test'){ lastDeathCause=cause; showDeath(); return overseerProfile; },
   step(dt){ gameT+=dt; if(state==='riding'||state==='title') update(dt); },
   freeze(on){ timeScale=on===false?1:0; },
   mood(v){ moodN=v; updateMood(); },
