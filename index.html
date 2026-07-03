@@ -209,6 +209,7 @@ const PEDAL_CAP = 0.75;           // pedaling alone can't exceed this fraction o
 const CLEAN_RAMP = 0.5;           // extra passive accel/s earned by a clean streak (~10s)
 const SPIN_RATE = 5.0, FLIP_RATE = 5.4;   // trick rotation speeds (rad/s)
 const TRICK_OFF = 0.9;            // landing this far (rad) from level = stumble, not death
+const SHIELD_TIME = 1.6;          // green speed gems grant a short trap grace window
 const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 /* ============================== RNG / NOISE ============================ */
@@ -792,13 +793,17 @@ function genChunk(ci){
   // --- rage traps (start after 4 chunks): sudden pits + high-rise walls
   const pits=[], walls=[];
   if(ci>=4){
+    const prevTrap=(pitsByChunk.get(ci-1)?.length||0)+(wallsByChunk.get(ci-1)?.length||0);
+    const trapChance=prevTrap?0.08:THREE.MathUtils.clamp(0.32+density*0.28,0.32,0.58);
     const t=rng();
-    if(t<0.30){
+    if(t<trapChance*0.55){
       for(let a=0;a<6;a++){
-        const p={x:rng()*8-4, w:6+rng()*2.5, z0:z0+8+rng()*(CHUNK-26), len:6+rng()*5, depth:9+rng()*3};
+        const expectedSpeed=THREE.MathUtils.clamp(START_SPEED+z0*0.018,20,MAX_SPEED*0.78);
+        const len=THREE.MathUtils.clamp(expectedSpeed*0.12 + density*2.5 + rng()*1.8,4.2,9.6);
+        const p={x:rng()*8-4, w:6+rng()*2.5, z0:z0+10+rng()*(CHUNK-len-28), len, depth:9+rng()*3};
         if(ramps.every(r=>p.z0+p.len<r.z0-6 || p.z0>r.z0+r.len+24)){ pits.push(p); break; }
       }
-    } else if(t<0.52){
+    } else if(t<trapChance){
       for(let a=0;a<6;a++){
         const w={z0:z0+10+rng()*(CHUNK-24), len:2.6, h:2.4+rng()*1.6, gapX:rng()*12-6, gapW:4.6+rng()*1.4};
         if(ramps.every(r=>w.z0+w.len<r.z0-6 || w.z0>r.z0+r.len+26)){ walls.push(w); break; }
@@ -925,10 +930,13 @@ function genChunk(ci){
       if(phys) wallCols.push(RAPIER.ColliderDesc.cuboid((x1-x0)/2,(w.h+5)/2,w.len/2)
         .setTranslation(xC, base+w.h-(w.h+5)/2, zC));
     }
-    for(const sx of [-1,1]){   // the tell: neon posts framing the gap
-      const p=new THREE.Mesh(postGeo, postMat);
-      p.position.set(w.gapX+sx*w.gapW/2, terrainH(w.gapX+sx*w.gapW/2,zC)+0.75, zC);
-      p.castShadow=true; group.add(p);
+    for(const zz of [zC-34,zC-18,zC]){   // the tell: neon posts framing the gap before the slab
+      for(const sx of [-1,1]){
+        const p=new THREE.Mesh(postGeo, postMat);
+        const px=w.gapX+sx*w.gapW/2;
+        p.position.set(px, terrainH(px,zz)+0.75, zz);
+        p.castShadow=true; group.add(p);
+      }
     }
   }
 
@@ -1205,6 +1213,14 @@ function resetRun(startState){
 }
 
 function mult(){ return Math.min(1+0.5*game.combo, 6); }
+function stepDownCombo(label='COMBO DOWN'){
+  const g=game;
+  if(g.combo<=0) return;
+  const old=g.combo;
+  g.combo=Math.floor(g.combo*0.5);
+  popup(g.combo>0?`${label} ×${g.combo}`:'COMBO LOST','gray',34);
+  if(old!==g.combo) updateComboHUD();
+}
 function updateComboHUD(){
   const on=game.combo>=1;
   comboBox.style.display=on?'block':'none';
@@ -1301,8 +1317,7 @@ function resolveLanding(kind){
     game.speed=Math.min(game.speed*1.05, MAX_SPEED);
     popup('GOOD','good'); sfx.good();
   } else {
-    if(game.combo>0) popup('COMBO LOST','gray');
-    game.combo=0;
+    stepDownCombo();
   }
   updateComboHUD();
   game.airTime=0; game.faults=0; game.lastAirTap=-99;
@@ -1310,8 +1325,8 @@ function resolveLanding(kind){
 function stumble(msg){
   const g=game;
   g.speed=Math.max(9, g.speed*0.5);
-  if(g.combo>0) popup('COMBO LOST','gray',34);
-  g.combo=0; g.cleanT=0; shake=Math.max(shake,0.55);
+  stepDownCombo('STREAK HIT');
+  g.cleanT=0; shake=Math.max(shake,0.55);
   popup(msg,'danger'); sfx.fault();
   updateComboHUD();
   g.airTime=0; g.faults=0; g.lastAirTap=-99; g.pendingLand=null;
@@ -1336,7 +1351,14 @@ function onLandContact(){
   const nF=Math.round(g.trickFlip/(2*Math.PI));
   const offF=Math.abs(g.trickFlip-nF*2*Math.PI);
   const nS=Math.abs(Math.round(g.trickSpin/(2*Math.PI)));
-  if(offF>TRICK_OFF){ stumble('CASED IT!'); return; }
+  const partial=Math.abs(g.trickFlip)/(2*Math.PI)+Math.abs(g.trickSpin)/(2*Math.PI);
+  if(offF>TRICK_OFF){
+    if(partial>=0.35){
+      const pts=Math.round(80*partial*mult());
+      g.score+=pts; popup('STYLE +'+pts,'air',-34);
+    }
+    stumble('CASED IT!'); return;
+  }
   if(nF!==0 || nS>0){
     const units=Math.abs(nF)+nS;
     const pts=Math.round((300*Math.abs(nF)+150*nS)*mult());
@@ -1345,6 +1367,10 @@ function onLandContact(){
     const name=nF!==0?(nF>0?'BACKFLIP':'FRONTFLIP'):'SPIN';
     popup((units>1?name+' ×'+units:name)+'  +'+pts,'perfect',-40);
     sfx.perfect(); fovKick=Math.max(fovKick,4);
+  } else if(partial>=0.35){
+    const pts=Math.round(60*partial*mult());
+    g.score+=pts;
+    popup('STYLE +'+pts,'air',-34);
   }
   g.trickFlip=0; g.trickSpin=0;
 
@@ -1537,7 +1563,7 @@ function applyPower(type){
   } else if(type==='green'){
     endPower();
     const f=Math.min(2, MAX_SPEED/Math.max(g.speed,1));
-    g.power={type:'green', t:POWER_DUR, factor:f};
+    g.power={type:'green', t:POWER_DUR, factor:f, shield:SHIELD_TIME};
     g.speed*=f;
     popup('×2 SPEED!','pgreen');
     sfx.pickup(880); fovKick=6;
@@ -1550,12 +1576,22 @@ function applyPower(type){
   }
   updatePowerHUD();
 }
+function absorbShield(){
+  const p=game.power;
+  if(!(p && p.type==='green' && p.shield>0)) return false;
+  p.shield=0;
+  game.speed=Math.max(16, game.speed*0.58);
+  shake=Math.max(shake,0.5);
+  popup('SHIELD BREAK','pgreen');
+  sfx.fault();
+  return true;
+}
 function updatePowerHUD(){
   const p=game.power;
   powerEl.style.display=p?'block':'none';
   if(p){
     powerEl.className=p.type;
-    pLabel.textContent=p.type==='green'?'×2 SPEED':(p.type==='red'?'SLOW':'STEADY');
+    pLabel.textContent=p.type==='green'?(p.shield>0?'×2 SHIELD':'×2 SPEED'):(p.type==='red'?'SLOW':'STEADY');
   }
 }
 function updatePowerups(dt, god){
@@ -1586,7 +1622,9 @@ function update(dt){
   // speed: passive ramp grows with a clean streak; hold to pedal for more
   g.cleanT+=dt;
   const targetSpeed=god?16:MAX_SPEED;
-  const ramp=SPEED_RAMP+CLEAN_RAMP*Math.min(1,g.cleanT/10);
+  // Canabalt-style tiered accel: passive gains fade with speed — the last third
+  // of the speedometer is earned through tricks, perfects and clean streaks
+  const ramp=(SPEED_RAMP+CLEAN_RAMP*Math.min(1,g.cleanT/10))*(1-0.55*g.speed/MAX_SPEED);
   if(g.speed<targetSpeed && !(g.power&&g.power.type==='blue'))
     g.speed=Math.min(g.speed+ramp*dt*(god?0.2:1), targetSpeed);
   if(!god && pedalHeld() && !g.airborne && g.speed<MAX_SPEED*PEDAL_CAP
@@ -1595,6 +1633,7 @@ function update(dt){
   // powerup effect timer
   if(g.power){
     g.power.t-=dt;
+    if(g.power.shield) g.power.shield=Math.max(0,g.power.shield-dt);
     if(g.power.t<=0){ endPower(); updatePowerHUD(); }
   }
   // off-track slowdown
@@ -1627,13 +1666,27 @@ function update(dt){
     // slammed into something solid ahead
     if(dz>0.0001){
       const ratio=m.z/dz;
-      if(ratio<0.35 && g.speed>25){ crash(); return; }
-      if(ratio<0.6){ g.speed=Math.max(9,g.speed*Math.pow(0.02,dt));
-        shake=Math.max(shake,0.2); g.cleanT=0; }
+      if(ratio<0.25 && g.speed>25){
+        if(absorbShield()){ g.cleanT=0; }
+        else { crash(); return; }
+      } else if(ratio<0.45 && g.speed>38){
+        stumble('CLIPPED!');
+      } else if(ratio<0.65){
+        g.speed=Math.max(9,g.speed*Math.pow(0.04,dt));
+        shake=Math.max(shake,0.2); g.cleanT=0;
+      }
     }
     const grounded=charCtl.computedGrounded();
     if(grounded){
-      if(pitDepthAt(g.x,g.z)>4){ crash(); return; }   // fell into a rage pit
+      if(pitDepthAt(g.x,g.z)>4){
+        if(absorbShield()){
+          doLaunch(JUMP_VY*0.9);
+          g.z+=Math.max(6,g.speed*0.18);
+          if(pitDepthAt(g.x,g.z)>4) g.z+=7;
+          return;
+        }
+        crash(); return;
+      }   // fell into a rage pit
       if(wasAir) onLandContact();
       g.vy=0;
       const gy2=terrainH(g.x,g.z);
@@ -1873,7 +1926,7 @@ fxCv.width=innerWidth; fxCv.height=innerHeight;
 
 resetRun('title');
 window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk,
-  airTap, doJump, predictLand, camera, bikeRoot,
+  airTap, doJump, predictLand, onLandContact, applyPower, absorbShield, camera, bikeRoot,
   get state(){ return state; },
   step(dt){ gameT+=dt; if(state==='riding'||state==='title') update(dt); },
   freeze(on){ timeScale=on===false?1:0; },
