@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#1a1040">
-<title>DOWNHILL RUSH — Bike Shop (design preview)</title>
+<title>DOWNHILL RUSH — Skin Shop (design preview)</title>
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
 <style>
@@ -12,22 +12,28 @@
   html,body { width:100%; height:100%; overflow:hidden; background:#1a1040;
     font-family:'Rajdhani',sans-serif; touch-action:none; user-select:none; }
   canvas#stage { position:fixed; inset:0; display:block; }
-  #hdr { position:fixed; top:0; left:0; right:0; z-index:10; text-align:center; padding:12px;
+  #hdr { position:fixed; top:0; left:0; right:0; z-index:10; text-align:center; padding:10px;
     pointer-events:none; }
-  #hdr h1 { font-size:clamp(22px,4.5vw,34px); letter-spacing:6px; font-weight:700;
+  #hdr h1 { font-size:clamp(20px,4vw,30px); letter-spacing:6px; font-weight:700;
     background:linear-gradient(180deg,#ffd76e,#ff7847,#ff2e88);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     filter:drop-shadow(0 0 16px rgba(255,46,136,.5)); }
-  #hdr .sub { font-size:13px; letter-spacing:3px; color:#9a92c9; }
+  #hdr .sub { font-size:12px; letter-spacing:3px; color:#9a92c9; }
+  #tabs { position:fixed; top:64px; left:50%; transform:translateX(-50%); z-index:11; display:flex; gap:8px; }
+  #tabs button { padding:8px 22px; font:700 15px 'Rajdhani',sans-serif; letter-spacing:3px;
+    color:#9a92c9; background:rgba(20,14,48,.8); border:1px solid rgba(255,255,255,.15);
+    border-radius:10px; cursor:pointer; }
+  #tabs button.on { color:#04222a; background:#ffd76e; border-color:#ffd76e;
+    box-shadow:0 0 16px rgba(255,215,110,.5); }
   .lbl { position:fixed; z-index:5; transform:translate(-50%,0); text-align:center;
     pointer-events:none; white-space:nowrap; }
-  .lbl .n { font-size:15px; font-weight:700; letter-spacing:2px; color:#fff; }
-  .lbl .t { font-size:11px; font-weight:700; letter-spacing:2px; }
-  .lbl .p { font-size:12px; color:#cfc8f0; letter-spacing:1px; }
+  .lbl .n { font-size:14px; font-weight:700; letter-spacing:2px; color:#fff; }
+  .lbl .t { font-size:10px; font-weight:700; letter-spacing:2px; }
+  .lbl .p { font-size:11px; color:#cfc8f0; letter-spacing:1px; }
   #bar { position:fixed; bottom:0; left:0; right:0; z-index:10; display:flex; gap:6px;
     padding:10px 12px calc(10px + env(safe-area-inset-bottom)); overflow-x:auto;
     background:linear-gradient(0deg, rgba(10,6,28,.85), transparent); }
-  #bar button { flex:0 0 auto; padding:8px 13px; font:700 13px 'Rajdhani',sans-serif;
+  #bar button { flex:0 0 auto; padding:8px 12px; font:700 12px 'Rajdhani',sans-serif;
     letter-spacing:2px; color:#cfc8f0; background:rgba(20,14,48,.8);
     border:1px solid rgba(255,255,255,.15); border-radius:10px; cursor:pointer; }
   #bar button.on { color:#04222a; background:#00e5ff; border-color:#00e5ff;
@@ -37,10 +43,14 @@
 <body>
 <canvas id="stage"></canvas>
 <div id="hdr">
-  <h1>BIKE SHOP</h1>
-  <div class="sub">DESIGN PREVIEW · V1 · NOT IN GAME YET</div>
+  <h1>SKIN SHOP</h1>
+  <div class="sub">DESIGN PREVIEW · V2 · NOT IN GAME YET</div>
 </div>
-<div id="bar"><button data-i="-1" class="on">ALL</button></div>
+<div id="tabs">
+  <button id="tabRiders" class="on">RIDERS</button>
+  <button id="tabBikes">BIKES</button>
+</div>
+<div id="bar"></div>
 
 <script type="importmap">
 { "imports": {
@@ -61,14 +71,12 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.15;
 
 const scene=new THREE.Scene();
-scene.fog=new THREE.Fog(0x3a2158, 30, 130);
+scene.fog=new THREE.Fog(0x3a2158, 32, 150);
 const camera=new THREE.PerspectiveCamera(62, innerWidth/innerHeight, 0.1, 500);
 
-// environment reflections so metals actually shine
 const pmrem=new THREE.PMREMGenerator(renderer);
 scene.environment=pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
-// desktop bloom
 let composer=null;
 if(!isMobile){
   const [{EffectComposer},{RenderPass},{UnrealBloomPass},{OutputPass}]=await Promise.all([
@@ -83,7 +91,6 @@ if(!isMobile){
   composer.addPass(new OutputPass());
 }
 
-// sunset sky (game palette)
 const skyMat=new THREE.ShaderMaterial({ side:THREE.BackSide, depthWrite:false, fog:false,
   vertexShader:`varying vec3 vDir; void main(){ vDir=position;
     gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
@@ -96,18 +103,17 @@ const skyMat=new THREE.ShaderMaterial({ side:THREE.BackSide, depthWrite:false, f
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(300,24,12), skyMat));
 const sun=new THREE.Mesh(new THREE.CircleGeometry(26,26),
   new THREE.MeshBasicMaterial({color:0xffd76e, fog:false}));
-sun.position.set(0,16,120); scene.add(sun);
+sun.position.set(0,16,140); scene.add(sun);
 
 scene.add(new THREE.HemisphereLight(0x5a4d9e, 0x1a1040, 0.8));
 const key=new THREE.DirectionalLight(0xffc9a0, 1.8); key.position.set(-6,12,18); scene.add(key);
 const rim=new THREE.DirectionalLight(0xff2e88, 0.9); rim.position.set(6,6,-14); scene.add(rim);
 
-// floor
-const floor=new THREE.Mesh(new THREE.CircleGeometry(120,48),
-  new THREE.MeshStandardMaterial({color:0x2c2454, roughness:.95, metalness:0}));
+const floor=new THREE.Mesh(new THREE.CircleGeometry(140,48),
+  new THREE.MeshStandardMaterial({color:0x2c2454, roughness:.95}));
 floor.rotation.x=-Math.PI/2; scene.add(floor);
 
-/* ============================ SKIN DEFINITIONS ============================ */
+/* ============================ SHARED ====================================== */
 const TIER={
   common:{label:'COMMON', col:'#9a92c9', hex:0x9a92c9},
   rare:{label:'RARE', col:'#4db8ff', hex:0x4db8ff},
@@ -115,30 +121,32 @@ const TIER={
   legendary:{label:'LEGENDARY', col:'#ffd76e', hex:0xffd76e},
   mythic:{label:'MYTHIC', col:'#a8ecff', hex:0xa8ecff},
 };
-const SKINS=[
+const mat=(c,o={})=>new THREE.MeshStandardMaterial({color:c, flatShading:true,
+  roughness:o.r!==undefined?o.r:.55, metalness:o.m||0,
+  emissive:o.e||0x000000, emissiveIntensity:o.ei!==undefined?o.ei:1,
+  envMapIntensity:o.envI||1});
+
+/* ============================ BIKE SKINS ================================== */
+const BIKES=[
  { id:'sunset', name:'SUNSET DRIFTER', tier:'common', price:400,
    frame:{color:0xff7847, rough:.55}, accent:{color:0xff2e88, rough:.5},
    wheels:{color:0x2a1020, emissive:0xff7847, ei:1.2}, glow:0xff7847,
    extras(g,M){ const badge=new THREE.Mesh(new THREE.CircleGeometry(.09,12),
-     new THREE.MeshStandardMaterial({color:0xffd76e, emissive:0xffd76e, emissiveIntensity:.8}));
+     mat(0xffd76e,{e:0xffd76e,ei:.8}));
      badge.position.set(.09,.62,.1); badge.rotation.y=Math.PI/2; g.add(badge); } },
-
  { id:'night', name:'NIGHT RIDER', tier:'common', price:400,
    frame:{color:0x14101f, rough:.35}, accent:{color:0x241b3f, rough:.4},
    wheels:{color:0x0d0716, emissive:0x7a3cff, ei:1.0}, glow:0x7a3cff },
-
  { id:'frost', name:'FROSTBITE', tier:'rare', price:1200,
    frame:{color:0xdcedf7, rough:.15, metal:.5}, accent:{color:0x9fd8ef, rough:.2, metal:.4},
    wheels:{color:0x0a2233, emissive:0x9feaff, ei:1.4}, glow:0x9feaff,
    extras(g,M){ for(let i=0;i<3;i++){ const ice=new THREE.Mesh(new THREE.ConeGeometry(.05,.16,5),M.accent);
      ice.position.set(0,.52,-.3+i*.3); ice.rotation.x=Math.PI; g.add(ice);} } },
-
  { id:'toxic', name:'TOXIC', tier:'rare', price:1200,
    frame:{color:0x1a2e14, rough:.5}, accent:{color:0x39f761, rough:.4, emissive:0x39f761, ei:.5},
    wheels:{color:0x0c1a08, emissive:0x62ff2e, ei:1.5}, glow:0x62ff2e,
    extras(g,M){ for(const s of [-1,1]){ const can=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.22,7),M.accent);
      can.position.set(s*.11,.78,-.28); g.add(can);} } },
-
  { id:'sakura', name:'SAKURA', tier:'rare', price:1500,
    frame:{color:0xffd7e8, rough:.35}, accent:{color:0xff6ea8, rough:.4},
    wheels:{color:0x2e0d1c, emissive:0xff9dc4, ei:1.3}, glow:0xff9dc4,
@@ -146,33 +154,27 @@ const SKINS=[
      for(let i=0;i<5;i++){ const p=new THREE.Mesh(new THREE.SphereGeometry(.045,6,5),M.accent);
        const a=i/5*Math.PI*2; p.position.set(Math.cos(a)*.07,Math.sin(a)*.07,0); c.add(p); }
      c.position.set(0,1.2,.68); g.add(c); } },
-
  { id:'voltage', name:'VOLTAGE', tier:'epic', price:3500,
    frame:{color:0x0f1e3c, rough:.3, metal:.3}, accent:{color:0xffe94d, emissive:0xffe94d, ei:1.1, rough:.3},
    wheels:{color:0x0a1430, emissive:0x2e9fff, ei:1.6}, glow:0x2e9fff,
    extras(g,M){ const seg=(x,y,z,ry)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(.03,.05,.22),M.accent);
      b.position.set(x,y,z); b.rotation.y=ry; g.add(b); };
      seg(.1,.72,.25,.6); seg(.1,.66,.05,-.6); seg(.1,.6,-.15,.6); } },
-
  { id:'inferno', name:'INFERNO', tier:'epic', price:4000,
    frame:{color:0x1c0d0d, rough:.4}, accent:{color:0xff5a1f, emissive:0xff5a1f, ei:1.2, rough:.4},
    wheels:{color:0x2a0d05, emissive:0xff7847, ei:1.7}, glow:0xff4a1f,
    extras(g,M){ for(let i=0;i<3;i++){ const fin=new THREE.Mesh(new THREE.TetrahedronGeometry(.09+i*.03),M.accent);
      fin.position.set(0,1.06+i*.02,-.05-i*.24); g.add(fin);} } },
-
  { id:'silver', name:'STERLING', tier:'legendary', price:9000,
    frame:{color:0xf4f6ff, rough:.12, metal:.85, envI:1.7, emissive:0xdfe4f0, ei:.14},
    accent:{color:0xd7dcea, rough:.15, metal:.85, envI:1.6},
-   wheels:{color:0xf4f6ff, metal:.7, rough:.15, emissive:0xffffff, ei:.75}, glow:0xf4f6ff, discWheels:true,
-   extras(g,M){} },
-
+   wheels:{color:0xf4f6ff, metal:.7, rough:.15, emissive:0xffffff, ei:.75}, glow:0xf4f6ff, discWheels:true },
  { id:'gold', name:'MIDAS', tier:'legendary', price:18000,
    frame:{color:0xffd76e, rough:.22, metal:.9, envI:1.5, emissive:0xffb52e, ei:.15},
    accent:{color:0xffb52e, rough:.25, metal:.9, envI:1.4},
    wheels:{color:0x3c2a05, metal:.8, rough:.3, emissive:0xffd76e, ei:1.2}, glow:0xffd76e,
    extras(g,M){ for(let i=0;i<3;i++){ const spike=new THREE.Mesh(new THREE.ConeGeometry(.035,.11,4),M.frame);
-     spike.position.set(-.07+i*.07,1.24,.68); g.add(spike);} } },   // tiny crown on the stem
-
+     spike.position.set(-.07+i*.07,1.24,.68); g.add(spike);} } },
  { id:'diamond', name:'DIAMONDBACK', tier:'mythic', price:40000, physical:true,
    frame:{color:0xeaf6ff, rough:.05, metal:.8, envI:2.1, emissive:0xbfe8ff, ei:.22},
    accent:{color:0xcfeaff, rough:.08, metal:.8, envI:2},
@@ -183,9 +185,7 @@ const SKINS=[
        gem.position.set(x,y,z); gem.rotation.y=.5; g.add(gem); };
      at(0,1.14,-.05,.09); at(0,.7,.28,.07); at(0,.66,-.28,.07); at(0,1.26,.68,.06); } },
 ];
-
-/* ============================ BIKE BUILDER ================================ */
-function makeMat(def, physical){
+function makeBikeMat(def, physical){
   const C=physical?THREE.MeshPhysicalMaterial:THREE.MeshStandardMaterial;
   const m=new C({ color:def.color, flatShading:true,
     roughness:def.rough!==undefined?def.rough:.5,
@@ -197,10 +197,10 @@ function makeMat(def, physical){
 }
 function buildBike(skin){
   const g=new THREE.Group();
-  const M={ frame:makeMat(skin.frame, skin.physical),
-            accent:makeMat(skin.accent, skin.physical),
-            wheel:makeMat(skin.wheels) };
-  const dark=new THREE.MeshStandardMaterial({color:0x14101f, roughness:.6, flatShading:true});
+  const M={ frame:makeBikeMat(skin.frame, skin.physical),
+            accent:makeBikeMat(skin.accent, skin.physical),
+            wheel:makeBikeMat(skin.wheels) };
+  const dark=mat(0x14101f,{r:.6});
   const wheelGeo=skin.discWheels
     ? new THREE.CylinderGeometry(.48,.48,.1,18)
     : new THREE.CylinderGeometry(.48,.48,.14,10);
@@ -210,80 +210,348 @@ function buildBike(skin){
     const hub=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,.18,8),M.accent);
     hub.rotation.z=Math.PI/2; hub.position.set(0,.48,z); g.add(hub);
   }
-  const box=(w,h,d,x,y,z,mat,rx=0)=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
-    m.position.set(x,y,z); m.rotation.x=rx; g.add(m); return m; };
-  box(.14,.14,1.7, 0,.62,0, M.frame);                 // down tube
-  box(.12,.12,1.15, 0,1.04,.03, M.frame, .1);         // top tube
-  box(.12,.55,.12, 0,.85,.72, M.frame, .25);          // fork
-  box(.12,.5,.12, 0,.85,-.55, M.frame, -.2);          // seat post
-  box(.34,.07,.46, 0,1.14,-.6, dark);                 // seat
-  box(.6,.08,.08, 0,1.16,.68, M.accent);              // handlebar
-  box(.09,.09,.1, .3,1.16,.68, dark);                 // grips
+  const box=(w,h,d,x,y,z,m,rx=0)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+    b.position.set(x,y,z); b.rotation.x=rx; g.add(b); return b; };
+  box(.14,.14,1.7, 0,.62,0, M.frame);
+  box(.12,.12,1.15, 0,1.04,.03, M.frame, .1);
+  box(.12,.55,.12, 0,.85,.72, M.frame, .25);
+  box(.12,.5,.12, 0,.85,-.55, M.frame, -.2);
+  box(.34,.07,.46, 0,1.14,-.6, dark);
+  box(.6,.08,.08, 0,1.16,.68, M.accent);
+  box(.09,.09,.1, .3,1.16,.68, dark);
   box(.09,.09,.1,-.3,1.16,.68, dark);
   const cr=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.06,10),M.accent);
-  cr.rotation.z=Math.PI/2; cr.position.set(0,.5,-.12); g.add(cr);   // chainring
-  box(.3,.05,.05, 0,.5,-.12, dark);                   // crank axle
-  box(.1,.04,.16, .18,.5,-.12, dark);                 // pedals
+  cr.rotation.z=Math.PI/2; cr.position.set(0,.5,-.12); g.add(cr);
+  box(.3,.05,.05, 0,.5,-.12, dark);
+  box(.1,.04,.16, .18,.5,-.12, dark);
   box(.1,.04,.16,-.18,.5,-.12, dark);
   if(skin.extras) skin.extras(g,M);
   return g;
 }
 
-/* ============================ GALLERY LAYOUT ============================== */
-const items=[];
-// premium bikes front and center
-const ORDER=['inferno','silver','diamond','gold','voltage',
-             'sunset','night','frost','toxic','sakura'];
-SKINS.forEach((skin)=>{
-  const i=ORDER.indexOf(skin.id);
-  const col=i%5, row=Math.floor(i/5);
-  const x=(col-2)*5.2+(row?2.6:0), z=row*7.5;   // stagger back row between front pedestals
-  const base=new THREE.Group(); base.position.set(x,0,z);
-  const t=TIER[skin.tier];
-  // pedestal
-  const pedestal=new THREE.Mesh(new THREE.CylinderGeometry(1.7,2.0,.5,24),
-    new THREE.MeshStandardMaterial({color:0x1c1638, roughness:.8}));
-  pedestal.position.y=.25; base.add(pedestal);
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(1.75,.05,8,40),
-    new THREE.MeshStandardMaterial({color:0x111,emissive:t.hex,emissiveIntensity:.75}));
+/* ============================ RIDER BUILDER =============================== */
+// Standing rig ~2.1 units tall. Helpers shared by all 15 characters.
+function riderRig(g, o){
+  // o: skin, top, pants, shoes, eyes, shirt?, legTop?, legBot?, headScale?, bulk?
+  const S={ skin:mat(o.skin), top:mat(o.top), pants:mat(o.pants), shoes:mat(o.shoes,{r:.35}) };
+  const bulk=o.bulk||1, hs=o.headScale||1;
+  const box=(w,h,d,x,y,z,m,rx=0,ry=0,rz=0)=>{
+    const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+    b.position.set(x,y,z); b.rotation.set(rx,ry,rz); g.add(b); return b; };
+  for(const s of [-1,1]){
+    box(.17,.5,.17, s*.12,.75,0, o.legTop?mat(o.legTop):S.pants);
+    box(.15,.5,.15, s*.12,.28,0, o.legBot?mat(o.legBot):S.pants);
+    box(.17,.12,.32, s*.12,.06,.05, S.shoes);
+  }
+  const torso=box(.52*bulk,.64,.3*bulk, 0,1.34,0, S.top);
+  if(o.shirt) box(.2,.52,.05, 0,1.32,.16*bulk, mat(o.shirt));
+  for(const s of [-1,1]){
+    box(.14*bulk,.56,.14*bulk, s*(.34*bulk),1.3,0, S.top, 0,0,-s*.1);
+    box(.1,.1,.1, s*(.37*bulk),.97,0, S.skin);
+  }
+  const headY=1.86+(hs-1)*.12;
+  const head=new THREE.Mesh(new THREE.IcosahedronGeometry(.23*hs,0),S.skin);
+  head.position.set(0,headY,0); g.add(head);
+  for(const s of [-1,1])
+    box(.055*hs,.06*hs,.02, s*.08*hs, headY+.02, .2*hs, mat(0x111111,{e:o.eyes,ei:1.2}));
+  return { S, box, head, headY, hs, torso,
+    hairCap(color,scale=1){ const h=new THREE.Mesh(new THREE.IcosahedronGeometry(.25*hs*scale,0),mat(color,{r:.7}));
+      h.scale.y=.75; h.position.set(0,headY+.1,-.02); g.add(h); return h; },
+    hairBack(color,len=.5,w=.34){ const h=box(w,len,.1, 0,headY-len/2+.12,-.2*hs, mat(color,{r:.7})); return h; },
+    hat(color,r=.26){ const b=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.9,.09,10),mat(color,{r:.6}));
+      b.position.set(0,headY+.22,0); b.rotation.z=.12; g.add(b); return b; },
+    skirt(color,r=.44){ const s=new THREE.Mesh(new THREE.CylinderGeometry(.26,r,.32,10),mat(color,{r:.6}));
+      s.position.set(0,.94,0); g.add(s); return s; },
+  };
+}
+
+const RIDERS=[
+ { id:'berna', name:'BERNA', tier:'common', price:500, glow:0x35d6ff,
+   build(g){ const R=riderRig(g,{skin:0xead0b2, top:0x6b6f52, pants:0x3a3d4a, shoes:0x23262e,
+     eyes:0x35d6ff, shirt:0x8a8f9c, headScale:1.25});
+     R.hairCap(0x5a3d28,1.05);
+     for(let i=0;i<4;i++){ const t=new THREE.Mesh(new THREE.ConeGeometry(.06,.14,4),mat(0x5a3d28,{r:.7}));
+       t.position.set(-.12+i*.08,R.headY+.3,.02+((i%2)*.06)); t.rotation.z=(i-1.5)*.3; g.add(t); }
+     R.box(.56,.2,.12, 0,1.62,-.18, mat(0x23262e,{r:.6})); } },   // hood bundle
+
+ { id:'cherry', name:'CHERRY', tier:'common', price:500, glow:0xff2e56,
+   build(g){ const R=riderRig(g,{skin:0xe8b88a, top:0x1b1b22, pants:0x24242c, shoes:0xf2f2f2,
+     eyes:0x3a2620});
+     R.hairCap(0x15121a,1.02); R.hairBack(0x15121a,.35);
+     for(const s of [-1,1]){ const br=R.box(.09,.85,.09, s*.2,R.headY-.42,.12, mat(0x15121a,{r:.75}),0,0,s*.06);
+       const tip=new THREE.Mesh(new THREE.ConeGeometry(.05,.12,5),mat(0x15121a,{r:.75}));
+       tip.position.set(s*.24,R.headY-.9,.14); tip.rotation.x=Math.PI; g.add(tip); }
+     for(const s of [-1,1]) R.box(.18,.07,.33, s*.12,.1,.06, mat(0x111111));  // panda shoe panels
+   } },
+
+ { id:'princess', name:'PRINCESS', tier:'common', price:500, glow:0xff9dc4,
+   build(g){ const R=riderRig(g,{skin:0xb5773f, top:0xf7c6d8, pants:0x1c2440, shoes:0x1c1a18,
+     eyes:0x3a2620, legTop:0xb5773f, legBot:0x1c2440});
+     R.hairCap(0x14121c,1.03); R.hairBack(0x14121c,.95,.4);
+     R.skirt(0x1c2440,.4);
+     R.box(.16,.05,.05, 0,1.62,.17, mat(0xffffff));                 // collar
+     R.box(.12,.08,.05, 0,1.55,.18, mat(0xc22336));                 // red bow
+   } },
+
+ { id:'begone', name:'BEGONE', tier:'rare', price:1500, glow:0x7db8ff,
+   build(g){ const R=riderRig(g,{skin:0x6e4a2f, top:0x9c1f2e, pants:0x1e1e24, shoes:0x16130f,
+     eyes:0x5d766d, shirt:0xf2f2f2});
+     R.hairCap(0x8db8ee,1.08);
+     const loop=new THREE.Mesh(new THREE.TorusGeometry(.09,.03,6,10),mat(0x8db8ee,{r:.7}));
+     loop.position.set(.02,R.headY+.32,0); g.add(loop);             // the top loop curl
+     for(const s of [-1,1]){ const ear=new THREE.Mesh(new THREE.ConeGeometry(.05,.14,4),mat(0x6e4a2f));
+       ear.position.set(s*.25,R.headY+.03,0); ear.rotation.z=s*-1.5; g.add(ear); }  // pointed ears
+     R.box(.07,.34,.04, 0,1.4,.19, mat(0x17150e));                  // tie
+     R.box(.07,.05,.045, 0,1.42,.192, mat(0xd8b13a));               // tie stripe
+     R.box(.54,.03,.31, 0,1.05,0, mat(0xf2f2f2));                   // blazer piping line
+   } },
+
+ { id:'titan', name:'TITAN', tier:'rare', price:1500, glow:0x5ce8d8,
+   build(g){ const R=riderRig(g,{skin:0xd9a878, top:0x17151b, pants:0x111116, shoes:0x0c0b0e,
+     eyes:0x5ce8d8, shirt:0xd9cfb8});
+     R.hairCap(0x2e2118,1.05);
+     for(let i=0;i<5;i++){ const s=new THREE.Mesh(new THREE.ConeGeometry(.05,.2,4),mat(0x2e2118,{r:.75}));
+       s.position.set(-.16+i*.08,R.headY+.26,-.02+((i%2)*.08));
+       s.rotation.set((Math.random()-.5)*.9,0,(i-2)*.35); g.add(s); }
+     for(const s of [-1,1]) R.box(.2,.16,.36, s*.12,.1,.05, mat(0x0c0b0e,{r:.4}));  // chunky boots
+   } },
+
+ { id:'bella', name:'BELLA', tier:'rare', price:1800, glow:0xffc76e,
+   build(g){ const R=riderRig(g,{skin:0xf2cba8, top:0xb3a48c, pants:0xf2ede6, shoes:0xf2ede6,
+     eyes:0xd8a03c, legTop:0xf2cba8, legBot:0xf2ede6});
+     R.hairCap(0xc25b45,1.02); R.hairBack(0xc25b45,.45);
+     R.hat(0xf2ede6,.27);                                            // white beret
+     R.skirt(0xb3a48c,.42);
+     for(const s of [-1,1]) R.box(.2,.4,.2, s*.34,1.35,0, mat(0xf6f3ec,{r:.5}));   // puff sleeves
+     for(const s of [-1,1]) R.box(.2,.26,.2, s*.12,.2,.02, mat(0xf6f3ec,{r:.7}));  // leg warmers
+     R.box(.1,.06,.04, 0,1.6,.17, mat(0x8a7a5c));                    // neck ribbon
+   } },
+
+ { id:'stephyberry', name:'STEPHYBERRY', tier:'rare', price:1800, glow:0xffb3c8,
+   build(g){ const R=riderRig(g,{skin:0xf6d7c2, top:0x1d1a20, pants:0xf2e2d8, shoes:0xffffff,
+     eyes:0x8fa3c8, legTop:0xf6d7c2, legBot:0xffffff});
+     R.hairCap(0xf3e2e4,1.05); R.hairBack(0xf3e2e4,1.0,.42);
+     R.skirt(0xf2e2d8,.4);
+     for(let i=0;i<3;i++){ const c=new THREE.Mesh(new THREE.ConeGeometry(.035,.09,4),
+       mat(0xffd76e,{m:.8,r:.25,envI:1.4}));
+       c.position.set(-.06+i*.06,R.headY+.3,.06); g.add(c); }        // tiny tiara
+     for(const s of [-1,1]) R.box(.05,.04,.02, s*.14,R.headY-.06,.2, mat(0xff9db4,{e:0xff9db4,ei:.4})); // blush
+   } },
+
+ { id:'dave', name:'DAVE', tier:'epic', price:4000, glow:0xf2f2f2,
+   build(g){ const R=riderRig(g,{skin:0x7a4a2c, top:0x141416, pants:0x141416, shoes:0x0d0d0f,
+     eyes:0x2a2018, shirt:0xf2f2f2});
+     const afro=new THREE.Mesh(new THREE.IcosahedronGeometry(.34,0),mat(0x0f0d0d,{r:.85}));
+     afro.position.set(0,R.headY+.16,-.02); g.add(afro);
+     R.box(.07,.36,.04, 0,1.4,.19, mat(0x0d0d0f));                   // tie
+     R.box(.1,.05,.04, .17,1.5,.17, mat(0xf2f2f2));                  // pocket square
+   } },
+
+ { id:'dylan', name:'DYLAN', tier:'epic', price:4000, glow:0x2e9fff,
+   build(g){ const R=riderRig(g,{skin:0x6e4426, top:0x17171c, pants:0x121215, shoes:0x0c0c0f,
+     eyes:0x111111, shirt:0x1f1f24});
+     R.hairCap(0x121010,.92);
+     R.box(.3,.07,.05, 0,R.headY+.03,.2, mat(0x0a0a0a,{r:.15}));     // shades
+     const chain=new THREE.Mesh(new THREE.TorusGeometry(.13,.02,6,14),mat(0xd7dcea,{m:.9,r:.2,envI:1.5}));
+     chain.position.set(0,1.62,.1); chain.rotation.x=1.2; g.add(chain);
+     R.box(.06,.04,.08, .37,1.0,.02, mat(0x111,{e:0x2e9fff,ei:1.5})); // glowing watch
+   } },
+
+ { id:'ik', name:'IK', tier:'epic', price:4500, glow:0xd8a03c,
+   build(g){ const R=riderRig(g,{skin:0xe0b58c, top:0x6e6a5e, pants:0xa89878, shoes:0x4a3524,
+     eyes:0x4a5a68});
+     R.hairCap(0xd8b96e,.95);
+     R.box(.14,.09,.06, 0,R.headY-.13,.19, mat(0xd8b96e,{r:.8}));    // goatee
+     R.box(.5,.06,.32, 0,1.06,0, mat(0x4a3524));                     // belt
+     R.box(.52,.04,.3, 0,1.63,0, mat(0xb89a52));                     // gold trim collar
+     for(let i=0;i<3;i++){ const strip=R.box(.16,.85-.15*i,.05, -.2+i*.2,1.15-(0.85-.15*i)/2+.35,-.22,
+       mat(0x4a3a2a,{r:.85}), .1); }                                 // tattered cape strips
+     for(const s of [-1,1]) R.box(.18,.3,.2, s*.12,.2,.03, mat(0x4a3524,{r:.7}));  // tall boots
+   } },
+
+ { id:'ronin', name:'RONIN', tier:'epic', price:5000, glow:0xff2e6e,
+   build(g){ const R=riderRig(g,{skin:0xd9a878, top:0xc4356e, pants:0x1a1a20, shoes:0x111114,
+     eyes:0xdd2233, shirt:0x17151b});
+     R.hairCap(0x17141c,1.02);
+     for(let i=0;i<5;i++){ const s=new THREE.Mesh(new THREE.ConeGeometry(.05,.22,4),mat(0x17141c,{r:.75}));
+       s.position.set(-.16+i*.08,R.headY+.27,0); s.rotation.z=(i-2)*.4; g.add(s); }
+     const kat=new THREE.Group();
+     const blade=new THREE.Mesh(new THREE.BoxGeometry(.05,1.15,.05),mat(0x1c1c22,{r:.4}));
+     blade.position.y=.3; kat.add(blade);
+     const hilt=new THREE.Mesh(new THREE.BoxGeometry(.06,.26,.06),mat(0x8a6a2a,{r:.5}));
+     hilt.position.y=.98; kat.add(hilt);
+     const guard=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.03,8),mat(0xd8b13a,{m:.7,r:.3}));
+     guard.position.y=.84; kat.add(guard);
+     kat.position.set(.12,1.3,-.22); kat.rotation.z=.5; g.add(kat);  // katana across the back
+     const pend=new THREE.Mesh(new THREE.OctahedronGeometry(.05),mat(0xdd2233,{e:0xdd2233,ei:.8}));
+     pend.position.set(0,1.5,.18); g.add(pend);
+   } },
+
+ { id:'raiden', name:'RAIDEN', tier:'epic', price:5000, glow:0xb44dff,
+   build(g){ const R=riderRig(g,{skin:0xc98d5e, top:0x6a3fae, pants:0x3a2a5e, shoes:0x241a3e,
+     eyes:0xff5d8f, headScale:1.2});
+     R.hairCap(0xcfc4bc,1.03);
+     R.hat(0x5a3399,.3);                                             // purple beret
+     for(const s of [-1,1]){                                         // twin swords, crossed
+       const sw=new THREE.Group();
+       const blade=new THREE.Mesh(new THREE.BoxGeometry(.05,.95,.05),mat(0xd7dcea,{m:.8,r:.25,envI:1.4}));
+       blade.position.y=.2; sw.add(blade);
+       const hilt=new THREE.Mesh(new THREE.BoxGeometry(.06,.2,.06),mat(0x5a3020,{r:.6}));
+       hilt.position.y=.78; sw.add(hilt);
+       const gd=new THREE.Mesh(new THREE.BoxGeometry(.14,.04,.05),mat(0xd7dcea,{m:.7,r:.3}));
+       gd.position.y=.66; sw.add(gd);
+       sw.position.set(s*.14,1.28,-.24); sw.rotation.z=s*.55; g.add(sw);
+     }
+     R.box(.56,.2,.14, 0,1.6,-.16, mat(0x5a3399,{r:.7}));            // hood
+   } },
+
+ { id:'spike', name:'SPIKE', tier:'legendary', price:10000, glow:0xff2222,
+   build(g){ const R=riderRig(g,{skin:0xd9a878, top:0x1b1b20, pants:0x17171c, shoes:0x101014,
+     eyes:0x3a2620, bulk:1.45});
+     R.hairCap(0x14121a,1.0);
+     for(let i=0;i<4;i++){ const s=new THREE.Mesh(new THREE.ConeGeometry(.05,.18,4),mat(0x14121a,{r:.75}));
+       s.position.set(-.12+i*.08,R.headY+.27,0); s.rotation.z=(i-1.5)*.3; g.add(s); }
+     for(const s of [-1,1]){                                         // pauldrons
+       const p=new THREE.Mesh(new THREE.IcosahedronGeometry(.19,0),mat(0x232329,{r:.35,m:.4}));
+       p.position.set(s*.5,1.62,0); g.add(p);
+       const dot=new THREE.Mesh(new THREE.SphereGeometry(.05,6,5),mat(0x330000,{e:0xff2222,ei:1.6}));
+       dot.position.set(s*.56,1.62,.1); g.add(dot);
+     }
+     const core=new THREE.Mesh(new THREE.CircleGeometry(.09,8),mat(0x330000,{e:0xff2222,ei:1.8}));
+     core.position.set(0,1.42,.225); g.add(core);                    // chest reactor
+     R.box(.76,.06,.44, 0,1.06,0, mat(0x232329,{r:.4}));             // armor waist plate
+   } },
+
+ { id:'himars', name:'HIMARS', tier:'legendary', price:12000, glow:0x3b6fd4,
+   build(g){ const R=riderRig(g,{skin:0xffffff, top:0x16161c, pants:0x16161c, shoes:0xe8901a,
+     eyes:0x111111, headScale:1.5});
+     // penguin: white face, blue back of head + crest, orange beak
+     const backHead=new THREE.Mesh(new THREE.IcosahedronGeometry(.36,0),mat(0x3b6fd4,{r:.6}));
+     backHead.position.set(0,R.headY+.05,-.12); g.add(backHead);
+     const crest=new THREE.Mesh(new THREE.ConeGeometry(.09,.3,5),mat(0x3b6fd4,{r:.6}));
+     crest.position.set(0,R.headY+.45,-.02); crest.rotation.z=-.35; g.add(crest);
+     const beak=new THREE.Mesh(new THREE.ConeGeometry(.07,.16,6),mat(0xe8901a,{r:.5}));
+     beak.position.set(0,R.headY-.06,.36); beak.rotation.x=1.35; g.add(beak);
+     const zip=new THREE.Mesh(new THREE.BoxGeometry(.04,.5,.02),mat(0xd8b13a,{m:.7,r:.3}));
+     zip.position.set(0,1.32,.16); g.add(zip);                       // gold zipper
+     const nasa=new THREE.Mesh(new THREE.CircleGeometry(.08,10),mat(0x1a3a8a,{e:0x2e5fd4,ei:.5}));
+     nasa.position.set(.15,1.4,.165); g.add(nasa);                   // NASA patch
+     const apollo=new THREE.Mesh(new THREE.CircleGeometry(.07,10),mat(0xf2f2f2));
+     apollo.position.set(-.15,1.4,.165); g.add(apollo);              // Apollo patch
+   } },
+
+ { id:'mendo', name:'MENDO', tier:'mythic', price:25000, glow:0x9d4dff,
+   build(g){ const R=riderRig(g,{skin:0x5e3a22, top:0xf2eef8, pants:0x8a5fd4, shoes:0xf2eef8,
+     eyes:0x2a2018, shirt:0xe8dcc2});
+     R.hairCap(0x181410,.95);
+     R.box(.34,.09,.06, 0,R.headY+.15,.19, mat(0xf2eef8,{r:.3}));    // goggles band up on forehead
+     R.box(.3,.06,.05, 0,R.headY+.15,.215, mat(0x8a5fd4,{e:0x8a5fd4,ei:.5})); // goggle lens strip
+     for(const s of [-1,1]){ const ear=new THREE.Mesh(new THREE.SphereGeometry(.03,6,5),
+       mat(0xffd76e,{m:.8,r:.25,envI:1.4})); ear.position.set(s*.22,R.headY-.04,.04); g.add(ear); } // gold earrings
+     R.box(.2,.12,.06, 0,1.66,.14, mat(0xe8dcc2,{r:.7}));            // turtleneck collar
+     R.box(.12,.1,.04, .28,1.45,.16, mat(0xffffff));                 // 未来 shoulder patch
+     R.box(.5,.05,.32, 0,1.06,0, mat(0x6a4aa8,{r:.5}));              // strap belt
+   } },
+];
+
+/* ============================ GALLERY ===================================== */
+const bikesRoot=new THREE.Group(), ridersRoot=new THREE.Group();
+scene.add(bikesRoot, ridersRoot);
+
+function pedestal(base, tierHex, glowHex){
+  const ped=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.8,.5,24),
+    mat(0x1c1638,{r:.8}));
+  ped.position.y=.25; base.add(ped);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(1.55,.05,8,40),
+    mat(0x111111,{e:tierHex,ei:.75}));
   ring.rotation.x=Math.PI/2; ring.position.y=.53; base.add(ring);
-  const glowRing=new THREE.Mesh(new THREE.TorusGeometry(1.1,.03,8,32),
-    new THREE.MeshStandardMaterial({color:0x111,emissive:skin.glow,emissiveIntensity:.9}));
+  const glowRing=new THREE.Mesh(new THREE.TorusGeometry(1.0,.03,8,32),
+    mat(0x111111,{e:glowHex,ei:.9}));
   glowRing.rotation.x=Math.PI/2; glowRing.position.y=.56; base.add(glowRing);
-  const spin=new THREE.Group(); spin.position.y=.53;
-  spin.add(buildBike(skin)); base.add(spin);
-  scene.add(base);
-  items.push({skin, base, spin, anchor:new THREE.Vector3(x, row?3.5:2.55, z)});
-});
+}
+function makeGallery(defs, order, root, buildFn, cols){
+  const items=[];
+  defs.forEach((skin)=>{
+    const i=order.indexOf(skin.id);
+    const col=i%cols, row=Math.floor(i/cols);
+    const x=(col-(cols-1)/2)*4.6+(row%2?2.3:0), z=row*6.5;
+    const base=new THREE.Group(); base.position.set(x,0,z);
+    pedestal(base, TIER[skin.tier].hex, skin.glow);
+    const spin=new THREE.Group(); spin.position.y=.53;
+    const model=new THREE.Group();
+    buildFn(skin, model);
+    spin.add(model); base.add(spin);
+    root.add(base);
+    items.push({skin, base, spin, anchor:new THREE.Vector3(x, row%2?3.6:2.75, z)});
+  });
+  return items;
+}
+const bikeItems=makeGallery(BIKES,
+  ['inferno','silver','diamond','gold','voltage','sunset','night','frost','toxic','sakura'],
+  bikesRoot, (s,m)=>m.add(buildBike(s)), 5);
+const riderItems=makeGallery(RIDERS,
+  ['ronin','himars','mendo','spike','raiden',
+   'dave','dylan','ik','titan','begone',
+   'berna','cherry','princess','bella','stephyberry'],
+  ridersRoot, (s,m)=>s.build(m), 5);
 
 /* ============================ LABELS & UI ================================= */
-const labels=items.map(({skin})=>{
-  const t=TIER[skin.tier];
-  const el=document.createElement('div'); el.className='lbl';
-  el.innerHTML='<div class="n"></div><div class="t" style="color:'+t.col+'">'+t.label+
-    '</div><div class="p">◈ '+skin.price.toLocaleString()+'</div>';
-  el.querySelector('.n').textContent=skin.name;
-  document.body.appendChild(el); return el;
-});
+const allLabels=[];
+function makeLabels(items){
+  return items.map(({skin})=>{
+    const t=TIER[skin.tier];
+    const el=document.createElement('div'); el.className='lbl';
+    el.innerHTML='<div class="n"></div><div class="t" style="color:'+t.col+'">'+t.label+
+      '</div><div class="p">◈ '+skin.price.toLocaleString()+'</div>';
+    el.querySelector('.n').textContent=skin.name;
+    document.body.appendChild(el); allLabels.push(el); return el;
+  });
+}
+const bikeLabels=makeLabels(bikeItems), riderLabels=makeLabels(riderItems);
+
+let mode='riders', focusI=-1, orbitA=0;
 const bar=document.getElementById('bar');
-SKINS.forEach((s,i)=>{
-  const b=document.createElement('button');
-  b.textContent=s.name; b.dataset.i=i;
-  b.style.color=TIER[s.tier].col;
-  bar.appendChild(b);
-});
-let focusI=-1, orbitA=0;
+function activeItems(){ return mode==='bikes'?bikeItems:riderItems; }
+function activeLabels(){ return mode==='bikes'?bikeLabels:riderLabels; }
+function overviewFor(m){
+  return m==='bikes'
+    ? {pos:new THREE.Vector3(0,7.5,-15), tgt:new THREE.Vector3(0,.9,4.5)}
+    : {pos:new THREE.Vector3(0,9,-15.5), tgt:new THREE.Vector3(0,.6,7)};
+}
+function rebuildBar(){
+  bar.innerHTML='';
+  const all=document.createElement('button');
+  all.textContent='ALL'; all.dataset.i=-1; all.className=focusI<0?'on':'';
+  bar.appendChild(all);
+  activeItems().forEach((it,i)=>{
+    const b=document.createElement('button');
+    b.textContent=it.skin.name; b.dataset.i=i;
+    b.style.color=TIER[it.skin.tier].col;
+    if(focusI===i) b.className='on';
+    bar.appendChild(b);
+  });
+}
+function setMode(m){
+  mode=m; focusI=-1;
+  bikesRoot.visible=m==='bikes'; ridersRoot.visible=m==='riders';
+  document.getElementById('tabBikes').classList.toggle('on',m==='bikes');
+  document.getElementById('tabRiders').classList.toggle('on',m==='riders');
+  allLabels.forEach(l=>l.style.display='none');
+  rebuildBar();
+}
+document.getElementById('tabBikes').addEventListener('click',()=>setMode('bikes'));
+document.getElementById('tabRiders').addEventListener('click',()=>setMode('riders'));
 bar.addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
   focusI=+b.dataset.i;
   bar.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
 });
-// click a bike to focus it
 const ray=new THREE.Raycaster(), ptr=new THREE.Vector2();
 addEventListener('pointerdown',e=>{
-  if(e.target.closest('#bar')) return;
+  if(e.target.closest('#bar')||e.target.closest('#tabs')) return;
   ptr.set(e.clientX/innerWidth*2-1, -(e.clientY/innerHeight)*2+1);
   ray.setFromCamera(ptr,camera);
+  const items=activeItems();
   for(let i=0;i<items.length;i++){
     if(ray.intersectObject(items[i].base,true).length){
       focusI=i;
@@ -292,31 +560,32 @@ addEventListener('pointerdown',e=>{
     }
   }
 });
+setMode('riders');
 
 /* ============================ LOOP ======================================== */
-const camPos=new THREE.Vector3(0,7.5,-16), camTgt=new THREE.Vector3(0,0.9,5);
+const camPos=new THREE.Vector3(0,9,-15.5), camTgt=new THREE.Vector3(0,.6,7);
 let last=performance.now();
 function frame(){
   const now=performance.now(), dt=Math.min((now-last)/1000,.05); last=now;
-  for(const it of items) it.spin.rotation.y+=dt*.7;
+  for(const it of activeItems()) it.spin.rotation.y+=dt*.7;
   let wantPos, wantTgt;
   if(focusI<0){
-    wantPos=new THREE.Vector3(0,7.5,-16); wantTgt=new THREE.Vector3(0,0.9,5);
+    const o=overviewFor(mode); wantPos=o.pos; wantTgt=o.tgt;
   } else {
     orbitA+=dt*.4;
-    const a=items[focusI].base.position;
-    wantPos=new THREE.Vector3(a.x+Math.sin(orbitA)*4.4, 2.6, a.z+Math.cos(orbitA)*-4.4);
-    wantTgt=new THREE.Vector3(a.x, 1.3, a.z);
+    const a=activeItems()[focusI].base.position;
+    wantPos=new THREE.Vector3(a.x+Math.sin(orbitA)*4.2, 2.7, a.z+Math.cos(orbitA)*-4.2);
+    wantTgt=new THREE.Vector3(a.x, 1.35, a.z);
   }
   camPos.lerp(wantPos, Math.min(1,dt*3.5));
   camTgt.lerp(wantTgt, Math.min(1,dt*3.5));
   camera.position.copy(camPos); camera.lookAt(camTgt);
-  // project labels
   const v=new THREE.Vector3();
+  const items=activeItems(), labels=activeLabels();
   items.forEach((it,i)=>{
     v.copy(it.anchor).project(camera);
     const el=labels[i];
-    const onScreen=v.z<1 && Math.abs(v.x)<1.1;
+    const onScreen=v.z<1 && Math.abs(v.x)<1.08;
     const dim=focusI>=0 && focusI!==i;
     el.style.display=onScreen&&!dim?'block':'none';
     el.style.left=((v.x*.5+.5)*innerWidth)+'px';
@@ -331,7 +600,8 @@ addEventListener('resize',()=>{
   renderer.setSize(innerWidth,innerHeight);
   if(composer) composer.setSize(innerWidth,innerHeight);
 });
-window.SHOP={ focus(i){ focusI=i; }, items };
+window.SHOP={ focus(i){ focusI=i; }, setMode, get mode(){ return mode; },
+  riders:riderItems, bikes:bikeItems };
 </script>
 </body>
 </html>
