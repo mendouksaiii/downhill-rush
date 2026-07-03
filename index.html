@@ -437,27 +437,124 @@ const dummy=new THREE.Object3D();
 const bikeRoot=new THREE.Group();     // world position
 const bikeTilt=new THREE.Group();     // pitch / roll
 bikeRoot.add(bikeTilt); scene.add(bikeRoot);
-const wheelGeo=new THREE.CylinderGeometry(0.48,0.48,0.15,10); wheelGeo.rotateZ(Math.PI/2);
-const wheelF=new THREE.Mesh(wheelGeo,neonMat); wheelF.position.set(0,0.48,0.82);
-const wheelB=new THREE.Mesh(wheelGeo,neonMat); wheelB.position.set(0,0.48,-0.82);
+
+// two-tone vertical paint gradients baked into vertex colors — one flat material for
+// the whole bike + rider, no textures
+const paintMat=new THREE.MeshStandardMaterial({vertexColors:true, flatShading:true, roughness:.45, metalness:.1});
+const rimMat=new THREE.MeshStandardMaterial({color:0x073036, emissive:0x00e5ff, emissiveIntensity:2.2, flatShading:true});
+const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
+function colorGeo(geo,fn){
+  const p=geo.attributes.position, cols=new Float32Array(p.count*3), c=new THREE.Color();
+  for(let i=0;i<p.count;i++){ fn(p.getX(i),p.getY(i),p.getZ(i),c);
+    cols[i*3]=c.r; cols[i*3+1]=c.g; cols[i*3+2]=c.b; }
+  geo.setAttribute('color', new THREE.BufferAttribute(cols,3)); return geo;
+}
+const grad=(y0,y1,bot,top)=>{ const A=new THREE.Color(bot), B=new THREE.Color(top);
+  return (x,y,z,c)=>c.lerpColors(A,B,THREE.MathUtils.clamp((y-y0)/(y1-y0),0,1)); };
+const solid=col=>{ const A=new THREE.Color(col); return (x,y,z,c)=>c.copy(A); };
+const mergeAll=arr=>mergeGeometries(arr.map(g=>g.index?g.toNonIndexed():g));
+const PAINT=grad(0.35,1.25,0x8f1560,0xff6a3d);    // frame: deep magenta -> sunset orange
+const SUIT_LEG=grad(-0.62,0.02,0x1c1730,0x4a4066);
+const SUIT_ARM=grad(-0.46,0.02,0x1c1730,0x4a4066);
+function tube(a,b,r,seg=6,cap=false){
+  const d=V3(b.x-a.x,b.y-a.y,b.z-a.z), l=d.length();
+  const g=cap?new THREE.CapsuleGeometry(r,l,3,seg):new THREE.CylinderGeometry(r,r,l,seg);
+  g.translate(0,l/2,0);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(V3(0,1,0), d.normalize()));
+  g.translate(a.x,a.y,a.z); return g;
+}
+function boxGeo(w,h,d,x,y,z,rx=0){ const g=new THREE.BoxGeometry(w,h,d);
+  if(rx) g.rotateX(rx); g.translate(x,y,z); return g; }
+
+// frame: real MTB silhouette merged into one painted mesh
+const BB=V3(0,.46,-.08), ST=V3(0,1.0,-.44), HT=V3(0,1.08,.5);
+const frameGeo=mergeAll([
+  tube(BB,V3(0,.86,.6),.048),                        // down tube
+  tube(ST,HT,.036),                                  // top tube
+  tube(BB,ST,.042),                                  // seat tube
+  tube(V3(0,.8,.58),V3(0,1.16,.52),.052),            // head tube
+  tube(HT,V3(0,1.14,.64),.032),                      // stem
+  tube(V3(-.3,1.14,.68),V3(.3,1.14,.68),.03,7),      // handlebar
+  tube(V3(0,1.0,-.44),V3(0,1.12,-.5),.03),           // seatpost
+  tube(V3(-.07,.84,.62),V3(-.07,.48,.78),.032),      // fork legs
+  tube(V3(.07,.84,.62),V3(.07,.48,.78),.032),
+  tube(V3(-.06,.44,-.1),V3(-.06,.48,-.82),.026),     // chain stays
+  tube(V3(.06,.44,-.1),V3(.06,.48,-.82),.026),
+  tube(V3(-.05,.98,-.46),V3(-.06,.5,-.8),.024),      // seat stays
+  tube(V3(.05,.98,-.46),V3(.06,.5,-.8),.024),
+].map(g=>colorGeo(g,PAINT)));
+bikeTilt.add(new THREE.Mesh(frameGeo,paintMat));
+
+// dark hardware: saddle, grips, cranks, pedals, number plate
+const saddleGeo=new THREE.SphereGeometry(.1,8,6);
+saddleGeo.scale(1.15,.5,2.3); saddleGeo.translate(0,1.16,-.5);
+const hardwareGeo=mergeAll([
+  saddleGeo,
+  tube(V3(-.38,1.14,.68),V3(-.28,1.14,.68),.042),    // grips
+  tube(V3(.28,1.14,.68),V3(.38,1.14,.68),.042),
+  tube(V3(-.15,.46,-.08),V3(.15,.46,-.08),.028),     // crank axle
+  boxGeo(.09,.03,.2, -.16,.46,-.06), boxGeo(.09,.03,.2, .16,.46,-.06),  // pedals
+  boxGeo(.2,.15,.03, 0,1.06,.76, -.15),              // number plate
+]);
+bikeTilt.add(new THREE.Mesh(hardwareGeo,darkMat));
+const tail=new THREE.Mesh(new THREE.BoxGeometry(.06,.08,.04),rimMat);
+tail.position.set(0,1.06,-.56); bikeTilt.add(tail);  // seatpost taillight
+
+// wheels: dark tire + spokes, neon rim ring that catches the bloom
+const wheelGeo=new THREE.TorusGeometry(.4,.085,5,14);   // shared with crash pieces
+function makeWheel(){
+  const grp=new THREE.Group();
+  const tire=wheelGeo.clone(); tire.rotateY(Math.PI/2);
+  const hub=new THREE.CylinderGeometry(.05,.05,.12,6); hub.rotateZ(Math.PI/2);
+  const parts=[tire,hub];
+  for(let i=0;i<5;i++){ const s=new THREE.BoxGeometry(.02,.72,.03); s.rotateX(i/5*Math.PI); parts.push(s); }
+  grp.add(new THREE.Mesh(mergeAll(parts),darkMat));
+  const rim=new THREE.TorusGeometry(.35,.03,4,12); rim.rotateY(Math.PI/2);
+  grp.add(new THREE.Mesh(rim,rimMat));
+  return grp;
+}
+const wheelF=makeWheel(); wheelF.position.set(0,.48,.82);
+const wheelB=makeWheel(); wheelB.position.set(0,.48,-.82);
 bikeTilt.add(wheelF,wheelB);
+
+// rider: capsule limbs pivoted at their joints so the pose code bends them naturally
 const riderG=new THREE.Group(); bikeTilt.add(riderG);   // posable rider rig
-function box(w,h,d,x,y,z,mat=darkMat,rx=0,rz=0,parent=bikeTilt){
-  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
-  m.position.set(x,y,z); m.rotation.x=rx; m.rotation.z=rz; parent.add(m); return m; }
-box(0.14,0.14,1.7, 0,0.62,0);                       // down tube
-box(0.12,0.55,0.12, 0,0.85,0.72, darkMat, 0.25);    // fork
-box(0.6,0.08,0.09, 0,1.14,0.68);                    // handlebar
-box(0.12,0.5,0.12, 0,0.85,-0.55, darkMat,-0.2);     // seat post
-const torso=box(0.36,0.62,0.26, 0,1.42,0.02, darkMat, 0.42, 0, riderG);
-const armR=box(0.1,0.46,0.1, 0.22,1.28,0.35, darkMat, 0.75, 0, riderG);
-const armL=box(0.1,0.46,0.1,-0.22,1.28,0.35, darkMat, 0.75, 0, riderG);
-const legR=box(0.11,0.5,0.11, 0.14,0.82,-0.18, darkMat, 0, 0, riderG);
-const legL=box(0.11,0.5,0.11,-0.14,0.82,-0.18, darkMat, 0, 0, riderG);
-const head=new THREE.Mesh(new THREE.IcosahedronGeometry(0.21,0),darkMat);
-head.position.set(0,1.83,0.3); riderG.add(head);
-const visor=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.1,0.06),neonMat);
-visor.position.set(0,1.83,0.5); riderG.add(visor);
+function limbMesh(mid,end,r0,r1,colFn,extra){
+  const parts=[ tube(V3(0,0,0),mid,r0,6,true), tube(mid,end,r1,6,true) ]
+    .map(g=>colorGeo(g,colFn));
+  if(extra) parts.push(extra);
+  return new THREE.Mesh(mergeAll(parts),paintMat);
+}
+function makeLeg(sx){
+  const shoe=colorGeo(boxGeo(.11,.08,.26, 0,-.6,.1),solid(0x14101f));
+  const m=limbMesh(V3(0,-.27,.16),V3(0,-.58,.06),.06,.05,SUIT_LEG,shoe);
+  m.position.set(sx,1.04,-.3); riderG.add(m); return m;
+}
+function makeArm(sx){
+  const glove=colorGeo(new THREE.IcosahedronGeometry(.055,0).translate(0,-.44,.15),solid(0x14101f));
+  const m=limbMesh(V3(0,-.22,.05),V3(0,-.42,.14),.05,.042,SUIT_ARM,glove);
+  m.position.set(sx,1.5,.06); riderG.add(m); return m;
+}
+const legR=makeLeg(.14), legL=makeLeg(-.14);
+const armR=makeArm(.2), armL=makeArm(-.2);
+// torso: capsule pivoted at the hips, paint-colored shoulders like a team jersey
+const torsoGeo=new THREE.CapsuleGeometry(.15,.28,3,8);
+torsoGeo.scale(1.15,1,.75); torsoGeo.translate(0,.29,0);
+colorGeo(torsoGeo,(x,y,z,c)=>{
+  if(y>.46) c.set(0xff6a3d);                                 // jersey shoulders
+  else if(z<-.06 && Math.abs(x)<.05) c.set(0xd44420);        // spine stripe faces the camera
+  else SUIT_LEG(x,y-.62,z,c); });
+const torso=new THREE.Mesh(torsoGeo,paintMat);
+torso.position.set(0,1.04,-.2); riderG.add(torso);
+// full-face helmet + neon visor
+const helmetGeo=mergeAll([
+  colorGeo(new THREE.IcosahedronGeometry(.2,1),grad(-.14,.2,0x8f1560,0xff6a3d)),
+  colorGeo(boxGeo(.17,.07,.16, 0,-.09,.14),solid(0x14101f)),   // chin guard
+]);
+const head=new THREE.Mesh(helmetGeo,paintMat);
+head.position.set(0,1.66,.16); riderG.add(head);
+const visor=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.06,0.1),neonMat);
+visor.position.set(0,1.7,0.33); visor.rotation.x=0.15; riderG.add(visor);
 bikeRoot.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
 
 /* ============================== PARTICLES / TRAIL ====================== */
@@ -1503,7 +1600,7 @@ addEventListener('resize',()=>{
 fxCv.width=innerWidth; fxCv.height=innerHeight;
 
 resetRun('title');
-window.DR={ game, terrainH, chunks, rampsByChunk, onTap, predictLand,
+window.DR={ game, terrainH, chunks, rampsByChunk, onTap, predictLand, camera, bikeRoot,
   get state(){ return state; },
   step(dt){ gameT+=dt; if(state==='riding'||state==='title') update(dt); },
   freeze(on){ timeScale=on===false?1:0; },
