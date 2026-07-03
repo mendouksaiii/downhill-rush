@@ -109,13 +109,20 @@ export function createOverseerRuntime(options = {}){
     archetype: 'judge',
     trapBudget: 0,
     attackBudget: 0,
+    attackCooldown: 0,
+    attackShield: 0,
+    perfectChain: 0,
+    attackCount: 0,
     recentMoves: [],
     events: {
       style: 0,
       greenPickups: 0,
       perfects: 0,
       misses: 0,
-      cleanGates: 0
+      cleanGates: 0,
+      attacksDodged: 0,
+      attacksHit: 0,
+      attacksCountered: 0
     },
     lastDirective: null
   };
@@ -141,13 +148,21 @@ export function createOverseerRuntime(options = {}){
     } else if(event.type === 'landing'){
       if(event.quality === 'perfect'){
         state.events.perfects++;
-        state.respect = clamp01(state.respect + 0.12);
+        state.perfectChain++;
+        if(state.perfectChain >= 3){
+          state.attackShield = Math.max(state.attackShield, 2);
+          state.attackCooldown = Math.max(state.attackCooldown, 2);
+        }
+        state.respect = clamp01(state.respect + 0.16);
         state.pressure = clamp01(state.pressure + 0.05);
         state.tilt = clamp01(state.tilt - 0.04);
       } else if(event.quality === 'miss'){
         state.events.misses++;
+        state.perfectChain = 0;
         state.tilt = clamp01(state.tilt + 0.08);
         state.respect = clamp01(state.respect - 0.04);
+      } else if(event.quality === 'good'){
+        state.perfectChain = 0;
       }
     } else if(event.type === 'pickup'){
       if(event.power === 'green'){
@@ -164,8 +179,29 @@ export function createOverseerRuntime(options = {}){
         state.pressure = clamp01(state.pressure + 0.04);
       }
     } else if(event.type === 'stumble'){
+      state.perfectChain = 0;
       state.mercy = clamp01(state.mercy + 0.08);
       state.tilt = clamp01(state.tilt - 0.04);
+    } else if(event.type === 'attack'){
+      if(event.result === 'dodged'){
+        state.events.attacksDodged++;
+        state.respect = clamp01(state.respect + 0.16);
+        state.pressure = clamp01(state.pressure + 0.05);
+        state.tilt = clamp01(state.tilt + 0.16);
+        state.attackCooldown = Math.max(state.attackCooldown, 1.5);
+      } else if(event.result === 'countered'){
+        state.events.attacksCountered++;
+        state.respect = clamp01(state.respect + 0.22);
+        state.tilt = clamp01(state.tilt - 0.04);
+        state.attackShield = Math.max(state.attackShield, 1);
+        state.attackCooldown = Math.max(state.attackCooldown, 2.5);
+      } else if(event.result === 'hit'){
+        state.events.attacksHit++;
+        state.perfectChain = 0;
+        state.mercy = clamp01(state.mercy + 0.14);
+        state.tilt = clamp01(state.tilt - 0.1);
+        state.attackCooldown = Math.max(state.attackCooldown, 2);
+      }
     }
     updateArchetype();
   }
@@ -179,6 +215,7 @@ export function createOverseerRuntime(options = {}){
     state.respect = clamp01(state.respect + Math.min(0.04, cleanT / 800));
     state.trapBudget = clamp01(state.pressure * 0.75 + state.tilt * 0.35 - state.mercy * 0.55);
     state.attackBudget = clamp01(state.manifestation * 0.6 + Math.max(0, z - 500) / 1800 - state.mercy * 0.5);
+    state.attackCooldown = Math.max(0, state.attackCooldown - dt);
     state.manifestation = clamp01(state.manifestation + Math.max(0, state.pressure - 0.55) * dt * 0.018 + state.tilt * dt * 0.012);
     updateArchetype();
   }
@@ -201,6 +238,44 @@ export function createOverseerRuntime(options = {}){
       state.lastDirective = directive;
       state.recentMoves = [directive.kind, ...state.recentMoves].slice(0, 5);
       return directive;
+    }
+
+    const canAttack = state.attackBudget > 0.28 && state.manifestation > 0.38
+      && state.attackCooldown <= 0 && state.attackShield <= 0 && Number(context.z0 || 0) > 420;
+    if(canAttack){
+      const attackTypes = {
+        judge: ['mirrorGate', 'collapsePulse', 'redEyeSweep'],
+        hunter: ['redEyeSweep', 'gravitySnare', 'collapsePulse'],
+        trickster: ['falseGift', 'mirrorGate', 'redEyeSweep']
+      }[state.archetype] || ['redEyeSweep'];
+      const attackType = attackTypes[Math.floor(rng() * attackTypes.length)];
+      const intensity = round2(clamp01(0.35 + state.attackBudget * 0.42 + state.pressure * 0.18));
+      const directive = {
+        kind: 'attack',
+        archetype: state.archetype,
+        intensity,
+        fairness: round2(clamp01(0.68 + state.respect * 0.2 - state.tilt * 0.18)),
+        telegraph: round2(clamp01(0.62 + state.respect * 0.15 - Math.max(0, speed - 60) / 180)),
+        budgetCost: 3,
+        params: {
+          attackType,
+          cooldown: round2(4.5 + intensity * 3),
+          trapChanceScale: attackType === 'falseGift' ? 1.45 : 1.15,
+          preferGreenGem: attackType === 'falseGift',
+          pitBias: attackType === 'collapsePulse' ? 0.82 : 0.55,
+          tightenGap: attackType === 'mirrorGate' ? round2(0.8 + intensity * 0.8) : 0
+        }
+      };
+      state.attackCooldown = directive.params.cooldown;
+      state.attackCount++;
+      state.lastDirective = directive;
+      state.recentMoves = [directive.kind, ...state.recentMoves].slice(0, 5);
+      return directive;
+    }
+
+    if(state.attackShield > 0 && state.attackBudget > 0.25){
+      state.attackShield = Math.max(0, state.attackShield - 1);
+      state.attackCooldown = Math.max(state.attackCooldown, 3);
     }
 
     const repeatPenalty = kind => state.recentMoves.filter(m => m === kind).length * 0.16;
@@ -272,6 +347,10 @@ export function createOverseerRuntime(options = {}){
       archetype: state.archetype,
       trapBudget: round2(state.trapBudget),
       attackBudget: round2(state.attackBudget),
+      attackCooldown: round2(state.attackCooldown),
+      attackShield: round2(state.attackShield),
+      perfectChain: state.perfectChain,
+      attackCount: state.attackCount,
       recentMoves: [...state.recentMoves],
       events: { ...state.events },
       lastDirective: state.lastDirective ? { ...state.lastDirective, params: { ...state.lastDirective.params } } : null

@@ -101,3 +101,51 @@ test('same seed and profile return stable directive kind', () => {
     { kind: db.kind, archetype: db.archetype, intensity: db.intensity, params: db.params }
   );
 });
+
+test('high manifestation unlocks a budgeted direct attack with cooldown', () => {
+  const overseer = createOverseerRuntime({ seed: 44 });
+
+  overseer.observe({ type: 'style', points: 1600, trick: true });
+  overseer.observe({ type: 'pickup', power: 'green' });
+  overseer.tick(18, { speed: 72, combo: 6, cleanT: 4, z: 980 });
+
+  const first = overseer.chooseDirective({ ci: 18, z0: 1080, density: 0.8, speed: 72 });
+  const second = overseer.chooseDirective({ ci: 19, z0: 1140, density: 0.8, speed: 72 });
+  const snap = overseer.snapshot();
+
+  assert.equal(first.kind, 'attack');
+  assert.match(first.params.attackType, /redEyeSweep|collapsePulse|gravitySnare|falseGift|mirrorGate/);
+  assert.ok(first.params.cooldown > 0);
+  assert.notEqual(second.kind, 'attack');
+  assert.ok(snap.attackCooldown > 0);
+});
+
+test('three perfect landings create a chain break that cancels the next attack', () => {
+  const overseer = createOverseerRuntime({ seed: 8 });
+
+  overseer.observe({ type: 'style', points: 1400, trick: true });
+  for (let i = 0; i < 3; i++) overseer.observe({ type: 'landing', quality: 'perfect' });
+  overseer.tick(18, { speed: 74, combo: 6, cleanT: 9, z: 1100 });
+
+  const directive = overseer.chooseDirective({ ci: 20, z0: 1200, density: 0.9, speed: 74 });
+  const snap = overseer.snapshot();
+
+  assert.notEqual(directive.kind, 'attack');
+  assert.ok(snap.attackShield > 0);
+  assert.ok(snap.respect > snap.tilt);
+});
+
+test('attack outcomes feed respect, tilt, and mercy', () => {
+  const overseer = createOverseerRuntime({ seed: 16 });
+
+  overseer.observe({ type: 'attack', result: 'dodged' });
+  overseer.observe({ type: 'attack', result: 'countered' });
+  const afterDodge = overseer.snapshot();
+
+  overseer.observe({ type: 'attack', result: 'hit' });
+  const afterHit = overseer.snapshot();
+
+  assert.ok(afterDodge.respect > 0.15);
+  assert.ok(afterHit.mercy > afterDodge.mercy);
+  assert.ok(afterHit.tilt < afterDodge.tilt);
+});

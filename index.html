@@ -65,6 +65,17 @@
   #power.green .plabel{ color:#2eff8a; text-shadow:0 0 10px rgba(46,255,138,.8);} #power.green .pfill{ background:#2eff8a; }
   #power.red .plabel{ color:#ff4e66; text-shadow:0 0 10px rgba(255,78,102,.8);} #power.red .pfill{ background:#ff4e66; }
   #power.blue .plabel{ color:#4db8ff; text-shadow:0 0 10px rgba(77,184,255,.8);} #power.blue .pfill{ background:#4db8ff; }
+  #overseerVoice { position:absolute; left:50%; top:calc(104px + env(safe-area-inset-top));
+    transform:translateX(-50%); min-width:min(440px,82vw); text-align:center; opacity:0;
+    font-size:clamp(16px,3vw,24px); font-weight:700; letter-spacing:5px; color:#ff304c;
+    text-shadow:0 0 12px rgba(255,48,76,.95), 2px 0 0 rgba(0,229,255,.35);
+    transition:opacity .18s linear; pointer-events:none; mix-blend-mode:screen; }
+  #overseerVoice.show { opacity:.94; animation:voiceglitch .42s steps(2,end) infinite; }
+  @keyframes voiceglitch {
+    0%,100%{ transform:translateX(-50%) skewX(0deg); filter:none; }
+    35%{ transform:translateX(calc(-50% - 2px)) skewX(-7deg); filter:contrast(1.8); }
+    60%{ transform:translateX(calc(-50% + 3px)) skewX(5deg); filter:hue-rotate(35deg); }
+  }
   @keyframes popfly {
     0%{opacity:0; transform:translate(-50%,18px) scale(.4);}
     12%{opacity:1; transform:translate(-50%,-3px) scale(1.24);}
@@ -149,6 +160,7 @@
   <div id="power"><span class="plabel"></span><div class="pbar"><div class="pfill"></div></div></div>
   <div id="speedbar"><div id="speedfill"></div></div>
   <div id="ringWrap"><canvas id="ring" width="150" height="150"></canvas><div id="hint">TAP WHEN RINGS MEET</div></div>
+  <div id="overseerVoice"></div>
   <div id="popups"></div>
   <button id="mute">🔊</button>
 </div>
@@ -250,6 +262,7 @@ let runSeed = 1;
 const rampsByChunk = new Map();
 const pitsByChunk = new Map();    // rage traps: sudden holes in the track
 const wallsByChunk = new Map();   // rage traps: high-rise ledges with one gap
+let overseerAttacks=[];
 
 const sstep=(e0,e1,v)=>{ const t=THREE.MathUtils.clamp((v-e0)/(e1-e0),0,1); return t*t*(3-2*t); };
 function trapH(x,z){
@@ -413,6 +426,24 @@ const sunGlowMat=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(glowCv
 const sunGlow=new THREE.Mesh(new THREE.PlaneGeometry(430,430), sunGlowMat);
 sunGlow.renderOrder=-1; scene.add(sunGlow);
 
+// Overseer manifestation: procedural red eye + distant body silhouette.
+const overseerEyeG=new THREE.Group();
+const eyeRingMat=new THREE.MeshBasicMaterial({color:0xff304c, transparent:true, opacity:0, fog:false,
+  depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide});
+const eyePupilMat=new THREE.MeshBasicMaterial({color:0x090009, transparent:true, opacity:0, fog:false,
+  depthWrite:false, side:THREE.DoubleSide});
+const eyeGlowMat=new THREE.MeshBasicMaterial({color:0xff304c, transparent:true, opacity:0, fog:false,
+  depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide});
+const eyeOuter=new THREE.Mesh(new THREE.RingGeometry(0.55,1,48), eyeRingMat);
+const eyePupil=new THREE.Mesh(new THREE.CircleGeometry(0.22,32), eyePupilMat);
+const eyeGlow=new THREE.Mesh(new THREE.CircleGeometry(1.55,48), eyeGlowMat);
+eyeGlow.position.z=-0.02; overseerEyeG.add(eyeGlow,eyeOuter,eyePupil);
+overseerEyeG.visible=false; overseerEyeG.renderOrder=2; scene.add(overseerEyeG);
+const overseerBodyMat=new THREE.MeshBasicMaterial({color:0x120009, transparent:true, opacity:0, fog:false,
+  depthWrite:false, side:THREE.DoubleSide});
+const overseerBody=new THREE.Mesh(new THREE.CircleGeometry(4.8,32), overseerBodyMat);
+overseerBody.visible=false; overseerBody.renderOrder=1; scene.add(overseerBody);
+
 // layered mountain silhouettes + drifting clouds on the horizon (follow camera like the sky)
 const horizonG=new THREE.Group(); scene.add(horizonG);
 function makeRidge(seed,z,base){
@@ -478,6 +509,48 @@ function updateMood(){
   moodSunY=D.sunY+(N.sunY-D.sunY)*m;
 }
 
+function updateOverseerManifestation(dt){
+  const snap=overseer?.snapshot?.();
+  const m=state==='riding' && snap ? snap.manifestation : 0;
+  const level=m>0.82?4:(m>0.58?3:(m>0.34?2:(m>0.18?1:0)));
+  if(level>overseerManifestLevel){
+    const lines={
+      judge:['PROVE IT','AGAIN'],
+      hunter:['RUN','I SEE YOUR LINE'],
+      trickster:['REACH','YOU WANTED MORE']
+    }[snap?.archetype||'judge'];
+    overseerSay(lines[Math.min(lines.length-1,level%lines.length)],1.25);
+  }
+  overseerManifestLevel=level;
+  if(overseerVoiceT>0){
+    overseerVoiceT-=dt;
+    if(overseerVoiceT<=0) overseerVoiceEl.classList.remove('show');
+  }
+  const eyeOn=m>0.24;
+  overseerEyeG.visible=eyeOn;
+  overseerBody.visible=m>0.78;
+  if(!eyeOn){
+    eyeRingMat.opacity=eyePupilMat.opacity=eyeGlowMat.opacity=0;
+    overseerBodyMat.opacity=0;
+    return;
+  }
+  const blink=snap.archetype==='trickster' ? 0.55+0.45*Math.abs(Math.sin(gameT*7.1)) : 1;
+  const eyeAlpha=THREE.MathUtils.clamp((m-0.24)/0.5,0,1)*blink;
+  eyeRingMat.opacity=0.25+0.7*eyeAlpha;
+  eyePupilMat.opacity=0.45+0.5*eyeAlpha;
+  eyeGlowMat.opacity=0.12+0.22*eyeAlpha;
+  const sx=snap.archetype==='judge'?1.65:(snap.archetype==='hunter'?1.05:1.35+0.18*Math.sin(gameT*9));
+  const sy=snap.archetype==='judge'?0.42:(snap.archetype==='hunter'?0.9:0.58+0.2*Math.sin(gameT*5));
+  const sc=24+30*m;
+  overseerEyeG.scale.set(sc*sx,sc*sy,sc);
+  overseerEyeG.position.set(camera.position.x+Math.sin(gameT*0.33)*40, camera.position.y+92+36*m, camera.position.z+560);
+  overseerEyeG.lookAt(camera.position);
+  overseerBodyMat.opacity=THREE.MathUtils.clamp((m-0.78)/0.22,0,1)*0.38;
+  overseerBody.scale.setScalar(30+30*m);
+  overseerBody.position.set(overseerEyeG.position.x, overseerEyeG.position.y-26, overseerEyeG.position.z+26);
+  overseerBody.lookAt(camera.position);
+}
+
 /* ============================== SHARED ASSETS ========================== */
 const terrainMat=new THREE.MeshStandardMaterial({vertexColors:true, flatShading:true, roughness:.95, metalness:0});
 const treeMat=new THREE.MeshStandardMaterial({color:0x17112b, flatShading:true, roughness:.9});
@@ -487,6 +560,10 @@ const rampMat=new THREE.MeshStandardMaterial({color:0x6c63ad, flatShading:true, 
 const postMat=new THREE.MeshStandardMaterial({color:0x073036, emissive:0x00e5ff, emissiveIntensity:1.4});
 const darkMat=new THREE.MeshStandardMaterial({color:0x131022, flatShading:true, roughness:.7});
 const neonMat=new THREE.MeshStandardMaterial({color:0x062930, emissive:0x00e5ff, emissiveIntensity:1.2, flatShading:true});
+const overseerWarnMat=new THREE.MeshStandardMaterial({color:0x2c0009, emissive:0xff304c, emissiveIntensity:1.8,
+  transparent:true, opacity:0.58, flatShading:true});
+const overseerPostMat=new THREE.MeshStandardMaterial({color:0x210006, emissive:0xff304c, emissiveIntensity:2.4,
+  transparent:true, opacity:0.9, flatShading:true});
 
 function coneAt(r,h,y){ const c=new THREE.ConeGeometry(r,h,6); c.translate(0,y,0); return c; }
 const trunkGeo=new THREE.CylinderGeometry(0.16,0.22,1.3,5); trunkGeo.translate(0,0.65,0);
@@ -706,6 +783,39 @@ function updateTrail(g){
 /* ============================== CHUNKS ================================= */
 const chunks=new Map();
 
+function planOverseerAttack(ci,z0,directive,rng){
+  if(directive.kind!=='attack') return null;
+  const type=directive.params?.attackType || 'redEyeSweep';
+  const z=z0+16+rng()*(CHUNK-30);
+  const x=type==='redEyeSweep' ? (rng()<0.5?-1:1)*(2.5+rng()*4.5) : rng()*10-5;
+  const width=type==='gravitySnare'?11:(type==='collapsePulse'?6.8:5.4);
+  return {ci,type,z,x,width,intensity:directive.intensity||0.5, armed:true, resolved:false, hit:false, t:0};
+}
+
+function addOverseerAttackVisual(group,attack){
+  if(!attack) return;
+  const len=attack.type==='gravitySnare'?14:8;
+  const mat=overseerWarnMat.clone(); mat.opacity=0.36;
+  const strip=new THREE.Mesh(new THREE.BoxGeometry(attack.width,0.08,len), mat);
+  strip.position.set(attack.x, terrainH(attack.x,attack.z)+0.08, attack.z);
+  strip.castShadow=false; strip.receiveShadow=false; group.add(strip);
+  for(const sx of [-1,1]){
+    const p=new THREE.Mesh(postGeo, overseerPostMat.clone());
+    const px=attack.x+sx*attack.width/2;
+    p.position.set(px, terrainH(px,attack.z)+0.85, attack.z);
+    p.scale.set(1.2,1.4,1.2); group.add(p);
+  }
+  attack.strip=strip;
+  attack.voice={
+    redEyeSweep:'RUN',
+    collapsePulse:'MOVE',
+    gravitySnare:'FALL',
+    falseGift:'REACH',
+    mirrorGate:'AGAIN?'
+  }[attack.type] || 'I SEE YOU';
+  overseerAttacks.push(attack);
+}
+
 function buildTerrainMesh(ci){
   const z0=ci*CHUNK;
   const geo=new THREE.PlaneGeometry(CHUNK_W, CHUNK, isMobile?26:36, isMobile?36:48);
@@ -785,6 +895,7 @@ function genChunk(ci){
   const directive=overseer && state==='riding'
     ? overseer.chooseDirective({ci,z0,density,speed:game.speed||START_SPEED})
     : {kind:'calm', archetype:'judge', intensity:0, fairness:1, telegraph:1, params:{trapChanceScale:1}};
+  const plannedAttack=planOverseerAttack(ci,z0,directive,rng);
   const ramps=[], obstacles=[];
 
   // --- ramps
@@ -863,7 +974,7 @@ function genChunk(ci){
 
   // --- powerup gems (retry placement so ramp chunks still get gems)
   const powerups=[];
-  const baitChance=directive.kind==='bait'?0.9:0.5;
+  const baitChance=(directive.kind==='bait'||directive.params?.attackType==='falseGift')?0.9:0.5;
   if(pits.length && rng()<baitChance && !directive.params?.suppressBait){
     // rage bait: a gem line leading straight across the hole
     const p=pits[0], rimY=baseH(p.x,p.z0-1.5)+1.4;
@@ -891,6 +1002,7 @@ function genChunk(ci){
 
   // --- build meshes
   const group=new THREE.Group();
+  addOverseerAttackVisual(group, plannedAttack);
   const geoms=[];
   const tMesh=buildTerrainMesh(ci); group.add(tMesh); geoms.push(tMesh.geometry);
 
@@ -972,7 +1084,7 @@ function genChunk(ci){
       cols.push(phys.createCollider(cd));
     }
   }
-  chunks.set(ci,{group, obstacles, geoms, powerups, cols, directive});
+  chunks.set(ci,{group, obstacles, geoms, powerups, cols, directive, attacks:plannedAttack?[plannedAttack]:[]});
 }
 
 function dropChunk(ci){
@@ -981,6 +1093,7 @@ function dropChunk(ci){
   c.geoms.forEach(g=>g.dispose());
   c.group.traverse(o=>{ if(o.isInstancedMesh) o.dispose?.(); });
   if(phys && c.cols) c.cols.forEach(col=>phys.removeCollider(col,false));
+  if(c.attacks?.length) overseerAttacks=overseerAttacks.filter(a=>!c.attacks.includes(a));
   chunks.delete(ci); rampsByChunk.delete(ci);
   pitsByChunk.delete(ci); wallsByChunk.delete(ci);
 }
@@ -1079,9 +1192,10 @@ const scoreEl=$('score'), comboBox=$('comboBox'), comboMult=comboBox.querySelect
   comboFlame=comboBox.querySelector('.flame'), speedFill=$('speedfill'),
   powerEl=$('power'), pLabel=powerEl.querySelector('.plabel'), pFill=powerEl.querySelector('.pfill'),
   ringWrap=$('ringWrap'), ringCv=$('ring'), ringCtx=ringCv.getContext('2d'),
-  hintEl=$('hint'), popupsEl=$('popups'), flashEl=$('flash'),
+  hintEl=$('hint'), popupsEl=$('popups'), flashEl=$('flash'), overseerVoiceEl=$('overseerVoice'),
   titleEl=$('title'), deathEl=$('death'), pausedEl=$('paused'),
   fxCv=$('fx'), fxCtx=fxCv.getContext('2d');
+let overseerVoiceT=0, overseerLastVoice='';
 
 const popupPool=[];
 function popup(text, cls, dy=0){
@@ -1094,6 +1208,14 @@ function popup(text, cls, dy=0){
 }
 function screenFlash(){ flashEl.style.transition='none'; flashEl.style.opacity=0.22;
   requestAnimationFrame(()=>{ flashEl.style.transition='opacity .3s ease-out'; flashEl.style.opacity=0; }); }
+
+function overseerSay(text, hold=1.15){
+  if(!text || text===overseerLastVoice && overseerVoiceT>0) return;
+  overseerLastVoice=text;
+  overseerVoiceT=hold;
+  overseerVoiceEl.textContent=text;
+  overseerVoiceEl.classList.add('show');
+}
 
 function drawRing(tLand){
   const W=150, c=W/2; ringCtx.clearRect(0,0,W,W);
@@ -1188,6 +1310,7 @@ let hitstopUntil=0, dispScore=0, deathT0=0, deathFinal=0;
 let squashT=9, dipT=9, dipAmp=0, steerCam=0, apexF=0, fovKick=0, tiltSm=0;
 let riderCrouch=0, riderExtend=0;
 let overseerProfile=loadOverseerProfile(), overseer=null, lastDeathCause='unknown';
+let overseerManifestLevel=0;
 
 function loadOverseerProfile(){
   try{
@@ -1206,6 +1329,8 @@ function resetRun(startState){
   seedNoise(runSeed);
   overseer=createOverseerRuntime({seed:runSeed, profile:overseerProfile});
   lastDeathCause='unknown';
+  overseerManifestLevel=0;
+  overseerAttacks=[];
   for(const ci of [...chunks.keys()]) dropChunk(ci);
   for(const p of pieces){ scene.remove(p.mesh); p.mesh.geometry.dispose?.(); }
   pieces=[];
@@ -1413,6 +1538,7 @@ function onLandContact(){
     const pts=Math.round((300*Math.abs(nF)+150*nS)*mult());
     g.score+=pts;
     overseerEvent({type:'style', points:pts, trick:true, full:true});
+    counterNearestOverseerAttack('STYLE COUNTER');
     g.speed=Math.min(g.speed*(1+0.05*units), MAX_SPEED);
     const name=nF!==0?(nF>0?'BACKFLIP':'FRONTFLIP'):'SPIN';
     popup((units>1?name+' ×'+units:name)+'  +'+pts,'perfect',-40);
@@ -1591,6 +1717,76 @@ function checkObstacles(){
       }
     }
   }
+}
+
+function counterNearestOverseerAttack(label='COUNTERED'){
+  const a=overseerAttacks.find(o=>!o.resolved && Math.abs(o.z-game.z)<24);
+  if(!a) return false;
+  a.resolved=true; a.countered=true;
+  if(a.strip) a.strip.visible=false;
+  overseerEvent({type:'attack', result:'countered', attackType:a.type});
+  overseerSay('CRACKED',1.1);
+  popup(label,'perfect',-56);
+  game.speed=Math.min(game.speed*1.08+2, MAX_SPEED);
+  fovKick=Math.max(fovKick,5); shake=Math.max(shake,0.24);
+  return true;
+}
+
+function resolveOverseerDodge(a){
+  if(a.resolved) return;
+  a.resolved=true; a.dodged=true;
+  if(a.strip) a.strip.material.opacity=0.12;
+  overseerEvent({type:'attack', result:'dodged', attackType:a.type});
+}
+
+function resolveOverseerHit(a, kind='hit'){
+  if(a.resolved) return;
+  if(kind==='collapse' && absorbShield()){
+    counterNearestOverseerAttack('SHIELD COUNTER');
+    return;
+  }
+  a.resolved=true; a.hit=true;
+  if(a.strip) a.strip.material.opacity=0.85;
+  overseerEvent({type:'attack', result:'hit', attackType:a.type});
+  overseerSay(kind==='collapse'?'OPEN':'FOUND YOU',1.2);
+  if(kind==='collapse') crash('overseer');
+  else {
+    stumble(a.type==='mirrorGate'?'MIRROR HIT!':'EYE STRIKE!');
+  }
+}
+
+function updateOverseerAttacks(dt){
+  if(!overseerAttacks.length || state!=='riding') return;
+  for(const a of overseerAttacks){
+    if(a.resolved) continue;
+    const dz=a.z-game.z, timeTo=dz/Math.max(1,game.speed);
+    if(a.strip){
+      a.strip.position.y=terrainH(a.strip.position.x,a.strip.position.z)+0.08;
+      a.strip.material.opacity=THREE.MathUtils.clamp(0.2+(1.6-timeTo)*0.3,0.2,0.86);
+    }
+    if(!a.warned && dz<150){
+      a.warned=true;
+      overseerSay(a.voice,1.25);
+      shake=Math.max(shake,0.08);
+    }
+    const inWindow=Math.abs(dz)<8;
+    const inLane=Math.abs(game.x-a.x)<a.width/2;
+    const trickCounter=game.airborne && (Math.abs(game.trickFlip)>Math.PI*1.45 || Math.abs(game.trickSpin)>Math.PI*1.45);
+    if(inWindow && trickCounter){ counterNearestOverseerAttack('STYLE COUNTER'); continue; }
+    if(a.type==='gravitySnare' && inWindow && game.airborne){
+      game.vy-=(10+14*a.intensity)*dt;
+      shake=Math.max(shake,0.12);
+      if(dz<-6) resolveOverseerHit(a,'snare');
+      continue;
+    }
+    if(inWindow && inLane){
+      if(a.type==='collapsePulse' && !game.airborne) resolveOverseerHit(a,'collapse');
+      else if(a.type==='redEyeSweep' || a.type==='mirrorGate') resolveOverseerHit(a,'strike');
+      else if(a.type==='falseGift' && game.power?.type==='green') resolveOverseerHit(a,'strike');
+    }
+    if(dz<-10) resolveOverseerDodge(a);
+  }
+  overseerAttacks=overseerAttacks.filter(a=>game.z-a.z<80);
 }
 
 /* ============================== POWERUPS =============================== */
@@ -1783,6 +1979,8 @@ function update(dt){
     g.trickFlip+=readFlip()*FLIP_RATE*dt;
     g.trickSpin+=readSteer()*SPIN_RATE*dt;
   }
+  if(!god) updateOverseerAttacks(dt);
+  if(state!=='riding' && state!=='title') return;
   // pending late-tap window expiry
   if(g.pendingLand && gameT-g.pendingLand.t>GOOD_WIN) resolveLanding('miss');
 
@@ -1883,7 +2081,9 @@ function drawFX(){
   const W=fxCv.width, H=fxCv.height;
   fxCtx.clearRect(0,0,W,H);
   if(state!=='riding') return;
-  let inten=THREE.MathUtils.clamp((game.speed-32)/55,0,1)*0.7 + (game.combo>=5?0.35:0);
+  const os=overseer?.snapshot?.();
+  const manifest=os?os.manifestation:0;
+  let inten=THREE.MathUtils.clamp((game.speed-32)/55,0,1)*0.7 + (game.combo>=5?0.35:0) + manifest*0.22;
   if(inten<=0.02) return;
   const cx=W/2, cy=H/2, maxR=Math.hypot(cx,cy);
   fxCtx.lineWidth=2;
@@ -1895,6 +2095,21 @@ function drawFX(){
     fxCtx.moveTo(cx+Math.cos(a)*r0, cy+Math.sin(a)*r0);
     fxCtx.lineTo(cx+Math.cos(a)*r1, cy+Math.sin(a)*r1);
     fxCtx.stroke();
+  }
+  if(manifest>0.22){
+    fxCtx.globalCompositeOperation='screen';
+    const rows=4+Math.floor(manifest*8);
+    for(let i=0;i<rows;i++){
+      const y=(Math.random()*H)|0, h=1+Math.random()*3;
+      fxCtx.fillStyle=`rgba(255,48,76,${0.035+manifest*0.055})`;
+      fxCtx.fillRect(0,y,W,h);
+    }
+    if(os?.archetype==='trickster' && Math.random()<manifest*0.18){
+      const y=(Math.random()*H)|0;
+      fxCtx.fillStyle=`rgba(0,229,255,${0.08*manifest})`;
+      fxCtx.fillRect(Math.random()*40,y,W*(0.2+Math.random()*0.45),2);
+    }
+    fxCtx.globalCompositeOperation='source-over';
   }
 }
 
@@ -1961,6 +2176,7 @@ function frame(){
     }
     updateCamera(dt);
     updateMood();
+    updateOverseerManifestation(dt);
     refreshHUD(dt);
     drawFX();
     if(state==='dead') tickDeathScore(now);
@@ -1984,6 +2200,7 @@ window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk,
   get state(){ return state; },
   get overseer(){ return overseer; },
   get overseerProfile(){ return overseerProfile; },
+  get overseerAttacks(){ return overseerAttacks; },
   resetOverseerProfile(){ overseerProfile=createDefaultOverseerProfile(); saveOverseerProfile(); return overseerProfile; },
   overseerEvent,
   finishOverseerRun(cause='test'){ lastDeathCause=cause; showDeath(); return overseerProfile; },
