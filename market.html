@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1a1040">
+<title>DOWNHILL RUSH — Marketplace (preview)</title>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#1a1040;
+    font-family:'Rajdhani',sans-serif; touch-action:pan-x; user-select:none; }
+  canvas#stage { position:fixed; inset:0; display:block; }
+  #ui { position:fixed; inset:0; display:flex; flex-direction:column; pointer-events:none; }
+  #top { display:flex; align-items:center; justify-content:space-between;
+    padding:calc(10px + env(safe-area-inset-top)) 14px 6px; }
+  #back { pointer-events:auto; font:700 14px 'Rajdhani'; letter-spacing:2px; color:#9a92c9;
+    background:rgba(20,14,48,.7); border:1px solid rgba(255,255,255,.15); border-radius:10px;
+    padding:8px 14px; cursor:pointer; }
+  #ttl { font-size:clamp(18px,4vw,26px); font-weight:700; letter-spacing:5px;
+    background:linear-gradient(180deg,#ffd76e,#ff7847,#ff2e88);
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  #coins { pointer-events:auto; font:700 17px 'Rajdhani'; letter-spacing:1px; color:#ffd76e;
+    background:rgba(20,14,48,.75); border:1px solid rgba(255,215,110,.35); border-radius:20px;
+    padding:7px 16px; text-shadow:0 0 10px rgba(255,215,110,.6);
+    font-variant-numeric:tabular-nums; }
+  #tabs { display:flex; gap:8px; justify-content:center; padding:4px 0; }
+  #tabs button { pointer-events:auto; padding:7px 20px; font:700 14px 'Rajdhani';
+    letter-spacing:3px; color:#9a92c9; background:rgba(20,14,48,.75);
+    border:1px solid rgba(255,255,255,.15); border-radius:10px; cursor:pointer; }
+  #tabs button.on { color:#04222a; background:#ffd76e; border-color:#ffd76e;
+    box-shadow:0 0 14px rgba(255,215,110,.5); }
+  #spacer { flex:1; }
+  #info { padding:0 18px 6px; text-shadow:0 2px 8px rgba(0,0,0,.5); }
+  #iname { font-size:clamp(26px,6vw,40px); font-weight:700; letter-spacing:3px; color:#fff; }
+  #itier { font-size:14px; font-weight:700; letter-spacing:3px; }
+  #iflavor { font-size:15px; color:#b8b0dd; letter-spacing:1px; margin-top:2px; font-style:italic; }
+  #actionWrap { padding:8px 18px 4px; }
+  #action { pointer-events:auto; width:min(340px,100%); padding:13px 0; text-align:center;
+    font:700 18px 'Rajdhani'; letter-spacing:4px; border:none; border-radius:12px; cursor:pointer;
+    color:#04222a; background:linear-gradient(135deg,#00e5ff,#39f7c1);
+    box-shadow:0 0 22px rgba(0,229,255,.45); transition:transform .08s; }
+  #action:active { transform:scale(.96); }
+  #action.own { background:linear-gradient(135deg,#ffd76e,#ffb52e); box-shadow:0 0 22px rgba(255,215,110,.45); }
+  #action.equipped { background:rgba(20,14,48,.8); color:#39f7c1;
+    border:1px solid #39f7c1; box-shadow:none; cursor:default; }
+  #action.poor { background:rgba(60,20,35,.85); color:#ff5d7a; border:1px solid #ff2e56;
+    box-shadow:none; }
+  #action.shake { animation:shake .4s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)}
+    40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+  #rail { pointer-events:auto; display:flex; gap:10px; overflow-x:auto;
+    scroll-snap-type:x mandatory; padding:10px 40vw 14px;
+    -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  #rail::-webkit-scrollbar { display:none; }
+  .card { flex:0 0 118px; scroll-snap-align:center; pointer-events:auto; cursor:pointer;
+    background:rgba(14,8,36,.72); border:1.5px solid rgba(255,255,255,.14); border-radius:14px;
+    padding:9px 10px 8px; text-align:center; position:relative;
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); transition:transform .15s, border-color .15s; }
+  .card.sel { border-color:#00e5ff; box-shadow:0 0 16px rgba(0,229,255,.35); transform:translateY(-6px); }
+  .card .stripe { height:3px; border-radius:2px; margin-bottom:7px; }
+  .card .cn { font-size:13px; font-weight:700; letter-spacing:1px; color:#fff; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; }
+  .card .cp { font-size:12px; font-weight:700; color:#ffd76e; letter-spacing:1px; margin-top:2px; }
+  .card .cp.owned { color:#39f7c1; }
+  .card .eq { position:absolute; top:-7px; right:-4px; font-size:10px; font-weight:700;
+    letter-spacing:1px; color:#04222a; background:#39f7c1; border-radius:8px; padding:2px 7px; }
+  #note { text-align:center; font-size:11px; letter-spacing:2px; color:#6a628f;
+    padding:0 0 calc(8px + env(safe-area-inset-bottom)); }
+  #flash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:50;
+    transition:opacity .4s ease-out; }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div id="flash"></div>
+<div id="ui">
+  <div id="top">
+    <button id="back">◂ BACK</button>
+    <div id="ttl">MARKETPLACE</div>
+    <div id="coins">◈ 15,000</div>
+  </div>
+  <div id="tabs">
+    <button id="tabRiders" class="on">RIDERS</button>
+    <button id="tabBikes">BIKES</button>
+  </div>
+  <div id="spacer"></div>
+  <div id="info">
+    <div id="iname"></div>
+    <div id="itier"></div>
+    <div id="iflavor"></div>
+  </div>
+  <div id="actionWrap"><button id="action">EQUIP</button></div>
+  <div id="rail"></div>
+  <div id="note">UI PREVIEW · COIN BALANCE IS PLACEHOLDER · NOT IN GAME YET</div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { TIER, mat, BIKES, buildBike, RIDERS } from './skins-data.js';
+
+const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const canvas=document.getElementById('stage');
+const renderer=new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile?1.5:2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.15;
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0x3a2158, 20, 80);
+const camera=new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 400);
+camera.position.set(1.5, 2.1, -4.1);
+camera.lookAt(0, 1.5, 0);
+
+const pmrem=new THREE.PMREMGenerator(renderer);
+scene.environment=pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+let composer=null;
+if(!isMobile){
+  const [{EffectComposer},{RenderPass},{UnrealBloomPass},{OutputPass}]=await Promise.all([
+    import('three/addons/postprocessing/EffectComposer.js'),
+    import('three/addons/postprocessing/RenderPass.js'),
+    import('three/addons/postprocessing/UnrealBloomPass.js'),
+    import('three/addons/postprocessing/OutputPass.js'),
+  ]);
+  composer=new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene,camera));
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.4,0.45,0.8));
+  composer.addPass(new OutputPass());
+}
+
+const skyMat=new THREE.ShaderMaterial({ side:THREE.BackSide, depthWrite:false, fog:false,
+  vertexShader:`varying vec3 vDir; void main(){ vDir=position;
+    gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader:`varying vec3 vDir; void main(){
+    float h=normalize(vDir).y;
+    vec3 col=mix(vec3(1.0,0.47,0.278),vec3(1.0,0.18,0.533),smoothstep(0.0,0.16,h));
+    col=mix(col,vec3(0.102,0.063,0.251),smoothstep(0.08,0.6,h));
+    if(h<0.0) col=mix(col,vec3(0.16,0.1,0.26),smoothstep(0.0,-0.3,h));
+    gl_FragColor=vec4(col,1.0); }`});
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(200,24,12), skyMat));
+const sun=new THREE.Mesh(new THREE.CircleGeometry(18,26),
+  new THREE.MeshBasicMaterial({color:0xffd76e, fog:false}));
+sun.position.set(-14,11,90); scene.add(sun);
+
+scene.add(new THREE.HemisphereLight(0x5a4d9e, 0x1a1040, 0.8));
+const key=new THREE.DirectionalLight(0xffc9a0, 1.8); key.position.set(-5,10,-12); scene.add(key);
+const rim=new THREE.DirectionalLight(0xff2e88, 1.0); rim.position.set(5,5,14); scene.add(rim);
+
+const floor=new THREE.Mesh(new THREE.CircleGeometry(90,48),
+  new THREE.MeshStandardMaterial({color:0x2c2454, roughness:.95}));
+floor.rotation.x=-Math.PI/2; scene.add(floor);
+
+// pedestal + rings
+const ped=new THREE.Mesh(new THREE.CylinderGeometry(1.35,1.65,.5,24), mat(0x1c1638,{r:.8}));
+ped.position.y=.25; scene.add(ped);
+const tierRing=new THREE.Mesh(new THREE.TorusGeometry(1.4,.05,8,40), mat(0x111111,{e:0xffffff,ei:.75}));
+tierRing.rotation.x=Math.PI/2; tierRing.position.y=.53; scene.add(tierRing);
+const glowRing=new THREE.Mesh(new THREE.TorusGeometry(.95,.03,8,32), mat(0x111111,{e:0xffffff,ei:.9}));
+glowRing.rotation.x=Math.PI/2; glowRing.position.y=.56; scene.add(glowRing);
+
+const spin=new THREE.Group(); spin.position.y=.53; scene.add(spin);
+let model=null, anim=null, ringPulse=0;
+
+/* ============================ SHOP STATE (demo) =========================== */
+const state={
+  coins:15000, coinsShown:15000,
+  owned:{ riders:new Set(['berna']), bikes:new Set(['sunset']) },
+  equipped:{ riders:'berna', bikes:'sunset' },
+  tab:'riders', sel:0,
+};
+const catalog=()=>state.tab==='riders'?RIDERS:BIKES;
+const selSkin=()=>catalog()[state.sel];
+const ownedSet=()=>state.owned[state.tab];
+
+/* ============================ 3D SWAP ===================================== */
+function showSkin(skin){
+  if(model){
+    model.traverse(o=>{ if(o.isMesh){ o.geometry.dispose();
+      if(o.material && !o.material._shared) o.material.dispose(); } });
+    spin.remove(model);
+  }
+  model=new THREE.Group();
+  anim=state.tab==='riders' ? skin.build(model) : (model.add(buildBike(skin)), null);
+  spin.add(model);
+  tierRing.material.emissive.set(TIER[skin.tier].hex);
+  glowRing.material.emissive.set(skin.glow);
+  ringPulse=1;
+}
+
+/* ============================ UI ========================================== */
+const $=id=>document.getElementById(id);
+const rail=$('rail'), actionBtn=$('action');
+function fmtC(n){ return '◈ '+Math.round(n).toLocaleString(); }
+function cardState(skin){
+  if(state.equipped[state.tab]===skin.id) return 'equipped';
+  if(ownedSet().has(skin.id)) return 'owned';
+  return 'locked';
+}
+function buildRail(){
+  rail.innerHTML='';
+  catalog().forEach((skin,i)=>{
+    const t=TIER[skin.tier], st=cardState(skin);
+    const c=document.createElement('div');
+    c.className='card'+(i===state.sel?' sel':'');
+    c.dataset.i=i;
+    c.innerHTML='<div class="stripe" style="background:'+t.col+'"></div>'+
+      '<div class="cn"></div>'+
+      '<div class="cp'+(st!=='locked'?' owned':'')+'">'+
+        (st==='locked'?fmtC(skin.price):(st==='equipped'?'EQUIPPED':'OWNED'))+'</div>'+
+      (st==='equipped'?'<div class="eq">✓</div>':'');
+    c.querySelector('.cn').textContent=skin.name;
+    c.addEventListener('click',()=>{ select(i); c.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); });
+    rail.appendChild(c);
+  });
+}
+function refreshInfo(){
+  const skin=selSkin(), t=TIER[skin.tier], st=cardState(skin);
+  $('iname').textContent=skin.name;
+  $('itier').textContent=t.label; $('itier').style.color=t.col;
+  $('iflavor').textContent='“'+skin.flavor+'”';
+  actionBtn.className='';
+  if(st==='equipped'){ actionBtn.textContent='EQUIPPED ✓'; actionBtn.classList.add('equipped'); }
+  else if(st==='owned'){ actionBtn.textContent='EQUIP'; actionBtn.classList.add('own'); }
+  else if(state.coins>=skin.price){ actionBtn.textContent='BUY · '+fmtC(skin.price); }
+  else { actionBtn.textContent='NEED '+fmtC(skin.price-state.coins)+' MORE'; actionBtn.classList.add('poor'); }
+  rail.querySelectorAll('.card').forEach(c=>c.classList.toggle('sel',+c.dataset.i===state.sel));
+}
+function select(i){
+  if(i===state.sel && model) { refreshInfo(); return; }
+  state.sel=i;
+  showSkin(selSkin());
+  refreshInfo();
+}
+actionBtn.addEventListener('click',()=>{
+  const skin=selSkin(), st=cardState(skin);
+  if(st==='equipped') return;
+  if(st==='owned'){
+    state.equipped[state.tab]=skin.id;
+    buildRail(); refreshInfo(); ringPulse=1;
+    return;
+  }
+  if(state.coins>=skin.price){
+    state.coins-=skin.price;
+    ownedSet().add(skin.id);
+    state.equipped[state.tab]=skin.id;      // auto-equip on purchase
+    const f=$('flash'); f.style.transition='none'; f.style.opacity=.25;
+    requestAnimationFrame(()=>{ f.style.transition='opacity .4s ease-out'; f.style.opacity=0; });
+    ringPulse=1.6;
+    buildRail(); refreshInfo();
+  } else {
+    actionBtn.classList.remove('shake'); void actionBtn.offsetWidth;
+    actionBtn.classList.add('shake');
+  }
+});
+$('tabRiders').addEventListener('click',()=>setTab('riders'));
+$('tabBikes').addEventListener('click',()=>setTab('bikes'));
+function setTab(t){
+  if(state.tab===t) return;
+  state.tab=t; state.sel=Math.max(0,catalog().findIndex(s=>s.id===state.equipped[t]));
+  $('tabRiders').classList.toggle('on',t==='riders');
+  $('tabBikes').classList.toggle('on',t==='bikes');
+  buildRail(); showSkin(selSkin()); refreshInfo();
+  rail.querySelector('.card.sel')?.scrollIntoView({inline:'center',block:'nearest'});
+}
+// selecting by scrolling: the card nearest the rail centre becomes active
+let scrollT=null;
+rail.addEventListener('scroll',()=>{
+  clearTimeout(scrollT);
+  scrollT=setTimeout(()=>{
+    const mid=rail.getBoundingClientRect().left+rail.clientWidth/2;
+    let best=-1, bd=1e9;
+    rail.querySelectorAll('.card').forEach(c=>{
+      const r=c.getBoundingClientRect(), d=Math.abs(r.left+r.width/2-mid);
+      if(d<bd){ bd=d; best=+c.dataset.i; }
+    });
+    if(best>=0 && best!==state.sel) select(best);
+  },110);
+});
+addEventListener('wheel',e=>{ rail.scrollLeft+=e.deltaY; },{passive:true});
+$('back').addEventListener('click',()=>{ location.href='/'; });
+
+/* ============================ LOOP ======================================== */
+let last=performance.now();
+function frame(){
+  const now=performance.now(), dt=Math.min((now-last)/1000,.05); last=now;
+  const t=now/1000;
+  spin.rotation.y+=dt*.65;
+  if(model && state.tab==='riders'){
+    model.position.y=Math.sin(t*1.7)*.04;
+    model.rotation.z=Math.sin(t*1.3)*.03;
+  }
+  if(anim) anim(t);
+  if(ringPulse>0){ ringPulse=Math.max(0,ringPulse-dt*2.2); }
+  const rp=1+ringPulse*.25;
+  tierRing.scale.set(rp,rp,rp); glowRing.scale.set(rp,rp,rp);
+  // coin counter eases toward the real balance
+  state.coinsShown+=(state.coins-state.coinsShown)*Math.min(1,dt*7);
+  if(Math.abs(state.coins-state.coinsShown)<1) state.coinsShown=state.coins;
+  $('coins').textContent=fmtC(state.coinsShown);
+  if(composer) composer.render(); else renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+buildRail();
+showSkin(selSkin());
+refreshInfo();
+rail.querySelector('.card.sel')?.scrollIntoView({inline:'center',block:'nearest'});
+requestAnimationFrame(frame);
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+  if(composer) composer.setSize(innerWidth,innerHeight);
+});
+window.MARKET={ state, select, setTab };
+</script>
+</body>
+</html>
