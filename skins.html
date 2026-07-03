@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1a1040">
+<title>DOWNHILL RUSH — Bike Shop (design preview)</title>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#1a1040;
+    font-family:'Rajdhani',sans-serif; touch-action:none; user-select:none; }
+  canvas#stage { position:fixed; inset:0; display:block; }
+  #hdr { position:fixed; top:0; left:0; right:0; z-index:10; text-align:center; padding:12px;
+    pointer-events:none; }
+  #hdr h1 { font-size:clamp(22px,4.5vw,34px); letter-spacing:6px; font-weight:700;
+    background:linear-gradient(180deg,#ffd76e,#ff7847,#ff2e88);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 16px rgba(255,46,136,.5)); }
+  #hdr .sub { font-size:13px; letter-spacing:3px; color:#9a92c9; }
+  .lbl { position:fixed; z-index:5; transform:translate(-50%,0); text-align:center;
+    pointer-events:none; white-space:nowrap; }
+  .lbl .n { font-size:15px; font-weight:700; letter-spacing:2px; color:#fff; }
+  .lbl .t { font-size:11px; font-weight:700; letter-spacing:2px; }
+  .lbl .p { font-size:12px; color:#cfc8f0; letter-spacing:1px; }
+  #bar { position:fixed; bottom:0; left:0; right:0; z-index:10; display:flex; gap:6px;
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom)); overflow-x:auto;
+    background:linear-gradient(0deg, rgba(10,6,28,.85), transparent); }
+  #bar button { flex:0 0 auto; padding:8px 13px; font:700 13px 'Rajdhani',sans-serif;
+    letter-spacing:2px; color:#cfc8f0; background:rgba(20,14,48,.8);
+    border:1px solid rgba(255,255,255,.15); border-radius:10px; cursor:pointer; }
+  #bar button.on { color:#04222a; background:#00e5ff; border-color:#00e5ff;
+    box-shadow:0 0 14px rgba(0,229,255,.5); }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div id="hdr">
+  <h1>BIKE SHOP</h1>
+  <div class="sub">DESIGN PREVIEW · V1 · NOT IN GAME YET</div>
+</div>
+<div id="bar"><button data-i="-1" class="on">ALL</button></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const canvas=document.getElementById('stage');
+const renderer=new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile?1.5:2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.15;
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0x3a2158, 30, 130);
+const camera=new THREE.PerspectiveCamera(62, innerWidth/innerHeight, 0.1, 500);
+
+// environment reflections so metals actually shine
+const pmrem=new THREE.PMREMGenerator(renderer);
+scene.environment=pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+// desktop bloom
+let composer=null;
+if(!isMobile){
+  const [{EffectComposer},{RenderPass},{UnrealBloomPass},{OutputPass}]=await Promise.all([
+    import('three/addons/postprocessing/EffectComposer.js'),
+    import('three/addons/postprocessing/RenderPass.js'),
+    import('three/addons/postprocessing/UnrealBloomPass.js'),
+    import('three/addons/postprocessing/OutputPass.js'),
+  ]);
+  composer=new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene,camera));
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.38,0.45,0.8));
+  composer.addPass(new OutputPass());
+}
+
+// sunset sky (game palette)
+const skyMat=new THREE.ShaderMaterial({ side:THREE.BackSide, depthWrite:false, fog:false,
+  vertexShader:`varying vec3 vDir; void main(){ vDir=position;
+    gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader:`varying vec3 vDir; void main(){
+    float h=normalize(vDir).y;
+    vec3 col=mix(vec3(1.0,0.47,0.278),vec3(1.0,0.18,0.533),smoothstep(0.0,0.16,h));
+    col=mix(col,vec3(0.102,0.063,0.251),smoothstep(0.08,0.6,h));
+    if(h<0.0) col=mix(col,vec3(0.16,0.1,0.26),smoothstep(0.0,-0.3,h));
+    gl_FragColor=vec4(col,1.0); }`});
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(300,24,12), skyMat));
+const sun=new THREE.Mesh(new THREE.CircleGeometry(26,26),
+  new THREE.MeshBasicMaterial({color:0xffd76e, fog:false}));
+sun.position.set(0,16,120); scene.add(sun);
+
+scene.add(new THREE.HemisphereLight(0x5a4d9e, 0x1a1040, 0.8));
+const key=new THREE.DirectionalLight(0xffc9a0, 1.8); key.position.set(-6,12,18); scene.add(key);
+const rim=new THREE.DirectionalLight(0xff2e88, 0.9); rim.position.set(6,6,-14); scene.add(rim);
+
+// floor
+const floor=new THREE.Mesh(new THREE.CircleGeometry(120,48),
+  new THREE.MeshStandardMaterial({color:0x2c2454, roughness:.95, metalness:0}));
+floor.rotation.x=-Math.PI/2; scene.add(floor);
+
+/* ============================ SKIN DEFINITIONS ============================ */
+const TIER={
+  common:{label:'COMMON', col:'#9a92c9', hex:0x9a92c9},
+  rare:{label:'RARE', col:'#4db8ff', hex:0x4db8ff},
+  epic:{label:'EPIC', col:'#b44dff', hex:0xb44dff},
+  legendary:{label:'LEGENDARY', col:'#ffd76e', hex:0xffd76e},
+  mythic:{label:'MYTHIC', col:'#a8ecff', hex:0xa8ecff},
+};
+const SKINS=[
+ { id:'sunset', name:'SUNSET DRIFTER', tier:'common', price:400,
+   frame:{color:0xff7847, rough:.55}, accent:{color:0xff2e88, rough:.5},
+   wheels:{color:0x2a1020, emissive:0xff7847, ei:1.2}, glow:0xff7847,
+   extras(g,M){ const badge=new THREE.Mesh(new THREE.CircleGeometry(.09,12),
+     new THREE.MeshStandardMaterial({color:0xffd76e, emissive:0xffd76e, emissiveIntensity:.8}));
+     badge.position.set(.09,.62,.1); badge.rotation.y=Math.PI/2; g.add(badge); } },
+
+ { id:'night', name:'NIGHT RIDER', tier:'common', price:400,
+   frame:{color:0x14101f, rough:.35}, accent:{color:0x241b3f, rough:.4},
+   wheels:{color:0x0d0716, emissive:0x7a3cff, ei:1.0}, glow:0x7a3cff },
+
+ { id:'frost', name:'FROSTBITE', tier:'rare', price:1200,
+   frame:{color:0xdcedf7, rough:.15, metal:.5}, accent:{color:0x9fd8ef, rough:.2, metal:.4},
+   wheels:{color:0x0a2233, emissive:0x9feaff, ei:1.4}, glow:0x9feaff,
+   extras(g,M){ for(let i=0;i<3;i++){ const ice=new THREE.Mesh(new THREE.ConeGeometry(.05,.16,5),M.accent);
+     ice.position.set(0,.52,-.3+i*.3); ice.rotation.x=Math.PI; g.add(ice);} } },
+
+ { id:'toxic', name:'TOXIC', tier:'rare', price:1200,
+   frame:{color:0x1a2e14, rough:.5}, accent:{color:0x39f761, rough:.4, emissive:0x39f761, ei:.5},
+   wheels:{color:0x0c1a08, emissive:0x62ff2e, ei:1.5}, glow:0x62ff2e,
+   extras(g,M){ for(const s of [-1,1]){ const can=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.22,7),M.accent);
+     can.position.set(s*.11,.78,-.28); g.add(can);} } },
+
+ { id:'sakura', name:'SAKURA', tier:'rare', price:1500,
+   frame:{color:0xffd7e8, rough:.35}, accent:{color:0xff6ea8, rough:.4},
+   wheels:{color:0x2e0d1c, emissive:0xff9dc4, ei:1.3}, glow:0xff9dc4,
+   extras(g,M){ const c=new THREE.Group();
+     for(let i=0;i<5;i++){ const p=new THREE.Mesh(new THREE.SphereGeometry(.045,6,5),M.accent);
+       const a=i/5*Math.PI*2; p.position.set(Math.cos(a)*.07,Math.sin(a)*.07,0); c.add(p); }
+     c.position.set(0,1.2,.68); g.add(c); } },
+
+ { id:'voltage', name:'VOLTAGE', tier:'epic', price:3500,
+   frame:{color:0x0f1e3c, rough:.3, metal:.3}, accent:{color:0xffe94d, emissive:0xffe94d, ei:1.1, rough:.3},
+   wheels:{color:0x0a1430, emissive:0x2e9fff, ei:1.6}, glow:0x2e9fff,
+   extras(g,M){ const seg=(x,y,z,ry)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(.03,.05,.22),M.accent);
+     b.position.set(x,y,z); b.rotation.y=ry; g.add(b); };
+     seg(.1,.72,.25,.6); seg(.1,.66,.05,-.6); seg(.1,.6,-.15,.6); } },
+
+ { id:'inferno', name:'INFERNO', tier:'epic', price:4000,
+   frame:{color:0x1c0d0d, rough:.4}, accent:{color:0xff5a1f, emissive:0xff5a1f, ei:1.2, rough:.4},
+   wheels:{color:0x2a0d05, emissive:0xff7847, ei:1.7}, glow:0xff4a1f,
+   extras(g,M){ for(let i=0;i<3;i++){ const fin=new THREE.Mesh(new THREE.TetrahedronGeometry(.09+i*.03),M.accent);
+     fin.position.set(0,1.06+i*.02,-.05-i*.24); g.add(fin);} } },
+
+ { id:'silver', name:'STERLING', tier:'legendary', price:9000,
+   frame:{color:0xf4f6ff, rough:.12, metal:.85, envI:1.7, emissive:0xdfe4f0, ei:.14},
+   accent:{color:0xd7dcea, rough:.15, metal:.85, envI:1.6},
+   wheels:{color:0xf4f6ff, metal:.7, rough:.15, emissive:0xffffff, ei:.75}, glow:0xf4f6ff, discWheels:true,
+   extras(g,M){} },
+
+ { id:'gold', name:'MIDAS', tier:'legendary', price:18000,
+   frame:{color:0xffd76e, rough:.22, metal:.9, envI:1.5, emissive:0xffb52e, ei:.15},
+   accent:{color:0xffb52e, rough:.25, metal:.9, envI:1.4},
+   wheels:{color:0x3c2a05, metal:.8, rough:.3, emissive:0xffd76e, ei:1.2}, glow:0xffd76e,
+   extras(g,M){ for(let i=0;i<3;i++){ const spike=new THREE.Mesh(new THREE.ConeGeometry(.035,.11,4),M.frame);
+     spike.position.set(-.07+i*.07,1.24,.68); g.add(spike);} } },   // tiny crown on the stem
+
+ { id:'diamond', name:'DIAMONDBACK', tier:'mythic', price:40000, physical:true,
+   frame:{color:0xeaf6ff, rough:.05, metal:.8, envI:2.1, emissive:0xbfe8ff, ei:.22},
+   accent:{color:0xcfeaff, rough:.08, metal:.8, envI:2},
+   wheels:{color:0xeaf6ff, metal:.6, rough:.08, emissive:0xa8ecff, ei:.8}, glow:0xa8ecff, discWheels:true,
+   extras(g,M){ const gemMat=new THREE.MeshPhysicalMaterial({color:0xdff2ff, metalness:.9, roughness:.02,
+       iridescence:1, iridescenceIOR:1.8, emissive:0x8fd8ff, emissiveIntensity:.35, flatShading:true});
+     const at=(x,y,z,s)=>{ const gem=new THREE.Mesh(new THREE.OctahedronGeometry(s),gemMat);
+       gem.position.set(x,y,z); gem.rotation.y=.5; g.add(gem); };
+     at(0,1.14,-.05,.09); at(0,.7,.28,.07); at(0,.66,-.28,.07); at(0,1.26,.68,.06); } },
+];
+
+/* ============================ BIKE BUILDER ================================ */
+function makeMat(def, physical){
+  const C=physical?THREE.MeshPhysicalMaterial:THREE.MeshStandardMaterial;
+  const m=new C({ color:def.color, flatShading:true,
+    roughness:def.rough!==undefined?def.rough:.5,
+    metalness:def.metal!==undefined?def.metal:0 });
+  if(def.envI) m.envMapIntensity=def.envI;
+  if(def.emissive){ m.emissive=new THREE.Color(def.emissive); m.emissiveIntensity=def.ei||1; }
+  if(physical){ m.iridescence=.7; m.iridescenceIOR=1.6; }
+  return m;
+}
+function buildBike(skin){
+  const g=new THREE.Group();
+  const M={ frame:makeMat(skin.frame, skin.physical),
+            accent:makeMat(skin.accent, skin.physical),
+            wheel:makeMat(skin.wheels) };
+  const dark=new THREE.MeshStandardMaterial({color:0x14101f, roughness:.6, flatShading:true});
+  const wheelGeo=skin.discWheels
+    ? new THREE.CylinderGeometry(.48,.48,.1,18)
+    : new THREE.CylinderGeometry(.48,.48,.14,10);
+  wheelGeo.rotateZ(Math.PI/2);
+  for(const z of [.82,-.82]){
+    const w=new THREE.Mesh(wheelGeo,M.wheel); w.position.set(0,.48,z); g.add(w);
+    const hub=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,.18,8),M.accent);
+    hub.rotation.z=Math.PI/2; hub.position.set(0,.48,z); g.add(hub);
+  }
+  const box=(w,h,d,x,y,z,mat,rx=0)=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    m.position.set(x,y,z); m.rotation.x=rx; g.add(m); return m; };
+  box(.14,.14,1.7, 0,.62,0, M.frame);                 // down tube
+  box(.12,.12,1.15, 0,1.04,.03, M.frame, .1);         // top tube
+  box(.12,.55,.12, 0,.85,.72, M.frame, .25);          // fork
+  box(.12,.5,.12, 0,.85,-.55, M.frame, -.2);          // seat post
+  box(.34,.07,.46, 0,1.14,-.6, dark);                 // seat
+  box(.6,.08,.08, 0,1.16,.68, M.accent);              // handlebar
+  box(.09,.09,.1, .3,1.16,.68, dark);                 // grips
+  box(.09,.09,.1,-.3,1.16,.68, dark);
+  const cr=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.06,10),M.accent);
+  cr.rotation.z=Math.PI/2; cr.position.set(0,.5,-.12); g.add(cr);   // chainring
+  box(.3,.05,.05, 0,.5,-.12, dark);                   // crank axle
+  box(.1,.04,.16, .18,.5,-.12, dark);                 // pedals
+  box(.1,.04,.16,-.18,.5,-.12, dark);
+  if(skin.extras) skin.extras(g,M);
+  return g;
+}
+
+/* ============================ GALLERY LAYOUT ============================== */
+const items=[];
+// premium bikes front and center
+const ORDER=['inferno','silver','diamond','gold','voltage',
+             'sunset','night','frost','toxic','sakura'];
+SKINS.forEach((skin)=>{
+  const i=ORDER.indexOf(skin.id);
+  const col=i%5, row=Math.floor(i/5);
+  const x=(col-2)*5.2+(row?2.6:0), z=row*7.5;   // stagger back row between front pedestals
+  const base=new THREE.Group(); base.position.set(x,0,z);
+  const t=TIER[skin.tier];
+  // pedestal
+  const pedestal=new THREE.Mesh(new THREE.CylinderGeometry(1.7,2.0,.5,24),
+    new THREE.MeshStandardMaterial({color:0x1c1638, roughness:.8}));
+  pedestal.position.y=.25; base.add(pedestal);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(1.75,.05,8,40),
+    new THREE.MeshStandardMaterial({color:0x111,emissive:t.hex,emissiveIntensity:.75}));
+  ring.rotation.x=Math.PI/2; ring.position.y=.53; base.add(ring);
+  const glowRing=new THREE.Mesh(new THREE.TorusGeometry(1.1,.03,8,32),
+    new THREE.MeshStandardMaterial({color:0x111,emissive:skin.glow,emissiveIntensity:.9}));
+  glowRing.rotation.x=Math.PI/2; glowRing.position.y=.56; base.add(glowRing);
+  const spin=new THREE.Group(); spin.position.y=.53;
+  spin.add(buildBike(skin)); base.add(spin);
+  scene.add(base);
+  items.push({skin, base, spin, anchor:new THREE.Vector3(x, row?3.5:2.55, z)});
+});
+
+/* ============================ LABELS & UI ================================= */
+const labels=items.map(({skin})=>{
+  const t=TIER[skin.tier];
+  const el=document.createElement('div'); el.className='lbl';
+  el.innerHTML='<div class="n"></div><div class="t" style="color:'+t.col+'">'+t.label+
+    '</div><div class="p">◈ '+skin.price.toLocaleString()+'</div>';
+  el.querySelector('.n').textContent=skin.name;
+  document.body.appendChild(el); return el;
+});
+const bar=document.getElementById('bar');
+SKINS.forEach((s,i)=>{
+  const b=document.createElement('button');
+  b.textContent=s.name; b.dataset.i=i;
+  b.style.color=TIER[s.tier].col;
+  bar.appendChild(b);
+});
+let focusI=-1, orbitA=0;
+bar.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  focusI=+b.dataset.i;
+  bar.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+});
+// click a bike to focus it
+const ray=new THREE.Raycaster(), ptr=new THREE.Vector2();
+addEventListener('pointerdown',e=>{
+  if(e.target.closest('#bar')) return;
+  ptr.set(e.clientX/innerWidth*2-1, -(e.clientY/innerHeight)*2+1);
+  ray.setFromCamera(ptr,camera);
+  for(let i=0;i<items.length;i++){
+    if(ray.intersectObject(items[i].base,true).length){
+      focusI=i;
+      bar.querySelectorAll('button').forEach(x=>x.classList.toggle('on',+x.dataset.i===i));
+      return;
+    }
+  }
+});
+
+/* ============================ LOOP ======================================== */
+const camPos=new THREE.Vector3(0,7.5,-16), camTgt=new THREE.Vector3(0,0.9,5);
+let last=performance.now();
+function frame(){
+  const now=performance.now(), dt=Math.min((now-last)/1000,.05); last=now;
+  for(const it of items) it.spin.rotation.y+=dt*.7;
+  let wantPos, wantTgt;
+  if(focusI<0){
+    wantPos=new THREE.Vector3(0,7.5,-16); wantTgt=new THREE.Vector3(0,0.9,5);
+  } else {
+    orbitA+=dt*.4;
+    const a=items[focusI].base.position;
+    wantPos=new THREE.Vector3(a.x+Math.sin(orbitA)*4.4, 2.6, a.z+Math.cos(orbitA)*-4.4);
+    wantTgt=new THREE.Vector3(a.x, 1.3, a.z);
+  }
+  camPos.lerp(wantPos, Math.min(1,dt*3.5));
+  camTgt.lerp(wantTgt, Math.min(1,dt*3.5));
+  camera.position.copy(camPos); camera.lookAt(camTgt);
+  // project labels
+  const v=new THREE.Vector3();
+  items.forEach((it,i)=>{
+    v.copy(it.anchor).project(camera);
+    const el=labels[i];
+    const onScreen=v.z<1 && Math.abs(v.x)<1.1;
+    const dim=focusI>=0 && focusI!==i;
+    el.style.display=onScreen&&!dim?'block':'none';
+    el.style.left=((v.x*.5+.5)*innerWidth)+'px';
+    el.style.top=((-v.y*.5+.5)*innerHeight)+'px';
+  });
+  if(composer) composer.render(); else renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+  if(composer) composer.setSize(innerWidth,innerHeight);
+});
+window.SHOP={ focus(i){ focusI=i; }, items };
+</script>
+</body>
+</html>
