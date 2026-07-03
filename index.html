@@ -1779,11 +1779,14 @@ function updateOverseerAttacks(dt){
       if(dz<-6) resolveOverseerHit(a,'snare');
       continue;
     }
+    const edgeBreak=a.type==='redEyeSweep' && dz<0 && Math.abs(Math.abs(game.x-a.x)-a.width/2)<1.15;
+    if(edgeBreak){ counterNearestOverseerAttack('EYE BREAK'); continue; }
     if(inWindow && inLane){
       if(a.type==='collapsePulse' && !game.airborne) resolveOverseerHit(a,'collapse');
       else if(a.type==='redEyeSweep' || a.type==='mirrorGate') resolveOverseerHit(a,'strike');
       else if(a.type==='falseGift' && game.power?.type==='green') resolveOverseerHit(a,'strike');
     }
+    if(a.type==='falseGift' && dz<-4 && !a.hit){ counterNearestOverseerAttack('REFUSED'); continue; }
     if(dz<-10) resolveOverseerDodge(a);
   }
   overseerAttacks=overseerAttacks.filter(a=>game.z-a.z<80);
