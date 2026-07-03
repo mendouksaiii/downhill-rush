@@ -232,8 +232,8 @@ function buildBike(skin){
 /* ============================ RIDER BUILDER =============================== */
 // Standing rig ~2.1 units tall. Helpers shared by all 15 characters.
 function riderRig(g, o){
-  // o: skin, top, pants, shoes, eyes, shirt?, legTop?, legBot?, headScale?, bulk?
-  const S={ skin:mat(o.skin), top:mat(o.top), pants:mat(o.pants), shoes:mat(o.shoes,{r:.35}) };
+  // o: skin, top, pants, shoes, eyes, shirt?, legTop?, legBot?, headScale?, bulk?, crop?, topMat?
+  const S={ skin:mat(o.skin), top:o.topMat||mat(o.top), pants:mat(o.pants), shoes:mat(o.shoes,{r:.35}) };
   const bulk=o.bulk||1, hs=o.headScale||1;
   const box=(w,h,d,x,y,z,m,rx=0,ry=0,rz=0)=>{
     const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
@@ -243,7 +243,13 @@ function riderRig(g, o){
     box(.15,.5,.15, s*.12,.28,0, o.legBot?mat(o.legBot):S.pants);
     box(.17,.12,.32, s*.12,.06,.05, S.shoes);
   }
-  const torso=box(.52*bulk,.64,.3*bulk, 0,1.34,0, S.top);
+  let torso;
+  if(o.crop){                                    // cropped top: bare midriff strip
+    torso=box(.5*bulk,.46,.29*bulk, 0,1.44,0, S.top);
+    box(.44,.18,.25, 0,1.12,0, S.skin);
+  } else {
+    torso=box(.52*bulk,.64,.3*bulk, 0,1.34,0, S.top);
+  }
   if(o.shirt) box(.2,.52,.05, 0,1.32,.16*bulk, mat(o.shirt));
   for(const s of [-1,1]){
     box(.14*bulk,.56,.14*bulk, s*(.34*bulk),1.3,0, S.top, 0,0,-s*.1);
@@ -275,13 +281,20 @@ const RIDERS=[
      R.box(.56,.2,.12, 0,1.62,-.18, mat(0x23262e,{r:.6})); } },   // hood bundle
 
  { id:'cherry', name:'CHERRY', tier:'common', price:500, glow:0xff2e56,
-   build(g){ const R=riderRig(g,{skin:0xe8b88a, top:0x1b1b22, pants:0x24242c, shoes:0xf2f2f2,
-     eyes:0x3a2620});
+   build(g){ const R=riderRig(g,{skin:0xe8b88a, top:0x1b1b22, pants:0xe8b88a, shoes:0xf2f2f2,
+     eyes:0x3a2620, crop:true, legTop:0xe8b88a, legBot:0x1b1b22});
      R.hairCap(0x15121a,1.02); R.hairBack(0x15121a,.35);
-     for(const s of [-1,1]){ const br=R.box(.09,.85,.09, s*.2,R.headY-.42,.12, mat(0x15121a,{r:.75}),0,0,s*.06);
+     R.skirt(0xc2233a,.42);                                          // cherry-red pleated skirt
+     const braids=[];
+     for(const s of [-1,1]){
+       const br=R.box(.09,.85,.09, s*.2,R.headY-.42,.12, mat(0x15121a,{r:.75}),0,0,s*.06);
+       braids.push(br);
        const tip=new THREE.Mesh(new THREE.ConeGeometry(.05,.12,5),mat(0x15121a,{r:.75}));
-       tip.position.set(s*.24,R.headY-.9,.14); tip.rotation.x=Math.PI; g.add(tip); }
+       tip.position.set(s*.24,R.headY-.9,.14); tip.rotation.x=Math.PI; g.add(tip);
+       R.box(.07,.05,.05, s*.2,R.headY-.02,.13, mat(0xc2233a));      // red bows at braid tops
+     }
      for(const s of [-1,1]) R.box(.18,.07,.33, s*.12,.1,.06, mat(0x111111));  // panda shoe panels
+     return t=>{ braids.forEach((b,i)=>{ b.rotation.x=Math.sin(t*1.8+i*2)*.12; }); };
    } },
 
  { id:'princess', name:'PRINCESS', tier:'common', price:500, glow:0xff9dc4,
@@ -307,8 +320,8 @@ const RIDERS=[
    } },
 
  { id:'titan', name:'TITAN', tier:'rare', price:1500, glow:0x5ce8d8,
-   build(g){ const R=riderRig(g,{skin:0xd9a878, top:0x17151b, pants:0x111116, shoes:0x0c0b0e,
-     eyes:0x5ce8d8, shirt:0xd9cfb8});
+   build(g){ const R=riderRig(g,{skin:0xd9a878, top:0x9a7448, pants:0x4c4a3a, shoes:0x2e2018,
+     eyes:0x5ce8d8, shirt:0xe8dcc2});
      R.hairCap(0x2e2118,1.05);
      for(let i=0;i<5;i++){ const s=new THREE.Mesh(new THREE.ConeGeometry(.05,.2,4),mat(0x2e2118,{r:.75}));
        s.position.set(-.16+i*.08,R.headY+.26,-.02+((i%2)*.08));
@@ -339,11 +352,12 @@ const RIDERS=[
    } },
 
  { id:'dave', name:'DAVE', tier:'epic', price:4000, glow:0xf2f2f2,
-   build(g){ const R=riderRig(g,{skin:0x7a4a2c, top:0x141416, pants:0x141416, shoes:0x0d0d0f,
+   build(g){ const R=riderRig(g,{skin:0x7a4a2c, top:0x1d2a4a, pants:0x1d2a4a, shoes:0x0d0d0f,
      eyes:0x2a2018, shirt:0xf2f2f2});
      const afro=new THREE.Mesh(new THREE.IcosahedronGeometry(.34,0),mat(0x0f0d0d,{r:.85}));
      afro.position.set(0,R.headY+.16,-.02); g.add(afro);
-     R.box(.07,.36,.04, 0,1.4,.19, mat(0x0d0d0f));                   // tie
+     R.box(.07,.36,.04, 0,1.4,.19, mat(0x10141c));                   // tie
+     R.box(.04,.03,.045, 0,1.38,.2, mat(0xffd76e,{m:.8,r:.3,envI:1.4})); // gold tie pin
      R.box(.1,.05,.04, .17,1.5,.17, mat(0xf2f2f2));                  // pocket square
    } },
 
@@ -364,9 +378,11 @@ const RIDERS=[
      R.box(.14,.09,.06, 0,R.headY-.13,.19, mat(0xd8b96e,{r:.8}));    // goatee
      R.box(.5,.06,.32, 0,1.06,0, mat(0x4a3524));                     // belt
      R.box(.52,.04,.3, 0,1.63,0, mat(0xb89a52));                     // gold trim collar
-     for(let i=0;i<3;i++){ const strip=R.box(.16,.85-.15*i,.05, -.2+i*.2,1.15-(0.85-.15*i)/2+.35,-.22,
-       mat(0x4a3a2a,{r:.85}), .1); }                                 // tattered cape strips
+     const cape=[];
+     for(let i=0;i<3;i++){ cape.push(R.box(.16,.85-.15*i,.05, -.2+i*.2,1.15-(0.85-.15*i)/2+.35,-.22,
+       mat(0x4a3a2a,{r:.85}), .1)); }                                // tattered cape strips
      for(const s of [-1,1]) R.box(.18,.3,.2, s*.12,.2,.03, mat(0x4a3524,{r:.7}));  // tall boots
+     return t=>{ cape.forEach((c,i)=>{ c.rotation.x=.1+Math.sin(t*2.2+i*.8)*.08; }); };
    } },
 
  { id:'ronin', name:'RONIN', tier:'epic', price:5000, glow:0xff2e6e,
@@ -420,6 +436,7 @@ const RIDERS=[
      const core=new THREE.Mesh(new THREE.CircleGeometry(.09,8),mat(0x330000,{e:0xff2222,ei:1.8}));
      core.position.set(0,1.42,.225); g.add(core);                    // chest reactor
      R.box(.76,.06,.44, 0,1.06,0, mat(0x232329,{r:.4}));             // armor waist plate
+     return t=>{ core.material.emissiveIntensity=1.4+Math.sin(t*3.2)*.7; };
    } },
 
  { id:'himars', name:'HIMARS', tier:'legendary', price:12000, glow:0x3b6fd4,
@@ -438,19 +455,42 @@ const RIDERS=[
      nasa.position.set(.15,1.4,.165); g.add(nasa);                   // NASA patch
      const apollo=new THREE.Mesh(new THREE.CircleGeometry(.07,10),mat(0xf2f2f2));
      apollo.position.set(-.15,1.4,.165); g.add(apollo);              // Apollo patch
+     return t=>{ g.rotation.z=Math.sin(t*3.1)*.07; };                // penguin waddle
    } },
 
  { id:'mendo', name:'MENDO', tier:'mythic', price:25000, glow:0x9d4dff,
-   build(g){ const R=riderRig(g,{skin:0x5e3a22, top:0xf2eef8, pants:0x8a5fd4, shoes:0xf2eef8,
-     eyes:0x2a2018, shirt:0xe8dcc2});
+   build(g){
+     const jacket=new THREE.MeshPhysicalMaterial({color:0xf6f2ff, roughness:.22, metalness:.1,
+       clearcoat:1, clearcoatRoughness:.15, iridescence:.55, iridescenceIOR:1.4,
+       envMapIntensity:1.6, flatShading:true});                      // pearlescent cyber-luxury
+     const R=riderRig(g,{skin:0x5e3a22, top:0xf2eef8, topMat:jacket, pants:0x8a5fd4, shoes:0xf2eef8,
+       eyes:0x2a2018, shirt:0xe8dcc2});
      R.hairCap(0x181410,.95);
      R.box(.34,.09,.06, 0,R.headY+.15,.19, mat(0xf2eef8,{r:.3}));    // goggles band up on forehead
-     R.box(.3,.06,.05, 0,R.headY+.15,.215, mat(0x8a5fd4,{e:0x8a5fd4,ei:.5})); // goggle lens strip
+     const lens=R.box(.3,.06,.05, 0,R.headY+.15,.215, mat(0x8a5fd4,{e:0x8a5fd4,ei:.5})); // lens strip
      for(const s of [-1,1]){ const ear=new THREE.Mesh(new THREE.SphereGeometry(.03,6,5),
-       mat(0xffd76e,{m:.8,r:.25,envI:1.4})); ear.position.set(s*.22,R.headY-.04,.04); g.add(ear); } // gold earrings
+       mat(0xffd76e,{m:.8,r:.25,envI:1.4})); ear.position.set(s*.22,R.headY-.04,.04); g.add(ear); }
      R.box(.2,.12,.06, 0,1.66,.14, mat(0xe8dcc2,{r:.7}));            // turtleneck collar
      R.box(.12,.1,.04, .28,1.45,.16, mat(0xffffff));                 // 未来 shoulder patch
-     R.box(.5,.05,.32, 0,1.06,0, mat(0x6a4aa8,{r:.5}));              // strap belt
+     R.box(.5,.05,.32, 0,1.06,0, mat(0x6a4aa8,{e:0x9d4dff,ei:.35,r:.5})); // glowing strap belt
+     const chain=new THREE.Mesh(new THREE.TorusGeometry(.12,.018,6,14),
+       mat(0xffd76e,{m:.85,r:.25,envI:1.5}));
+     chain.position.set(0,1.6,.12); chain.rotation.x=1.25; g.add(chain);   // gold chain
+     const orb=new THREE.Group(); orb.position.y=1.35; g.add(orb);   // orbiting gems
+     const gems=[];
+     for(let i=0;i<3;i++){ const gm=new THREE.Mesh(new THREE.OctahedronGeometry(.05),
+       mat(0x2a1050,{e:0x9d4dff,ei:1.4}));
+       const a=i/3*Math.PI*2; gm.position.set(Math.cos(a)*.55,0,Math.sin(a)*.55);
+       orb.add(gm); gems.push(gm); }
+     const beam=new THREE.Mesh(new THREE.ConeGeometry(.85,3.2,12,1,true),
+       new THREE.MeshBasicMaterial({color:0x9d4dff, transparent:true, opacity:.07,
+         blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false}));
+     beam.position.y=2.2; g.add(beam);                               // mythic light shaft
+     return t=>{
+       orb.rotation.y=t*.8;
+       gems.forEach((gm,i)=>{ gm.position.y=Math.sin(t*2+i*2.1)*.16; gm.rotation.y=t*2; });
+       lens.material.emissiveIntensity=.5+Math.sin(t*2.4)*.35;
+     };
    } },
 ];
 
@@ -479,10 +519,11 @@ function makeGallery(defs, order, root, buildFn, cols){
     pedestal(base, TIER[skin.tier].hex, skin.glow);
     const spin=new THREE.Group(); spin.position.y=.53;
     const model=new THREE.Group();
-    buildFn(skin, model);
+    const anim=buildFn(skin, model);
     spin.add(model); base.add(spin);
     root.add(base);
-    items.push({skin, base, spin, anchor:new THREE.Vector3(x, row%2?3.6:2.75, z)});
+    items.push({skin, base, spin, model, anim, phase:Math.random()*6.28,
+      anchor:new THREE.Vector3(x, row%2?3.6:2.75, z)});
   });
   return items;
 }
@@ -567,7 +608,15 @@ const camPos=new THREE.Vector3(0,9,-15.5), camTgt=new THREE.Vector3(0,.6,7);
 let last=performance.now();
 function frame(){
   const now=performance.now(), dt=Math.min((now-last)/1000,.05); last=now;
-  for(const it of activeItems()) it.spin.rotation.y+=dt*.7;
+  const t=now/1000;
+  for(const it of activeItems()){
+    it.spin.rotation.y+=dt*.7;
+    if(mode==='riders'){                      // idle: breathe-bob and gentle sway
+      it.model.position.y=Math.sin(t*1.7+it.phase)*.04;
+      it.model.rotation.z=Math.sin(t*1.3+it.phase)*.03;
+    }
+    if(it.anim) it.anim(t);
+  }
   let wantPos, wantTgt;
   if(focusI<0){
     const o=overviewFor(mode); wantPos=o.pos; wantTgt=o.tgt;
