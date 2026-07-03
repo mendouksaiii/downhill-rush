@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 
 export const TIER={
+  starter:{label:'STARTER', col:'#7de08a', hex:0x7de08a},
   common:{label:'COMMON', col:'#9a92c9', hex:0x9a92c9},
   rare:{label:'RARE', col:'#4db8ff', hex:0x4db8ff},
   epic:{label:'EPIC', col:'#b44dff', hex:0xb44dff},
@@ -169,7 +170,14 @@ export function riderRig(g, o){
 }
 
 export const RIDERS=[
- { id:'berna', name:'BERNA', tier:'common', price:500, glow:0x35d6ff,
+ { id:'rookie', name:'ROOKIE', tier:'starter', price:0, glow:0x00e5ff,
+   flavor:'Where every legend starts.',
+   build(g){ const R=riderRig(g,{skin:0x1c1c26, top:0x14141e, pants:0x111119, shoes:0x0b0b10,
+     eyes:0x00e5ff});
+     R.hairCap(0x0f0f16,1.0);
+     R.box(.12,.3,.04, 0,1.34,.155, mat(0x062930,{e:0x00e5ff,ei:1.0})); } },  // neon chest stripe
+
+ { id:'berna', name:'BERNA', tier:'legendary', price:8000, glow:0x35d6ff,
    flavor:'Eyes bigger than the mountain.',
    build(g){ const R=riderRig(g,{skin:0xead0b2, top:0x6b6f52, pants:0x3a3d4a, shoes:0x23262e,
      eyes:0x35d6ff, shirt:0x8a8f9c, headScale:1.25});
@@ -178,7 +186,7 @@ export const RIDERS=[
        t.position.set(-.12+i*.08,R.headY+.3,.02+((i%2)*.06)); t.rotation.z=(i-1.5)*.3; g.add(t); }
      R.box(.56,.2,.12, 0,1.62,-.18, mat(0x23262e,{r:.6})); } },
 
- { id:'cherry', name:'CHERRY', tier:'common', price:500, glow:0xff2e56,
+ { id:'cherry', name:'CHERRY', tier:'epic', price:3000, glow:0xff2e56,
    flavor:'Sweet. Fast. Slightly dangerous.',
    build(g){ const R=riderRig(g,{skin:0xe8b88a, top:0x1b1b22, pants:0xe8b88a, shoes:0xf2f2f2,
      eyes:0x3a2620, crop:true, legTop:0xe8b88a, legBot:0x1b1b22});
@@ -196,7 +204,7 @@ export const RIDERS=[
      return t=>{ braids.forEach((b,i)=>{ b.rotation.x=Math.sin(t*1.8+i*2)*.12; }); };
    } },
 
- { id:'princess', name:'PRINCESS', tier:'common', price:500, glow:0xff9dc4,
+ { id:'princess', name:'PRINCESS', tier:'epic', price:3000, glow:0xff9dc4,
    flavor:'Royalty takes no shortcuts.',
    build(g){ const R=riderRig(g,{skin:0xb5773f, top:0xf7c6d8, pants:0x1c2440, shoes:0x1c1a18,
      eyes:0x3a2620, legTop:0xb5773f, legBot:0x1c2440});
@@ -231,7 +239,7 @@ export const RIDERS=[
      for(const s of [-1,1]) R.box(.2,.16,.36, s*.12,.1,.05, mat(0x0c0b0e,{r:.4}));
    } },
 
- { id:'bella', name:'BELLA', tier:'rare', price:1800, glow:0xffc76e,
+ { id:'bella', name:'BELLA', tier:'epic', price:3000, glow:0xffc76e,
    flavor:'Paris was too slow for her.',
    build(g){ const R=riderRig(g,{skin:0xf2cba8, top:0xb3a48c, pants:0xf2ede6, shoes:0xf2ede6,
      eyes:0xd8a03c, legTop:0xf2cba8, legBot:0xf2ede6});
@@ -243,7 +251,7 @@ export const RIDERS=[
      R.box(.1,.06,.04, 0,1.6,.17, mat(0x8a7a5c));
    } },
 
- { id:'stephyberry', name:'STEPHYBERRY', tier:'rare', price:1800, glow:0xffb3c8,
+ { id:'stephyberry', name:'STEPHYBERRY', tier:'legendary', price:8000, glow:0xffb3c8,
    flavor:'Crowned in strawberries and frost.',
    build(g){ const R=riderRig(g,{skin:0xf6d7c2, top:0x1d1a20, pants:0xf2e2d8, shoes:0xffffff,
      eyes:0x8fa3c8, legTop:0xf6d7c2, legBot:0xffffff});

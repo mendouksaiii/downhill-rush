@@ -151,10 +151,11 @@ const bikeItems=makeGallery(BIKES,
   ['inferno','silver','diamond','gold','voltage','sunset','night','frost','toxic','sakura'],
   bikesRoot, (s,m)=>{ m.add(buildBike(s)); }, 5);
 const riderItems=makeGallery(RIDERS,
-  ['ronin','himars','mendo','spike','raiden',
-   'dave','dylan','ik','titan','begone',
-   'berna','cherry','princess','bella','stephyberry'],
-  ridersRoot, (s,m)=>s.build(m), 5);
+  ['mendo','spike','himars','ronin',
+   'raiden','berna','stephyberry','dave',
+   'dylan','ik','cherry','princess',
+   'bella','titan','begone','rookie'],
+  ridersRoot, (s,m)=>s.build(m), 4);
 
 /* ============================ LABELS & UI ================================= */
 const allLabels=[];
@@ -163,7 +164,7 @@ function makeLabels(items){
     const t=TIER[skin.tier];
     const el=document.createElement('div'); el.className='lbl';
     el.innerHTML='<div class="n"></div><div class="t" style="color:'+t.col+'">'+t.label+
-      '</div><div class="p">◈ '+skin.price.toLocaleString()+'</div>';
+      '</div><div class="p">'+(skin.price?'◈ '+skin.price.toLocaleString():'FREE')+'</div>';
     el.querySelector('.n').textContent=skin.name;
     document.body.appendChild(el); allLabels.push(el); return el;
   });
@@ -177,7 +178,7 @@ function activeLabels(){ return mode==='bikes'?bikeLabels:riderLabels; }
 function overviewFor(m){
   return m==='bikes'
     ? {pos:new THREE.Vector3(0,7.5,-15), tgt:new THREE.Vector3(0,.9,4.5)}
-    : {pos:new THREE.Vector3(0,9,-15.5), tgt:new THREE.Vector3(0,.6,7)};
+    : {pos:new THREE.Vector3(0,11.5,-18.5), tgt:new THREE.Vector3(0,.3,9.5)};
 }
 function rebuildBar(){
   bar.innerHTML='';
@@ -224,7 +225,7 @@ addEventListener('pointerdown',e=>{
 setMode('riders');
 
 /* ============================ LOOP ======================================== */
-const camPos=new THREE.Vector3(0,9,-15.5), camTgt=new THREE.Vector3(0,.6,7);
+const camPos=new THREE.Vector3(0,11.5,-18.5), camTgt=new THREE.Vector3(0,.3,9.5);
 let last=performance.now();
 function frame(){
   const now=performance.now(), dt=Math.min((now-last)/1000,.05); last=now;

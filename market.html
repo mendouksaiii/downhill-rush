@@ -174,11 +174,15 @@ let model=null, anim=null, ringPulse=0;
 /* ============================ SHOP STATE (demo) =========================== */
 const state={
   coins:15000, coinsShown:15000,
-  owned:{ riders:new Set(['berna']), bikes:new Set(['sunset']) },
-  equipped:{ riders:'berna', bikes:'sunset' },
+  owned:{ riders:new Set(['rookie']), bikes:new Set(['sunset']) },
+  equipped:{ riders:'rookie', bikes:'sunset' },
   tab:'riders', sel:0,
 };
-const catalog=()=>state.tab==='riders'?RIDERS:BIKES;
+const SORTED={
+  riders:[...RIDERS].sort((a,b)=>a.price-b.price),
+  bikes:[...BIKES].sort((a,b)=>a.price-b.price),
+};
+const catalog=()=>state.tab==='riders'?SORTED.riders:SORTED.bikes;
 const selSkin=()=>catalog()[state.sel];
 const ownedSet=()=>state.owned[state.tab];
 
@@ -231,6 +235,7 @@ function refreshInfo(){
   actionBtn.className='';
   if(st==='equipped'){ actionBtn.textContent='EQUIPPED ✓'; actionBtn.classList.add('equipped'); }
   else if(st==='owned'){ actionBtn.textContent='EQUIP'; actionBtn.classList.add('own'); }
+  else if(skin.price===0){ actionBtn.textContent='GET · FREE'; }
   else if(state.coins>=skin.price){ actionBtn.textContent='BUY · '+fmtC(skin.price); }
   else { actionBtn.textContent='NEED '+fmtC(skin.price-state.coins)+' MORE'; actionBtn.classList.add('poor'); }
   rail.querySelectorAll('.card').forEach(c=>c.classList.toggle('sel',+c.dataset.i===state.sel));
