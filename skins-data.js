@@ -380,7 +380,7 @@ export const RIDERS=[
      return t=>{ cape.forEach((c,i)=>{ c.rotation.x=.1+Math.sin(t*2.2+i*.8)*.08; }); };
    } },
 
- { id:'ronin', name:'RONIN', tier:'epic', price:5000, glow:0xff2e6e,
+ { id:'ronin', name:'RONIN', tier:'legendary', price:15000, glow:0xff2e6e,
    flavor:'One blade. No master.',
    build(g){ const R=riderRig(g,{skin:0xd9a878, top:0xc4356e, pants:0x1a1a20, shoes:0x111114,
      eyes:0xdd2233, shirt:0x17151b});
@@ -492,7 +492,7 @@ export const RIDERS=[
      };
    } },
 
- { id:'miji', name:'MIJI', tier:'legendary', price:9000, glow:0xff2a2a,
+ { id:'miji', name:'MIJI', tier:'epic', price:5000, glow:0xff2a2a,
    flavor:'The storm wears a hood.',
    build(g){ const R=riderRig(g,{skin:0x3a2a24, top:0x121016, pants:0x0e0d12, shoes:0x0a0a0e,
      eyes:0xff2a2a});
