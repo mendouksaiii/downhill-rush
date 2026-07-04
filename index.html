@@ -556,6 +556,9 @@ function updateOverseerManifestation(dt){
 const terrainMat=new THREE.MeshStandardMaterial({vertexColors:true, flatShading:true, roughness:.95, metalness:0});
 const NIGHT_TINT=new THREE.Color(0x8fa3e0);
 const crystalMat=new THREE.MeshStandardMaterial({color:0x0a2b33, emissive:0x00e5ff, emissiveIntensity:0.85, flatShading:true});
+// map-edge demarcation: tall white pylons along the hard boundary (|x| = TRACK_HARD)
+const edgePostGeo=new THREE.BoxGeometry(0.22,7,0.22); edgePostGeo.translate(0,3.2,0);
+const edgePostMat=new THREE.MeshStandardMaterial({color:0xf4f6ff, emissive:0xdfe8ff, emissiveIntensity:0.55, flatShading:true});
 const treeMat=new THREE.MeshStandardMaterial({color:0x17112b, flatShading:true, roughness:.9});
 const rockMat=new THREE.MeshStandardMaterial({color:0x241b3f, flatShading:true, roughness:.95});
 const logMat=new THREE.MeshStandardMaterial({color:0x2c2038, flatShading:true, roughness:.9});
@@ -1020,6 +1023,9 @@ function genChunk(ci){
     const side=rng()<0.5?-1:1;
     deco.push({x:side*(13.5+rng()*30), z:z0+rng()*CHUNK, s:1.1+rng()*1.9, rot:rng()*Math.PI*2});
   }
+  const edgePosts=[];
+  for(let z=z0+6;z<z0+CHUNK;z+=12)
+    for(const side of [-1,1]) edgePosts.push({x:side*TRACK_HARD, z, s:1, rot:0});
   const eBoulders=[], shards=[];
   for(let i=0;i<5;i++){
     const side=rng()<0.5?-1:1;
@@ -1055,6 +1061,7 @@ function genChunk(ci){
   makeInst(logGeo,logMat,logItems,  o=>terrainH(o.x,o.z)+0.4*o.s);
   makeInst(rockGeo,rockMat,eBoulders, o=>terrainH(o.x,o.z)+0.3*o.s);
   makeInst(puGeo,crystalMat,shards, o=>terrainH(o.x,o.z)+0.4*o.s);
+  makeInst(edgePostGeo,edgePostMat,edgePosts, o=>terrainH(o.x,o.z)-0.3);
 
   for(const r of ramps){
     const rm=buildRampMesh(r); rm.castShadow=rm.receiveShadow=true;
