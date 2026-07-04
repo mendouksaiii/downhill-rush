@@ -175,7 +175,7 @@
     <div class="lbHead">🏔 LONGEST RUNS · LIVE<span id="lbLive"></span></div>
     <ol id="lbList"><li class="lbNote">loading…</li></ol>
   </div>
-  <div class="ctl">← → steer · SPACE jump/pedal · A land ring · screen tap lands on mobile · ↑ ↓ flips</div>
+  <div class="ctl">← → steer · ↑ accelerate · SPACE jump/pedal · A land ring · ↓ / W/S flips</div>
 </div>
 <div id="death" class="overlay hidden">
   <h2>WRECKED</h2>
@@ -1666,14 +1666,14 @@ function doJump(){
 }
 
 /* ============================== INPUT ================================== */
-// SPACE = pedal/jump · A = desktop ring timing · touch tap = mobile ring timing
-// steer with drag or ←→ · tricks in the air with vertical drag or ↑↓ (W/S)
+// SPACE = pedal/jump · ArrowUp = pedal · A = desktop ring timing · touch tap = mobile ring timing
+// steer with drag or ←→ · tricks in the air with vertical drag or ↓ (W/S)
 const keys={};
 let steerPointer=null, touchSteer=0, touchFlip=0, touchStartX=0, touchStartY=0;
 let mouseX=0.5, lastMouseT=-9999;
 const activePtrs=new Set();
 let pressT=0, pressX=0, pressY=0, pressMoved=false, pressConsumed=false;
-function pedalHeld(){ return keys.Space===true || activePtrs.size>0; }
+function pedalHeld(){ return keys.Space===true || keys.ArrowUp===true || activePtrs.size>0; }
 addEventListener('keydown',e=>{
   if(state==='title'){
     if(e.code==='Enter'){ startRun(); return; }
@@ -1739,10 +1739,10 @@ function readSteer(){
   return 0;
 }
 function readFlip(){
-  // pull back (S/↓/drag down) = backflip, push (W/↑/drag up) = frontflip
+  // pull back (S/↓/drag down) = backflip, push (W/drag up) = frontflip
   let k=0;
   if(keys.KeyS||keys.ArrowDown) k+=1;
-  if(keys.KeyW||keys.ArrowUp) k-=1;
+  if(keys.KeyW) k-=1;
   if(k!==0) return k;
   if(steerPointer!==null) return touchFlip;
   return 0;

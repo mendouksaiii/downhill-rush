@@ -50,6 +50,14 @@ test('ground jumps only come from keyboard Space, not pointer taps', () => {
   assert.doesNotMatch(pointerup, /doJump\(\)/);
 });
 
+test('ArrowUp accelerates without feeding air trick input', () => {
+  const pedal = functionBody('pedalHeld');
+  const flip = functionBody('readFlip');
+
+  assert.match(pedal, /keys\.ArrowUp/);
+  assert.doesNotMatch(flip, /keys\.ArrowUp/);
+});
+
 test('ring timing uses mobile touch taps but not desktop mouse clicks', () => {
   const pointerdown = listenerBody('pointerdown');
 
