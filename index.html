@@ -219,7 +219,7 @@ const SPEED_RAMP = 0.30;          // passive accel per second
 const MAX_SPEED = 88;
 const PERFECT_WIN = 0.08, GOOD_WIN = 0.20, FAULT_WIN = 0.40;
 const POWER_DUR = 6;              // seconds a powerup effect lasts
-const MIN_AIR_FOR_TAP = 0.45;     // hops shorter than this don't engage timing
+const MIN_AIR_FOR_TAP = 0.8;      // only real jumps engage the landing ring — rollers stay free
 const JUMP_VY = 7.5;              // base jump impulse (grows slightly with speed)
 const PEDAL_ACC = 9;              // hold-to-pedal acceleration (m/s^2), soft-capped
 const PEDAL_CAP = 0.75;           // pedaling alone can't exceed this fraction of MAX_SPEED
@@ -1537,6 +1537,7 @@ function onLandContact(){
   const nS=Math.abs(Math.round(g.trickSpin/(2*Math.PI)));
   const partial=Math.abs(g.trickFlip)/(2*Math.PI)+Math.abs(g.trickSpin)/(2*Math.PI);
   if(offF>TRICK_OFF){
+    if(offF>1.9){ crash('inverted'); return; }   // landed on your head — game over
     if(partial>=0.35){
       const pts=Math.round(80*partial*mult());
       g.score+=pts; popup('STYLE +'+pts,'air',-34);
@@ -1658,7 +1659,7 @@ addEventListener('pointermove',e=>{
     if(e.pointerId===steerPointer){
       touchSteer=THREE.MathUtils.clamp((e.clientX-touchStartX)/(innerWidth*0.13),-1,1);
       const fy=(e.clientY-touchStartY)/(innerHeight*0.12);
-      touchFlip=Math.abs(fy)<0.25?0:THREE.MathUtils.clamp(fy-Math.sign(fy)*0.25,-1,1);
+      touchFlip=Math.abs(fy)<0.4?0:THREE.MathUtils.clamp(fy-Math.sign(fy)*0.4,-1,1);
     }
   }
   else { mouseX=e.clientX/innerWidth; lastMouseT=performance.now(); }
@@ -1998,8 +1999,8 @@ function update(dt){
   }
   // air tricks: flips (↑↓ / vertical drag) and spins (←→ while airborne)
   if(g.airborne && !god){
+    // tricks only from dedicated inputs — ←→ in the air is pure steering
     g.trickFlip+=readFlip()*FLIP_RATE*dt;
-    g.trickSpin+=readSteer()*SPIN_RATE*dt;
   }
   if(!god) updateOverseerAttacks(dt);
   if(state!=='riding' && state!=='title') return;
