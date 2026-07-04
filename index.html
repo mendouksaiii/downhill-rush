@@ -600,8 +600,8 @@ const grad=(y0,y1,bot,top)=>{ const A=new THREE.Color(bot), B=new THREE.Color(to
 const solid=col=>{ const A=new THREE.Color(col); return (x,y,z,c)=>c.copy(A); };
 const mergeAll=arr=>mergeGeometries(arr.map(g=>g.index?g.toNonIndexed():g));
 const PAINT=grad(0.35,1.25,0x8f1560,0xff6a3d);    // frame: deep magenta -> sunset orange
-const SUIT_LEG=grad(-0.62,0.02,0x1c1730,0x4a4066);
-const SUIT_ARM=grad(-0.46,0.02,0x1c1730,0x4a4066);
+const SUIT_LEG=grad(-0.68,0.02,0x2c2450,0x6e639e);   // bright enough to read in silhouette
+const SUIT_ARM=grad(-0.32,0.02,0x2c2450,0x6e639e);
 function tube(a,b,r,seg=6,cap=false){
   const d=V3(b.x-a.x,b.y-a.y,b.z-a.z), l=d.length();
   const g=cap?new THREE.CapsuleGeometry(r,l,3,seg):new THREE.CylinderGeometry(r,r,l,seg);
@@ -663,7 +663,9 @@ const wheelF=makeWheel(); wheelF.position.set(0,.48,.82);
 const wheelB=makeWheel(); wheelB.position.set(0,.48,-.82);
 bikeTilt.add(wheelF,wheelB);
 
-// rider: capsule limbs pivoted at their joints so the pose code bends them naturally
+// rider: proper downhill attack stance — hands ON the grips, feet ON the pedals.
+// Limbs are built in joint-local space with the reach baked in, so rest pose fits
+// the bike exactly and the pose code only adds flex on top.
 const riderG=new THREE.Group(); bikeTilt.add(riderG);   // posable rider rig
 function limbMesh(mid,end,r0,r1,colFn,extra){
   const parts=[ tube(V3(0,0,0),mid,r0,6,true), tube(mid,end,r1,6,true) ]
@@ -671,36 +673,42 @@ function limbMesh(mid,end,r0,r1,colFn,extra){
   if(extra) parts.push(extra);
   return new THREE.Mesh(mergeAll(parts),paintMat);
 }
+// legs: hip (±.13,1.14,-.34) → knee forward → foot on the pedal (±.16,.48,-.06)
 function makeLeg(sx){
-  const shoe=colorGeo(boxGeo(.11,.08,.26, 0,-.6,.1),solid(0x14101f));
-  const m=limbMesh(V3(0,-.27,.16),V3(0,-.58,.06),.06,.05,SUIT_LEG,shoe);
-  m.position.set(sx,1.04,-.3); riderG.add(m); return m;
+  const shoe=colorGeo(boxGeo(.12,.09,.28, sx>0?.03:-.03,-.66,.32),solid(0x14101f));
+  const m=limbMesh(V3(sx>0?.04:-.04,-.32,.24),V3(sx>0?.03:-.03,-.62,.28),.065,.05,SUIT_LEG,shoe);
+  m.position.set(sx,1.14,-.34); riderG.add(m); return m;
 }
+// arms: shoulder (±.20,1.44,.08) → elbows out → glove on the grip (±.33,1.15,.66)
 function makeArm(sx){
-  const glove=colorGeo(new THREE.IcosahedronGeometry(.055,0).translate(0,-.44,.15),solid(0x14101f));
-  const m=limbMesh(V3(0,-.22,.05),V3(0,-.42,.14),.05,.042,SUIT_ARM,glove);
-  m.position.set(sx,1.5,.06); riderG.add(m); return m;
+  const glove=colorGeo(new THREE.IcosahedronGeometry(.06,0).translate(sx>0?.13:-.13,-.29,.58),solid(0x14101f));
+  const m=limbMesh(V3(sx>0?.10:-.10,-.20,.26),V3(sx>0?.13:-.13,-.29,.58),.055,.045,SUIT_ARM,glove);
+  m.position.set(sx,1.44,.08); riderG.add(m); return m;
 }
-const legR=makeLeg(.14), legL=makeLeg(-.14);
+const legR=makeLeg(.13), legL=makeLeg(-.13);
 const armR=makeArm(.2), armL=makeArm(-.2);
-// torso: capsule pivoted at the hips, paint-colored shoulders like a team jersey
-const torsoGeo=new THREE.CapsuleGeometry(.15,.28,3,8);
-torsoGeo.scale(1.15,1,.75); torsoGeo.translate(0,.29,0);
+// torso: two-segment "banana" pivoted at the hips, curling forward over the frame;
+// pose rotation (.42 base) brings the shoulders to (0,~1.44,.09) above the arms
+const torsoGeo=mergeAll([
+  tube(V3(0,0,0),V3(0,.26,.10),.145,7,true),        // lower back
+  tube(V3(0,.26,.10),V3(0,.44,.30),.125,7,true),    // upper back, leaning to the bars
+]);
+torsoGeo.scale(1.25,1,.9);
 colorGeo(torsoGeo,(x,y,z,c)=>{
-  if(y>.46) c.set(0xff6a3d);                                 // jersey shoulders
-  else if(z<-.06 && Math.abs(x)<.05) c.set(0xd44420);        // spine stripe faces the camera
+  if(y>.32) c.set(0xff6a3d);                                 // jersey shoulders
+  else if(z<.02 && Math.abs(x)<.06) c.set(0xd44420);         // spine stripe faces the camera
   else SUIT_LEG(x,y-.62,z,c); });
 const torso=new THREE.Mesh(torsoGeo,paintMat);
-torso.position.set(0,1.04,-.2); riderG.add(torso);
-// full-face helmet + neon visor
+torso.position.set(0,1.16,-.36); riderG.add(torso);
+// full-face helmet + neon visor, tucked low over the stem
 const helmetGeo=mergeAll([
-  colorGeo(new THREE.IcosahedronGeometry(.2,1),grad(-.14,.2,0x8f1560,0xff6a3d)),
-  colorGeo(boxGeo(.17,.07,.16, 0,-.09,.14),solid(0x14101f)),   // chin guard
+  colorGeo(new THREE.IcosahedronGeometry(.21,1),grad(-.14,.21,0x8f1560,0xff6a3d)),
+  colorGeo(boxGeo(.18,.08,.16, 0,-.10,.15),solid(0x14101f)),   // chin guard
 ]);
 const head=new THREE.Mesh(helmetGeo,paintMat);
-head.position.set(0,1.66,.16); riderG.add(head);
-const visor=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.06,0.1),neonMat);
-visor.position.set(0,1.7,0.33); visor.rotation.x=0.15; riderG.add(visor);
+head.position.set(0,1.58,.26); riderG.add(head);
+const visor=new THREE.Mesh(new THREE.BoxGeometry(0.26,0.06,0.1),neonMat);
+visor.position.set(0,1.62,0.44); visor.rotation.x=0.12; riderG.add(visor);
 bikeRoot.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
 
 /* ============================== PARTICLES / TRAIL ====================== */
@@ -2035,7 +2043,7 @@ function update(dt){
   riderG.rotation.z=-g.steer*0.2;
   torso.rotation.x=0.42+0.4*riderCrouch-0.22*riderExtend;
   legL.scale.y=legR.scale.y=1-0.32*riderCrouch+0.08*riderExtend;
-  armL.rotation.x=armR.rotation.x=0.75+0.35*riderCrouch;
+  armL.rotation.x=armR.rotation.x=0.18*riderCrouch-0.10*riderExtend;  // rest pose grips the bars
   // carve spray when steering hard at speed; light rolling dust otherwise
   if(!g.airborne && Math.abs(g.steer)>0.5 && g.speed>24)
     spawnParticles(2, g.x-g.steer*0.6, g.y+0.15, g.z-0.5, 2.5, -g.steer*6, 1.8, g.speed*0.12);
