@@ -1053,7 +1053,7 @@ function genChunk(ci){
   if(ci>=4){
     const prevTrap=(pitsByChunk.get(ci-1)?.length||0)+(wallsByChunk.get(ci-1)?.length||0);
     const trapScale=directive.params?.trapChanceScale ?? 1;
-    const trapChance=prevTrap?0.08:THREE.MathUtils.clamp((0.32+density*0.28)*trapScale,0.12,0.78);
+    const trapChance=prevTrap?0.08:THREE.MathUtils.clamp((0.32+density*0.28)*trapScale*OT.trapAggressionMul,0.12,0.78);
     const pitWeight=directive.params?.pitBias ?? (directive.kind==='technical'?0.36:0.55);
     const t=rng();
     if(t<trapChance*pitWeight){
@@ -1112,7 +1112,7 @@ function genChunk(ci){
 
   // --- powerup gems (retry placement so ramp chunks still get gems)
   const powerups=[];
-  const baitChance=(directive.kind==='bait'||directive.params?.attackType==='falseGift')?0.9:0.5;
+  const baitChance=Math.min(0.95,((directive.kind==='bait'||directive.params?.attackType==='falseGift')?0.9:0.5)*OT.baitChanceMul);
   if(pits.length && rng()<baitChance && !directive.params?.suppressBait){
     // rage bait: a gem line leading straight across the hole
     const p=pits[0], rimY=baseH(p.x,p.z0-1.5)+1.4;
@@ -1605,6 +1605,27 @@ function saveOverseerProfile(){
 }
 function overseerEvent(event){ if(overseer) overseer.observe(event); }
 
+// Globally evolved Overseer tuning, committed by the scheduled LLM job
+// (scripts/evolve-overseer.mjs). Clamped hard here too — a bad commit cannot
+// push the Overseer outside these bounds. mercyBias/attackCooldownMul are
+// consumed by the live-attack director; the rest scale chunk generation.
+const OT={attackCooldownMul:1, trapAggressionMul:1, baitChanceMul:1, mercyBias:0};
+fetch('/overseer-tuning.json').then(r=>r.ok?r.json():null).then(t=>{
+  if(!t || !t.params) return;
+  const cl=(v,lo,hi,d)=>Number.isFinite(+v)?Math.min(Math.max(+v,lo),hi):d;
+  OT.attackCooldownMul=cl(t.params.attackCooldownMul,0.6,1.6,1);
+  OT.trapAggressionMul=cl(t.params.trapAggressionMul,0.7,1.4,1);
+  OT.baitChanceMul=cl(t.params.baitChanceMul,0.5,1.3,1);
+  OT.mercyBias=cl(t.params.mercyBias,-0.15,0.25,0);
+  const ab=t.params.archetypeBias;
+  if(ab){  // blend evolved bias 50/50 with what this player's Overseer learned locally
+    const j=cl(ab.judge,.1,.8,.34), h=cl(ab.hunter,.1,.8,.33), k=cl(ab.trickster,.1,.8,.33), s=j+h+k;
+    const loc=overseerProfile.archetypeBias||{judge:.34,hunter:.33,trickster:.33};
+    overseerProfile.archetypeBias={
+      judge:(loc.judge+j/s)/2, hunter:(loc.hunter+h/s)/2, trickster:(loc.trickster+k/s)/2 };
+  }
+}).catch(()=>{});
+
 function resetRun(startState){
   runSeed=(Math.random()*1e9)|0;
   seedNoise(runSeed);
@@ -1623,7 +1644,7 @@ function resetRun(startState){
     combo:0, topCombo:0, score:0, airPts:0, hangT:0,
     nearChain:0, nearChainT:-99,
     steer:0, dist0:6, power:null, runT:0,
-    cleanT:0, gas:0, trickFlip:0, trickSpin:0, graceUntil:0,
+    cleanT:0, gas:0, trickFlip:0, trickSpin:0, graceUntil:0, stumbleN:0,
   });
   gameT=0; timeScale=1; shake=0;
   dispScore=0; hitstopUntil=0; squashT=9; dipT=9; dipAmp=0;
@@ -1734,6 +1755,19 @@ function showDeath(){
     overseerProfile=updateOverseerProfile(overseerProfile, summary);
     saveOverseerProfile();
   }
+  // anonymous run summary for the evolution loop (fields whitelisted server-side)
+  try{
+    const ev=overseer?.snapshot?.()||{};
+    navigator.sendBeacon?.('/api/overseer', JSON.stringify({
+      score:Math.floor(game.score), dist:Math.floor(game.z-game.dist0),
+      runT:+game.runT.toFixed(1), hang:+game.hangT.toFixed(1), combo:game.topCombo,
+      perfects:ev.events?.perfects||0, stumbles:game.stumbleN||0,
+      deathCause:lastDeathCause, quickDeath:game.runT<10&&(game.z-game.dist0)<180,
+      archetype:ev.archetype||'unknown', pressure:ev.pressure||0, tilt:ev.tilt||0, mercy:ev.mercy||0,
+      attacksHit:ev.events?.attacksHit||0, attacksDodged:ev.events?.attacksDodged||0,
+      attacksCountered:ev.events?.attacksCountered||0,
+    }));
+  }catch(e){}
   submitRun(game.runT, game.score, game.z-game.dist0, game.hangT);
   deathEl.classList.remove('hidden');
   canRestartAt=performance.now()+400;
@@ -1783,6 +1817,7 @@ function resolveLanding(kind){
 }
 function stumble(msg){
   const g=game;
+  g.stumbleN=(g.stumbleN||0)+1;
   // floor at 16 m/s so a stumble never leaves you too slow to hop the next pit;
   // grace window keeps one mistake from cascading into an unavoidable death
   g.speed=Math.max(16, g.speed*0.5);
@@ -2557,7 +2592,7 @@ fxCv.width=innerWidth; fxCv.height=innerHeight;
 
 resetRun('title');
 if(!tutorialSeen()) setTimeout(()=>{ if(state==='title'&&!tutorialOpen) openTutorial(false); }, 350);
-window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk,
+window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk, OT,
   airTap, doJump, predictLand, onLandContact, applyPower, absorbShield, camera, bikeRoot,
   get state(){ return state; },
   get overseer(){ return overseer; },

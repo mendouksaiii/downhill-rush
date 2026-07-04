@@ -16,7 +16,7 @@
 2. ⬜ UNCLAIMED **Eye shader iris**: replace billboard rings with ShaderMaterial plane — fibrous animated iris, veins, noise flicker, pupil dilation w/ aggression uniform, pupil tracks player. Keep halos/drip.
 3. ✅ THIS SEAT — infra DONE (needs game-side wiring below) **LLM evolution loop (poker-style, automated)**: client sendBeacon run summary → new `api/overseer.js` (Upstash Redis, same env as leaderboard — NOTE: api/ is friend-adjacent territory, flag in PR); `.github/workflows/overseer-evolve.yml` cron → `scripts/evolve-overseer.mjs` fetches dump, calls LLM (key from repo secret), validates bounds, commits `overseer-profile.json`; game fetches profile at boot and applies clamped tuning. READ the claude-api skill before writing the API call.
 
-## Evolution loop — game-side wiring still needed (2 snippets, index.html)
+## Evolution loop — game-side wiring ✅ DONE (this seat)
 Whoever holds index.html next, add these (infra is live once merged; snippets are the last mile):
 1. **Run-summary beacon** — where the run summary is built for the local overseer profile (near showDeath/recordOverseerRun), add fire-and-forget:
    `try{ navigator.sendBeacon('/api/overseer', JSON.stringify({runT:g.runT, score:g.score, dist:g.z-g.dist0, hang:g.hangT, combo:game.topCombo, perfects:…, stumbles:…, deathCause:cause, quickDeath:runT<10&&dist<180, archetype:overseer?.state.archetype, pressure/tilt/mercy from state, attacksHit/Dodged/Countered from event counts})); }catch(e){}`
