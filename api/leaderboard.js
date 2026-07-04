@@ -86,6 +86,8 @@ module.exports = async (req, res) => {
       if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
       body = body || {};
       const name = String(body.name || '').trim().slice(0, 14).replace(/[^\w\- ]/g, '');
+      const emailRaw = String(body.email || '').trim().slice(0, 120);
+      const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw) ? emailRaw : '';
       const time = Math.min(Math.max(+body.time || 0, 0), 7200);
       const score = Math.min(Math.max(Math.floor(+body.score || 0), 0), 99999999);
       const dist = Math.min(Math.max(Math.floor(+body.dist || 0), 0), 999999);
@@ -97,12 +99,17 @@ module.exports = async (req, res) => {
         score,
         dist,
         hang: +hang.toFixed(1),
+        email,
         at: Date.now(),
       };
       const rankScore = +rankValue(entry).toFixed(3);
 
       const changed = (await redis([['ZADD', KEY, 'GT', String(rankScore), name]]))[0];
       if (changed) await redis([['HSET', META_KEY, name, JSON.stringify(entry)]]);
+      else if (email) {
+        const existing = safeMeta((await redis([['HGET', META_KEY, name]]))[0]) || {};
+        await redis([['HSET', META_KEY, name, JSON.stringify({ ...existing, email })]]);
+      }
       const r = await redis([
         ['ZREMRANGEBYRANK', KEY, '0', String(-(CAP + 1))],   // r[0] = # trimmed
         ['ZREVRANK', KEY, name],                             // r[1] = rank (0-based)

@@ -104,16 +104,30 @@
     background:radial-gradient(ellipse at 50% 60%, rgba(26,16,64,.25), rgba(12,7,32,.68)); }
   .overlay.hidden { display:none; }
   #title { overflow-y:auto; padding:28px 0; }
-  #signup { margin-top:26px; display:flex; gap:10px; align-items:center; }
-  #nameInput { width:190px; padding:12px 14px; font:700 16px 'Rajdhani',sans-serif; letter-spacing:2px;
+  #signup { margin-top:26px; width:min(430px,88vw); display:grid; grid-template-columns:1fr auto;
+    gap:10px; align-items:end; }
+  .accountField { position:relative; }
+  .accountField label { display:block; margin:0 0 5px 2px; text-align:left; font-size:11px;
+    font-weight:700; letter-spacing:2px; color:#9a92c9; }
+  #nameInput, #emailInput { width:100%; padding:12px 14px; font:700 16px 'Rajdhani',sans-serif; letter-spacing:2px;
     color:#fff; background:rgba(10,6,28,.65); border:1px solid rgba(0,229,255,.35); border-radius:12px;
     outline:none; text-align:center; }
-  #nameInput:focus { border-color:#00e5ff; box-shadow:0 0 18px rgba(0,229,255,.35); }
-  #nameInput::placeholder { color:#7a72b0; letter-spacing:3px; }
+  #nameInput:focus, #emailInput:focus { border-color:#00e5ff; box-shadow:0 0 18px rgba(0,229,255,.35); }
+  #nameInput::placeholder, #emailInput::placeholder { color:#7a72b0; letter-spacing:3px; }
+  #nameStatus { position:absolute; right:12px; top:34px; font-size:12px; font-weight:700; letter-spacing:1px; color:#9a92c9; }
+  #nameStatus.ok { color:#2eff8a; } #nameStatus.bad { color:#ff5d7a; }
+  #emailSlot { grid-column:1 / -1; }
+  #accountHint { grid-column:1 / -1; min-height:16px; margin-top:-2px; font-size:12px; letter-spacing:1px; color:#9a92c9; }
+  #accountHint.ok { color:#2eff8a; } #accountHint.bad { color:#ff5d7a; }
   #startBtn { padding:12px 28px; font:700 18px 'Rajdhani',sans-serif; letter-spacing:4px;
     color:#04222a; background:linear-gradient(135deg,#00e5ff,#39f7c1); border:none; border-radius:12px;
     cursor:pointer; box-shadow:0 0 26px rgba(0,229,255,.45); transition:transform .08s; }
   #startBtn:active { transform:scale(.94); }
+  #startBtn:disabled { opacity:.38; cursor:not-allowed; box-shadow:none; filter:grayscale(.35); }
+  #profileBtn { grid-column:1 / -1; justify-self:center; padding:9px 18px; font:700 13px 'Rajdhani',sans-serif;
+    letter-spacing:3px; color:#cfc8f0; background:rgba(14,8,36,.5); border:1px solid rgba(255,255,255,.16);
+    border-radius:10px; cursor:pointer; }
+  #profileBtn.hidden { display:none; }
   #lbPanel { margin-top:24px; width:min(360px,88vw); background:rgba(14,8,36,.55);
     border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:14px 18px 10px;
     backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); text-align:left; }
@@ -159,6 +173,21 @@
   #stats .k { text-align:right; color:#9a92c9; }
   #stats .v { text-align:left; font-weight:700; color:#ffd76e; font-variant-numeric:tabular-nums; }
   #paused { z-index:30; background:rgba(12,7,32,.6); font-size:22px; letter-spacing:4px; color:#00e5ff; }
+  #profilePanel { z-index:32; background:rgba(12,7,32,.78); padding:24px; }
+  #profileCard { width:min(420px,90vw); padding:22px; border-radius:18px; background:rgba(14,8,36,.72);
+    border:1px solid rgba(255,255,255,.14); box-shadow:0 24px 70px rgba(0,0,0,.38); text-align:center;
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+  #profileCard h2 { font-size:clamp(28px,6vw,40px); letter-spacing:4px; color:#ffd76e; }
+  #profileEmail { margin-top:6px; font-size:14px; letter-spacing:1px; color:#b8b0dd; }
+  #profileStats { margin-top:18px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .profileStat { padding:12px; background:rgba(0,229,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:12px; }
+  .profileStat .k { font-size:11px; letter-spacing:2px; color:#9a92c9; font-weight:700; }
+  .profileStat .v { margin-top:3px; font-size:22px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums; }
+  .profileStat .gold { color:#ffd76e; text-shadow:0 0 12px rgba(255,215,110,.55); }
+  .profileActions { margin-top:18px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .profileActions button { padding:10px 14px; font:700 13px 'Rajdhani',sans-serif; letter-spacing:2px;
+    color:#cfc8f0; background:rgba(30,20,60,.9); border:1px solid rgba(255,255,255,.15); border-radius:10px; cursor:pointer; }
+  .profileActions button.primary { color:#04222a; background:#00e5ff; border-color:#00e5ff; }
 </style>
 </head>
 <body>
@@ -180,8 +209,18 @@
   <h1>DOWNHILL<br>RUSH</h1>
   <div class="tag">time the ring. don't die.</div>
   <div id="signup">
-    <input id="nameInput" maxlength="14" placeholder="USERNAME" autocomplete="off" spellcheck="false">
+    <div class="accountField">
+      <label>USERNAME</label>
+      <input id="nameInput" maxlength="14" placeholder="USERNAME" autocomplete="off" spellcheck="false">
+      <span id="nameStatus"></span>
+    </div>
     <button id="startBtn">RIDE</button>
+    <div class="accountField" id="emailSlot">
+      <label>EMAIL</label>
+      <input id="emailInput" type="email" placeholder="YOUR@EMAIL.COM" autocomplete="email" spellcheck="false">
+    </div>
+    <div id="accountHint"></div>
+    <button id="profileBtn" class="hidden">PROFILE</button>
   </div>
   <div id="lbPanel">
     <div class="lbHead">🏔 LONGEST RUNS · LIVE<span id="lbLive"></span></div>
@@ -203,6 +242,22 @@
   <div class="tapline">TAP TO RIDE AGAIN</div>
 </div>
 <div id="paused" class="overlay hidden">PAUSED — TAP TO RESUME</div>
+<div id="profilePanel" class="overlay hidden">
+  <div id="profileCard">
+    <h2 id="profileName">RIDER</h2>
+    <div id="profileEmail">email not added</div>
+    <div id="profileStats">
+      <div class="profileStat"><div class="k">WORLD RANK</div><div class="v gold" id="pRank">--</div></div>
+      <div class="profileStat"><div class="k">BEST TIME</div><div class="v" id="pTime">--</div></div>
+      <div class="profileStat"><div class="k">BEST DISTANCE</div><div class="v" id="pDist">--</div></div>
+      <div class="profileStat"><div class="k">BEST SCORE</div><div class="v" id="pScore">--</div></div>
+    </div>
+    <div class="profileActions">
+      <button class="primary" id="profileClose">BACK</button>
+      <button id="profileSignOut">SIGN OUT</button>
+    </div>
+  </div>
+</div>
 
 <script type="importmap">
 { "imports": {
@@ -1342,14 +1397,95 @@ function drawRing(tLand){
 
 /* ============================== LEADERBOARD / IDENTITY ================= */
 const LB_API='/api/leaderboard';
+const NAME_KEY='dr_name';
+const EMAIL_KEY='dr_email';
 let playerName='';
-try{ playerName=localStorage.getItem('dr_name')||''; }catch(e){}
-const nameInput=$('nameInput'), lbList=$('lbList');
+let playerEmail='';
+let accountStatus='unknown';
+let accountCheckSeq=0;
+let accountCheckTimer=0;
+let canStartRun=false;
+let profileMe=null;
+try{
+  playerName=localStorage.getItem(NAME_KEY)||'';
+  playerEmail=localStorage.getItem(EMAIL_KEY)||'';
+}catch(e){}
+const nameInput=$('nameInput'), emailInput=$('emailInput'), nameStatus=$('nameStatus'),
+  accountHint=$('accountHint'), startBtn=$('startBtn'), profileBtn=$('profileBtn'),
+  lbList=$('lbList'), profilePanel=$('profilePanel');
+const emailHint=accountHint;
 nameInput.value=playerName;
+emailInput.value=playerEmail;
 function sanitizeName(v){ return v.trim().slice(0,14).replace(/[^\w\- ]/g,''); }
+function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim()); }
 function fmtT(t){ return t>=60 ? Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0')
   : t.toFixed(1)+'s'; }
 let lbHasData=false;
+function refreshAccountGate(){
+  const typed=sanitizeName(nameInput.value);
+  const isReturning=!!playerName && typed.toLowerCase()===playerName.toLowerCase();
+  const nameValid=typed.length>=2;
+  const emailOk=isReturning || validEmail(emailInput.value);
+  const nameAllowed=isReturning || accountStatus==='available' || accountStatus==='unknown-offline';
+  const canStart=nameValid && emailOk && nameAllowed;
+  canStartRun=canStart;
+  startBtn.disabled=!canStart;
+  profileBtn.hidden=!playerName;
+  profileBtn.classList.toggle('hidden',!playerName);
+  nameStatus.className='';
+  if(!typed) nameStatus.textContent='';
+  else if(isReturning){ nameStatus.textContent='saved'; nameStatus.className='ok'; }
+  else if(accountStatus==='checking') nameStatus.textContent='...';
+  else if(accountStatus==='available'){ nameStatus.textContent='free'; nameStatus.className='ok'; }
+  else if(accountStatus==='taken'){ nameStatus.textContent='taken'; nameStatus.className='bad'; }
+  else nameStatus.textContent='';
+
+  accountHint.className='';
+  if(isReturning){
+    emailHint.textContent=isReturning && playerEmail ? 'profile saved - ride when ready'
+      : 'welcome back - email is optional, your scores stay linked to this rider';
+    accountHint.classList.add('ok');
+  } else if(!nameValid){
+    accountHint.textContent='pick a 2-14 character rider name';
+  } else if(accountStatus==='taken'){
+    accountHint.textContent='that username already has leaderboard history';
+    accountHint.classList.add('bad');
+  } else if(!validEmail(emailInput.value)){
+    accountHint.textContent='new riders need an email plus an unused name';
+  } else if(accountStatus==='checking'){
+    accountHint.textContent='checking username...';
+  } else if(accountStatus==='unknown-offline'){
+    accountHint.textContent='leaderboard check offline - this device will save your profile';
+  } else {
+    accountHint.textContent='ready to claim this rider';
+    accountHint.classList.add('ok');
+  }
+}
+async function checkUsernameAvailability(){
+  const name=sanitizeName(nameInput.value);
+  const seq=++accountCheckSeq;
+  if(!name || name.length<2 || (playerName && name.toLowerCase()===playerName.toLowerCase())){
+    accountStatus='unknown'; refreshAccountGate(); return;
+  }
+  accountStatus='checking'; refreshAccountGate();
+  try{
+    const r=await fetch(LB_API+'?me='+encodeURIComponent(name)+'&t='+Date.now(),{cache:'no-store'});
+    if(!r.ok) throw 0;
+    const d=await r.json();
+    if(seq!==accountCheckSeq) return;
+    accountStatus=d.me?'taken':'available';
+  }catch(e){
+    if(seq!==accountCheckSeq) return;
+    accountStatus='unknown-offline';
+  }
+  refreshAccountGate();
+}
+function queueUsernameCheck(){
+  clearTimeout(accountCheckTimer);
+  accountStatus='unknown';
+  refreshAccountGate();
+  accountCheckTimer=setTimeout(checkUsernameAvailability, 320);
+}
 function renderLB(top, me){
   lbList.innerHTML='';
   if(!top||!top.length){ lbList.innerHTML='<li class="lbNote">no runs yet — be the first</li>'; return; }
@@ -1378,13 +1514,15 @@ async function fetchLB(){
     const r=await fetch(LB_API+q,{cache:'no-store'});
     if(!r.ok) throw 0;
     const d=await r.json();
+    profileMe=d.me||null;
     renderLB(d.top, d.me); lbHasData=true;
+    renderProfile();
   }catch(e){ if(!lbHasData) lbList.innerHTML='<li class="lbNote">leaderboard offline</li>'; }
 }
 function submitRun(time,score,dist,hang=0){
   if(!playerName || time<2) return;
   fetch(LB_API,{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({name:playerName, time:+time.toFixed(1), score:Math.floor(score), dist:Math.floor(dist), hang:+hang.toFixed(1)})})
+    body:JSON.stringify({name:playerName, email:playerEmail, time:+time.toFixed(1), score:Math.floor(score), dist:Math.floor(dist), hang:+hang.toFixed(1)})})
     .then(r=>r.ok?r.json():null)
     .then(d=>{
       if(!d||!d.top) return;
@@ -1396,19 +1534,51 @@ function submitRun(time,score,dist,hang=0){
     }).catch(()=>{});
 }
 function startRun(){
+  refreshAccountGate();
+  if(!canStartRun) return;
   playerName=sanitizeName(nameInput.value);
+  playerEmail=validEmail(emailInput.value)?emailInput.value.trim():'';
   nameInput.value=playerName;
-  try{ localStorage.setItem('dr_name',playerName); }catch(e){}
+  emailInput.value=playerEmail;
+  try{
+    localStorage.setItem(NAME_KEY,playerName);
+    if(playerEmail) localStorage.setItem(EMAIL_KEY,playerEmail);
+  }catch(e){}
   nameInput.blur();
+  emailInput.blur();
+  refreshAccountGate();
   resetRun('riding');
 }
-$('startBtn').addEventListener('click',e=>{ e.stopPropagation(); startRun(); });
+function renderProfile(){
+  $('profileName').textContent=playerName||'RIDER';
+  $('profileEmail').textContent=playerEmail||'email not added';
+  $('pRank').textContent=profileMe&&profileMe.rank?'#'+profileMe.rank:'--';
+  $('pTime').textContent=profileMe?fmtT(profileMe.time):'--';
+  $('pDist').textContent=profileMe?Math.floor(profileMe.dist||0)+' m':'--';
+  $('pScore').textContent=profileMe?Math.floor(profileMe.score||0):'--';
+}
+startBtn.addEventListener('click',e=>{ e.stopPropagation(); startRun(); });
 nameInput.addEventListener('pointerdown',e=>e.stopPropagation());
+emailInput.addEventListener('pointerdown',e=>e.stopPropagation());
+nameInput.addEventListener('input',queueUsernameCheck);
+emailInput.addEventListener('input',()=>{ playerEmail=emailInput.value.trim(); refreshAccountGate(); renderProfile(); });
+profileBtn.addEventListener('click',e=>{ e.stopPropagation(); renderProfile(); profilePanel.classList.remove('hidden'); fetchLB(); });
+$('profileClose').addEventListener('click',e=>{ e.stopPropagation(); profilePanel.classList.add('hidden'); });
+$('profileSignOut').addEventListener('click',e=>{
+  e.stopPropagation();
+  playerName=''; playerEmail=''; profileMe=null; nameInput.value=''; emailInput.value='';
+  try{ localStorage.removeItem(NAME_KEY); localStorage.removeItem(EMAIL_KEY); }catch(err){}
+  profilePanel.classList.add('hidden');
+  refreshAccountGate();
+  fetchLB();
+});
+refreshAccountGate();
+if(playerName) checkUsernameAvailability();
 fetchLB();
 // live refresh: poll while the board is on screen (title/score), pause during play
 setInterval(()=>{ if((state==='title'||state==='dead') && !document.hidden) fetchLB(); }, 5000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden && (state==='title'||state==='dead')) fetchLB(); });
-window.LB={ renderLB, fetchLB, setName(n){ playerName=n; } };
+window.LB={ renderLB, fetchLB, setName(n){ playerName=n; nameInput.value=n; refreshAccountGate(); } };
 
 /* ============================== GAME STATE ============================= */
 let state='title';        // title | riding | crashed | dead
