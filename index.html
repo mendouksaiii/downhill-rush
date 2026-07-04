@@ -506,6 +506,7 @@ function updateMood(){
   cloudMat.color.copy(skyU.uTop.value).lerp(skyU.uMid.value,0.3);
   sunGlowMat.color.lerpColors(D.glow,N.glow,m);
   sunGlowMat.opacity=0.5-m*0.22;
+  terrainMat.color.setRGB(1,1,1).lerp(NIGHT_TINT, m*0.55);   // terrain cools down at night
   moodSunY=D.sunY+(N.sunY-D.sunY)*m;
 }
 
@@ -553,6 +554,8 @@ function updateOverseerManifestation(dt){
 
 /* ============================== SHARED ASSETS ========================== */
 const terrainMat=new THREE.MeshStandardMaterial({vertexColors:true, flatShading:true, roughness:.95, metalness:0});
+const NIGHT_TINT=new THREE.Color(0x8fa3e0);
+const crystalMat=new THREE.MeshStandardMaterial({color:0x0a2b33, emissive:0x00e5ff, emissiveIntensity:0.85, flatShading:true});
 const treeMat=new THREE.MeshStandardMaterial({color:0x17112b, flatShading:true, roughness:.9});
 const rockMat=new THREE.MeshStandardMaterial({color:0x241b3f, flatShading:true, roughness:.95});
 const logMat=new THREE.MeshStandardMaterial({color:0x2c2038, flatShading:true, roughness:.9});
@@ -854,6 +857,8 @@ function buildTerrainMesh(ci){
     const sunFace=Math.max(0,-hz)*0.5;                                 // slopes facing the low sun catch warmth
     tmp.r=Math.min(1,tmp.r*(1+sunFace*0.5)); tmp.g=Math.min(1,tmp.g*(1+sunFace*0.18));
     const v=1+noise2(x*0.11+9.1,z*0.11)*0.07;
+    if(Math.abs(ax-9)<0.8) tmp.multiplyScalar(0.8);                    // worn edge lines mark the track boundary
+    if(Math.abs(ax-0.6)<0.28) tmp.multiplyScalar(0.88);                // tire ruts down the racing line
     const glint=(noise2(x*3.1,z*3.1)>0.9)?1.65:1;                      // rare snow sparkles that catch the bloom
     colors[i*3]=tmp.r*v*glint; colors[i*3+1]=tmp.g*v*glint; colors[i*3+2]=tmp.b*v*glint;
   }
@@ -1009,11 +1014,20 @@ function genChunk(ci){
     }
   }
 
-  // --- decorative treeline outside the track
+  // --- decorative treeline + boulders + neon crystals outside the track
   const deco=[];
   for(let i=0;i<16;i++){
     const side=rng()<0.5?-1:1;
     deco.push({x:side*(13.5+rng()*30), z:z0+rng()*CHUNK, s:1.1+rng()*1.9, rot:rng()*Math.PI*2});
+  }
+  const eBoulders=[], shards=[];
+  for(let i=0;i<5;i++){
+    const side=rng()<0.5?-1:1;
+    eBoulders.push({x:side*(14+rng()*22), z:z0+rng()*CHUNK, s:1.4+rng()*2.6, rot:rng()*Math.PI*2});
+  }
+  for(let i=0;i<3;i++) if(rng()<0.55){
+    const side=rng()<0.5?-1:1;
+    shards.push({x:side*(12+rng()*10), z:z0+rng()*CHUNK, s:0.5+rng()*0.9, rot:rng()*Math.PI*2});
   }
 
   // --- build meshes
@@ -1039,6 +1053,8 @@ function genChunk(ci){
   makeInst(treeGeo,treeMat,treeItems, o=>terrainH(o.x,o.z)-0.15);
   makeInst(rockGeo,rockMat,rockItems, o=>terrainH(o.x,o.z)+0.35*o.s);
   makeInst(logGeo,logMat,logItems,  o=>terrainH(o.x,o.z)+0.4*o.s);
+  makeInst(rockGeo,rockMat,eBoulders, o=>terrainH(o.x,o.z)+0.3*o.s);
+  makeInst(puGeo,crystalMat,shards, o=>terrainH(o.x,o.z)+0.4*o.s);
 
   for(const r of ramps){
     const rm=buildRampMesh(r); rm.castShadow=rm.receiveShadow=true;

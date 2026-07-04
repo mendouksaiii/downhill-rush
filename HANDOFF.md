@@ -10,13 +10,14 @@
 - Test loop: `npx http-server . -p 5610` (or preview server), then drive deterministically from console: `DR.step(1/60)` in loops; `DR.start()`, `DR.doJump()`, `DR.freeze()`, `DR.game`, `DR.pitsByChunk/wallsByChunk`. Tab-hidden pauses rAF — DR.step bypasses. Syntax check: extract `<script type="module">` → esbuild.
 - Gotchas: `mergeGeometries` needs uniform indexed/non-indexed → use `mergeAll`; TDZ (const used before def) kills the module silently; preview panel reloads on file edit.
 
-## Current task list (user request 2026-07-04)
+## Current task list (user request 2026-07-04) — ALL DONE, pushed to PR #4
 1. ✅ **Controls**: ←→ in air = steering ONLY (no spin accumulation). Tricks = dedicated inputs (↑↓ flips) air-only. Awkward landing tiers: moderate off-rotation = stumble; landing inverted (off > ~1.9 rad) = crash/game over.
 2. ✅ **Ring timing too frequent**: raise MIN_AIR_FOR_TAP 0.45 → 0.8s so small rollers don't trigger the tap ring.
 3. ✅ **Rider quality/physics parity with bike**: knee/elbow pads, neck, backpack, bigger visor; head counter-pitch to look ahead, speed-based body lean; keep pose contract (torso/armL/R/legL/R/riderG names + crouch/extend code).
-4. ⬜ **Graphics pass (road + arena)**: night tint on terrainMat.color via moodN (terrain currently stays sunset-warm at night); track edge wear lines + tire stripes in vertex colors; instanced neon crystals + boulders on valley edges.
+4. ✅ **Graphics pass (road + arena)**: night tint on terrainMat.color via moodN (terrain currently stays sunset-warm at night); track edge wear lines + tire stripes in vertex colors; instanced neon crystals + boulders on valley edges.
 
 ## Done this session (chronological)
+- Graphics: terrainMat.color night tint (NIGHT_TINT lerp in updateMood — verified cold blue at mood 1); track edge wear lines (|x|≈9) + tire ruts (x≈±0.6) in vertex colors; instanced boulders (5/chunk, |x|>14) + neon crystals (crystalMat, ~1.5/chunk) on valley edges
 - Rider detail+physics: knee/elbow pads, neck+collar, hydration pack (z<-.09 torso color rule), helmet aero fin, wider visor; head counter-pitch (-tiltSm*0.55), speed-based tuck on riderG.rotation.x
 - Controls: air ←→ = steering only (spin accumulation removed); flips ↑↓ only, touch flip deadzone 0.4; inverted landing (offF>1.9 rad) = crash; MIN_AIR_FOR_TAP 0.45→0.8 (ring ~7 engagements/20s, real jumps only)
 - stumble floor 16 m/s + 2.5s grace window (slam during grace = stumble); shape-aware fallback collision (#6) — commit `on feat/gameplay-v2`
