@@ -97,16 +97,28 @@
     backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); text-align:left; }
   .lbHead { font-size:14px; font-weight:700; letter-spacing:3px; color:#ffd76e;
     text-shadow:0 0 12px rgba(255,215,110,.5); margin-bottom:8px; text-align:center; }
-  #lbList { list-style:none; }
-  #lbList li { display:grid; grid-template-columns:26px 1fr auto; gap:8px; padding:3px 0;
+  #lbList { list-style:none; max-height:34vh; overflow-y:auto; scrollbar-width:thin;
+    scrollbar-color:rgba(255,255,255,.25) transparent; }
+  #lbList::-webkit-scrollbar { width:4px; } #lbList::-webkit-scrollbar-thumb {
+    background:rgba(255,255,255,.22); border-radius:2px; }
+  #lbList li { display:grid; grid-template-columns:30px 1fr auto; gap:8px; padding:3px 2px;
     font-size:15px; letter-spacing:1px; color:#cfc8f0; border-top:1px solid rgba(255,255,255,.06); }
   #lbList li:first-child { border-top:none; }
-  #lbList li .r { font-weight:700; color:#9a92c9; }
+  #lbList li .r { font-weight:700; color:#9a92c9; font-variant-numeric:tabular-nums; }
   #lbList li.p1 { color:#ffd76e; } #lbList li.p1 .r { color:#ffd76e; }
   #lbList li.p2 { color:#e6ecff; } #lbList li.p2 .r { color:#e6ecff; }
   #lbList li.p3 { color:#ff9d6e; } #lbList li.p3 .r { color:#ff9d6e; }
   #lbList li .t { font-weight:700; font-variant-numeric:tabular-nums; }
+  #lbList li.me { color:#00e5ff; background:rgba(0,229,255,.1); border-radius:6px;
+    box-shadow:inset 0 0 0 1px rgba(0,229,255,.4); }
+  #lbList li.me .r { color:#00e5ff; }
+  #lbList li.youRow { margin-top:5px; border-top:1px dashed rgba(0,229,255,.4);
+    padding-top:6px; color:#00e5ff; }
+  #lbList li.youRow .r { color:#00e5ff; }
   #lbList li.lbNote { display:block; text-align:center; color:#7a72b0; border:none; }
+  #lbLive { display:inline-block; width:7px; height:7px; border-radius:50%; background:#2eff8a;
+    margin-left:8px; box-shadow:0 0 8px #2eff8a; animation:lbpulse 1.6s infinite; vertical-align:middle; }
+  @keyframes lbpulse { 0%,100%{opacity:1} 50%{opacity:.25} }
   #dRank { margin-top:14px; font-size:clamp(20px,4vw,28px); font-weight:700; letter-spacing:3px;
     color:#ffd76e; text-shadow:0 0 18px rgba(255,215,110,.9); }
   #dRank.hidden { display:none; }
@@ -148,7 +160,7 @@
     <button id="startBtn">RIDE</button>
   </div>
   <div id="lbPanel">
-    <div class="lbHead">🏔 LONGEST RUNS · WORLD TOP 10</div>
+    <div class="lbHead">🏔 LONGEST RUNS · LIVE<span id="lbLive"></span></div>
     <ol id="lbList"><li class="lbNote">loading…</li></ol>
   </div>
   <div class="ctl">← → steer &nbsp;·&nbsp; SPACE / TAP = land &nbsp;·&nbsp; tap when the rings meet</div>
@@ -960,23 +972,36 @@ nameInput.value=playerName;
 function sanitizeName(v){ return v.trim().slice(0,14).replace(/[^\w\- ]/g,''); }
 function fmtT(t){ return t>=60 ? Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0')
   : t.toFixed(1)+'s'; }
-function renderLB(top){
+let lbHasData=false;
+function renderLB(top, me){
   lbList.innerHTML='';
   if(!top||!top.length){ lbList.innerHTML='<li class="lbNote">no runs yet — be the first</li>'; return; }
+  const mine=(playerName||'').toLowerCase();
+  let shown=false;
   top.forEach((e,i)=>{
     const li=document.createElement('li');
-    if(i<3) li.className='p'+(i+1);
+    let cls=i<3?'p'+(i+1):'';
+    if(mine && e.name.toLowerCase()===mine){ cls+=' me'; shown=true; }
+    if(cls) li.className=cls.trim();
     li.innerHTML='<span class="r">'+(i+1)+'</span><span class="n"></span><span class="t">'+fmtT(e.time)+'</span>';
     li.querySelector('.n').textContent=e.name;
     lbList.appendChild(li);
   });
+  if(me && me.rank && !shown){                 // pin your rank if you placed below the visible list
+    const li=document.createElement('li'); li.className='me youRow';
+    li.innerHTML='<span class="r">'+me.rank+'</span><span class="n"></span><span class="t">'+fmtT(me.time)+'</span>';
+    li.querySelector('.n').textContent=me.name+' (you)';
+    lbList.appendChild(li);
+  }
 }
 async function fetchLB(){
   try{
-    const r=await fetch(LB_API);
+    const q=playerName?('?me='+encodeURIComponent(playerName)+'&t='+Date.now()):('?t='+Date.now());
+    const r=await fetch(LB_API+q,{cache:'no-store'});
     if(!r.ok) throw 0;
-    renderLB((await r.json()).top);
-  }catch(e){ lbList.innerHTML='<li class="lbNote">leaderboard offline</li>'; }
+    const d=await r.json();
+    renderLB(d.top, d.me); lbHasData=true;
+  }catch(e){ if(!lbHasData) lbList.innerHTML='<li class="lbNote">leaderboard offline</li>'; }
 }
 function submitRun(time,score,dist){
   if(!playerName || time<2) return;
@@ -984,9 +1009,10 @@ function submitRun(time,score,dist){
     body:JSON.stringify({name:playerName, time:+time.toFixed(1), score:Math.floor(score), dist:Math.floor(dist)})})
     .then(r=>r.ok?r.json():null)
     .then(d=>{
-      if(!d) return;
-      renderLB(d.top);
-      if(d.rank && d.rank<=10 && state==='dead'){
+      if(!d||!d.top) return;
+      lbHasData=true;
+      renderLB(d.top, d.rank?{rank:d.rank, name:playerName, time:+time.toFixed(1)}:null);
+      if(d.rank && state==='dead'){
         const el=$('dRank'); el.textContent='WORLD RANK #'+d.rank; el.classList.remove('hidden');
       }
     }).catch(()=>{});
@@ -1001,6 +1027,10 @@ function startRun(){
 $('startBtn').addEventListener('click',e=>{ e.stopPropagation(); startRun(); });
 nameInput.addEventListener('pointerdown',e=>e.stopPropagation());
 fetchLB();
+// live refresh: poll while the board is on screen (title/score), pause during play
+setInterval(()=>{ if((state==='title'||state==='dead') && !document.hidden) fetchLB(); }, 5000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden && (state==='title'||state==='dead')) fetchLB(); });
+window.LB={ renderLB, fetchLB, setName(n){ playerName=n; } };
 
 /* ============================== GAME STATE ============================= */
 let state='title';        // title | riding | crashed | dead
