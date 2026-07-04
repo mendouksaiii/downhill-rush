@@ -491,4 +491,84 @@ export const RIDERS=[
        lens.material.emissiveIntensity=.5+Math.sin(t*2.4)*.35;
      };
    } },
+
+ { id:'miji', name:'MIJI', tier:'legendary', price:9000, glow:0xff2a2a,
+   flavor:'The storm wears a hood.',
+   build(g){ const R=riderRig(g,{skin:0x3a2a24, top:0x121016, pants:0x0e0d12, shoes:0x0a0a0e,
+     eyes:0xff2a2a});
+     R.hairCap(0x141018,1.0);
+     for(let i=0;i<4;i++){ const s=new THREE.Mesh(new THREE.ConeGeometry(.05,.16,4),mat(0x141018,{r:.8}));
+       s.position.set(-.12+i*.08,R.headY+.24,.02); s.rotation.z=(i-1.5)*.35; g.add(s); }
+     const hood=new THREE.Mesh(new THREE.IcosahedronGeometry(.32,0),mat(0x121016,{r:.85}));
+     hood.scale.set(1,1.12,1); hood.position.set(0,R.headY+.06,-.08); g.add(hood);       // hood over head
+     R.box(.5,.28,.34, 0,1.58,-.04, mat(0x121016,{r:.85}));                               // hood cowl on shoulders
+     R.box(.24,.14,.06, 0,R.headY-.12,.19, mat(0x0e0d12));                                // face mask
+     const bolt=R.box(.03,.5,.03, .22,1.5,.16, mat(0xff2a2a,{e:0xff2a2a,ei:1.5}),0,0,.3); // red lightning bolt
+     R.box(.1,.1,.04, .2,1.3,.16, mat(0xd41a1a,{e:0xd41a1a,ei:.6}));                       // red X mark
+     R.box(.06,.16,.04, 0,1.42,.17, mat(0xd41a1a,{e:0xff2a2a,ei:.7}));                     // red kanji/pendant
+     return t=>{ bolt.material.emissiveIntensity=1+Math.sin(t*9)*.7; };                   // flickering lightning
+   } },
+
+ { id:'maggi', name:'MAGGI', tier:'epic', price:3500, glow:0xffd76e,
+   flavor:"Straight A's, straight lines.",
+   build(g){ const R=riderRig(g,{skin:0x5a3a24, top:0x16151b, pants:0x14131a, shoes:0x0e0d12,
+     eyes:0x3a2620, legTop:0x5a3a24, legBot:0x14131a});                                   // thigh-high black boots
+     R.hairCap(0x140f14,1.0);
+     for(const s of [-1,1]){ const bun=new THREE.Mesh(new THREE.SphereGeometry(.13,8,7),mat(0x140f14,{r:.75}));
+       bun.position.set(s*.16,R.headY+.2,-.02); g.add(bun); }                             // twin space buns
+     R.box(.34,.045,.04, 0,R.headY+.02,.19, mat(0x222222,{m:.5,r:.3}));                    // glasses frame
+     for(const s of [-1,1]) R.box(.13,.1,.02, s*.09,R.headY+.02,.2, mat(0xcfe8ff,{r:.1,m:.3})); // lenses
+     R.skirt(0xf2ede6,.42);                                                               // white pleated skirt
+     R.box(.16,.05,.05, 0,1.62,.16, mat(0x14141a));                                        // turtleneck collar
+     R.box(.08,.14,.04, 0,1.45,.17, mat(0xffd76e,{m:.8,r:.3,envI:1.4}));                   // gold necklace
+     for(const s of [-1,1]) R.box(.06,.06,.06, s*.24,1.28,.02, mat(0xffd76e,{m:.8,r:.3})); // gold watch/cuff
+   } },
+
+ { id:'lexxi', name:'LEXXI', tier:'epic', price:4500, glow:0xff2a3a,
+   flavor:'Soft eyes. Sharp everything else.',
+   build(g){ const R=riderRig(g,{skin:0x5a3a28, top:0x121016, pants:0x0e0d12, shoes:0x141018,
+     eyes:0x7a4a3a});
+     const hijab=new THREE.Mesh(new THREE.IcosahedronGeometry(.3,1),mat(0x121016,{r:.7}));
+     hijab.scale.set(1,1.06,1); hijab.position.set(0,R.headY+.05,-.04); g.add(hijab);     // hijab cap
+     R.box(.42,.4,.16, 0,1.58,-.1, mat(0x121016,{r:.7}));                                  // hijab drape
+     R.box(.22,.13,.06, 0,R.headY-.12,.18, mat(0x0e0d12));                                 // face mask
+     R.box(.06,.14,.04, 0,1.42,.17, mat(0xd41a1a,{e:0xff2a3a,ei:.7}));                     // red dagger pendant
+     R.box(.5,.06,.32, 0,1.06,0, mat(0x1a0e10,{e:0xd41a1a,ei:.3}));                        // red-patterned belt
+     R.box(.28,.3,.18, .3,1.2,-.05, mat(0x141018,{r:.6}));                                 // crossbody bag
+     R.box(.04,.28,.02, .18,1.14,.14, mat(0xd41a1a,{e:0xd41a1a,ei:.5}));                   // red waist chain
+     for(const s of [-1,1]) R.box(.18,.07,.33, s*.13,.06,.06, mat(0xd41a1a));              // red sneaker accents
+   } },
+
+ { id:'froggy', name:'FROGGY', tier:'legendary', price:13000, glow:0x62c72e,
+   flavor:'Hops the leaderboard. Literally.',
+   build(g){ const R=riderRig(g,{skin:0x5cc23a, top:0x5cc23a, pants:0x5cc23a, shoes:0x4aa82e,
+     eyes:0x111111, headScale:1.5});
+     const belly=new THREE.Mesh(new THREE.SphereGeometry(.2,8,7),mat(0xf2e8c2,{r:.7}));
+     belly.scale.set(.9,1.2,.4); belly.position.set(0,1.25,.16); g.add(belly);            // cream belly
+     for(const s of [-1,1]){ const eye=new THREE.Mesh(new THREE.SphereGeometry(.11,8,7),mat(0xffffff,{r:.3}));
+       eye.position.set(s*.13,R.headY+.16,.04); g.add(eye);                               // big frog eyes on top
+       const pup=new THREE.Mesh(new THREE.SphereGeometry(.05,7,6),mat(0x111111));
+       pup.position.set(s*.15,R.headY+.15,.13); g.add(pup); }
+     R.box(.34,.4,.2, 0,1.3,-.2, mat(0xd42a2a,{r:.5}));                                     // red backpack
+     for(const s of [-1,1]) R.box(.06,.5,.06, s*.14,1.35,.08, mat(0xd42a2a,{r:.5}));       // straps
+   } },
+
+ { id:'gem', name:'GEM', tier:'rare', price:2000, glow:0xffbf6e,
+   flavor:'Rare by name. Rarer by run.',
+   build(g){ const R=riderRig(g,{skin:0x6e4428, top:0x16141c, pants:0x14121a, shoes:0x1a1620,
+     eyes:0x3a2620, legTop:0x6e4428, legBot:0x14121a});
+     R.hairCap(0x120f16,1.0);
+     R.hairBack(0x120f16,1.15,.44);                                                        // long braids down back
+     const braids=[];
+     for(const s of [-1,1]){
+       braids.push(R.box(.1,.9,.1, s*.24,1.3,.16, mat(0x120f16,{r:.75})));                 // braids over shoulders
+       const tip=new THREE.Mesh(new THREE.ConeGeometry(.05,.12,5),mat(0x120f16,{r:.75}));
+       tip.position.set(s*.24,.82,.18); tip.rotation.x=Math.PI; g.add(tip); }
+     R.skirt(0x16141c,.4);                                                                 // black skirt (built fit)
+     R.box(.3,.04,.16, 0,1.5,.14, mat(0x0e0c12));                                          // lace cami neckline
+     R.box(.08,.16,.04, 0,1.44,.17, mat(0xffd76e,{m:.8,r:.3,envI:1.4}));                    // gold layered necklace
+     for(const s of [-1,1]){ const hoop=new THREE.Mesh(new THREE.TorusGeometry(.045,.012,6,10),
+       mat(0xffd76e,{m:.85,r:.25,envI:1.5})); hoop.position.set(s*.22,R.headY-.06,.02); g.add(hoop); } // gold hoops
+     return t=>{ braids.forEach((b,i)=>{ b.rotation.x=Math.sin(t*1.6+i*2)*.1; }); };       // braid sway
+   } },
 ];
