@@ -63,7 +63,7 @@ test('held acceleration and speed-based jump height are capped', () => {
   const jump = functionBody('jumpImpulseForSpeed');
   const doJump = functionBody('doJump');
 
-  assert.match(html, /const PEDAL_CAP = 0\.6[0-9]/);
+  assert.match(html, /const GAS_BOOST_CAP = 1(?:\.0)?/);
   assert.match(html, /const JUMP_SPEED_GATE = MAX_SPEED\*0\.78/);
   assert.match(html, /const JUMP_INSANE_SPEED = MAX_SPEED\*0\.96/);
   assert.match(html, /const JUMP_VY_MAX = 9\.4/);
@@ -100,13 +100,18 @@ test('gas meter gates player acceleration progression', () => {
 test('gas acceleration tuning is responsive without being free', () => {
   const boost = functionBody('boostAccelForGas');
   const updateGas = functionBody('updateGas');
+  const update = functionBody('update');
 
   assert.match(html, /const GAS_FILL_RATE = 0\.1[0-9]/);
   assert.match(html, /const GAS_BURN_RATE = 0\.3[0-9]/);
   assert.match(html, /const GAS_ACC_MIN = 5\.5, GAS_ACC_MAX = 18/);
   assert.match(html, /const GAS_FULL_CLEAN_T = 6/);
+  assert.match(html, /const GAS_BOOST_CAP = 1(?:\.0)?/);
   assert.match(boost, /GAS_ACC_MAX/);
   assert.match(updateGas, /g\.cleanT\/GAS_FULL_CLEAN_T/);
+  assert.match(updateGas, /g\.speed<MAX_SPEED\*GAS_BOOST_CAP/);
+  assert.match(update, /Math\.min\(g\.speed\+gasBoost\*dt, MAX_SPEED\*GAS_BOOST_CAP\)/);
+  assert.doesNotMatch(html, /PEDAL_CAP/);
 });
 
 test('hang time is tracked as a personal and leaderboard stat', () => {
@@ -167,4 +172,40 @@ test('landing ring is faster and placed per jump', () => {
 test('terrain dropout does not create a generic auto-launch', () => {
   assert.doesNotMatch(html, /doLaunch\(Math\.max\(g\.prevGvy,0\)\)/);
   assert.match(html, /else if\(pitDepthAt\(g\.x,g\.z\)>4\)/);
+});
+
+test('death screen can return to the home title instead of only restarting', () => {
+  const goHome = functionBody('goHome');
+
+  assert.match(html, /id="homeBtn"/);
+  assert.match(html, /id="againBtn"/);
+  assert.match(goHome, /resetRun\('title'\)/);
+  assert.match(html, /\$\('homeBtn'\)\.addEventListener\('click'[\s\S]*goHome\(\)/);
+  assert.match(html, /\$\('againBtn'\)\.addEventListener\('click'[\s\S]*beginRide\(\)/);
+});
+
+test('new players get an image-backed tutorial carousel', () => {
+  const openTutorial = functionBody('openTutorial');
+  const renderTutorial = functionBody('renderTutorial');
+  const startRun = functionBody('startRun');
+  const keydown = listenerBody('keydown');
+
+  assert.match(html, /id="tutorial"/);
+  assert.match(html, /id="tutorialBtn"/);
+  assert.match(html, /const TUTORIAL_KEY='dr_tutorial_seen_v1'/);
+  assert.match(html, /assets\/tutorial\/slide-steer\.png/);
+  assert.match(html, /assets\/tutorial\/slide-jump-ring\.png/);
+  assert.match(html, /assets\/tutorial\/slide-overseer\.png/);
+  assert.match(html, /#tutorial \{[^}]*overflow-y:auto/);
+  assert.match(html, /#tutorial \{[^}]*touch-action:pan-y/);
+  assert.match(html, /#tutorialCard \{[^}]*touch-action:pan-y/);
+  assert.match(html, /#tutorialCard \{[^}]*max-height:none/);
+  assert.match(html, /#tutorialCopy \{[^}]*overflow-y:auto/);
+  assert.match(html, /#tutorialCopy \{[^}]*touch-action:pan-y/);
+  assert.match(html, /#tutorialCopy \{[^}]*max-height:58vh/);
+  assert.match(openTutorial, /tutorialStartAfter=startAfter/);
+  assert.match(renderTutorial, /tutorialImg\.src=s\.img/);
+  assert.match(startRun, /!tutorialSeen\(\)[\s\S]*openTutorial\(true\)/);
+  assert.match(keydown, /tutorialKey\(e\)/);
+  assert.match(html, /setTimeout\(\(\)=>\{ if\(state==='title'&&!tutorialOpen\) openTutorial\(false\); \}, 350\)/);
 });
