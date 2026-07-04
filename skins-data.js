@@ -1,6 +1,10 @@
 // Shared skin catalog + model builders for Downhill Rush.
 // Used by skins.html (showroom), market.html (shop preview), and later the game itself.
+// Style matches the in-game bike/rider: real MTB frame from painted tubes, torus
+// wheels with neon rims, capsule limbs, two-tone vertical gradients baked into
+// vertex colors on flat-shaded material — no textures.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export const TIER={
   starter:{label:'STARTER', col:'#7de08a', hex:0x7de08a},
@@ -14,6 +18,30 @@ export const mat=(c,o={})=>new THREE.MeshStandardMaterial({color:c, flatShading:
   roughness:o.r!==undefined?o.r:.55, metalness:o.m||0,
   emissive:o.e||0x000000, emissiveIntensity:o.ei!==undefined?o.ei:1,
   envMapIntensity:o.envI||1});
+
+/* ---- gradient / flat-shaded builders (shared bike + rider style) ---- */
+const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
+export const bodyMat=new THREE.MeshStandardMaterial({vertexColors:true, flatShading:true, roughness:.5, metalness:.06});
+function colorGeo(geo,fn){
+  const p=geo.attributes.position, cols=new Float32Array(p.count*3), c=new THREE.Color();
+  for(let i=0;i<p.count;i++){ fn(p.getX(i),p.getY(i),p.getZ(i),c);
+    cols[i*3]=c.r; cols[i*3+1]=c.g; cols[i*3+2]=c.b; }
+  geo.setAttribute('color', new THREE.BufferAttribute(cols,3)); return geo;
+}
+const grad=(y0,y1,bot,top)=>{ const A=new THREE.Color(bot), B=new THREE.Color(top);
+  return (x,y,z,c)=>c.lerpColors(A,B,THREE.MathUtils.clamp((y-y0)/(y1-y0),0,1)); };
+const solid=col=>{ const A=new THREE.Color(col); return (x,y,z,c)=>c.copy(A); };
+const darken=(hex,f)=>new THREE.Color(hex).multiplyScalar(f).getHex();
+const mergeAll=arr=>mergeGeometries(arr.map(g=>g.index?g.toNonIndexed():g));
+function tube(a,b,r,seg=6,cap=false){
+  const d=V3(b.x-a.x,b.y-a.y,b.z-a.z), l=d.length();
+  const g=cap?new THREE.CapsuleGeometry(r,l,3,seg):new THREE.CylinderGeometry(r,r,l,seg);
+  g.translate(0,l/2,0);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(V3(0,1,0), d.normalize()));
+  g.translate(a.x,a.y,a.z); return g;
+}
+function boxGeo(w,h,d,x,y,z,rx=0){ const g=new THREE.BoxGeometry(w,h,d);
+  if(rx) g.rotateX(rx); g.translate(x,y,z); return g; }
 
 /* ============================ BIKE SKINS ================================== */
 export const BIKES=[
@@ -84,46 +112,53 @@ export const BIKES=[
        gem.position.set(x,y,z); gem.rotation.y=.5; g.add(gem); };
      at(0,1.14,-.05,.09); at(0,.7,.28,.07); at(0,.66,-.28,.07); at(0,1.26,.68,.06); } },
 ];
-function makeBikeMat(def, physical){
-  const C=physical?THREE.MeshPhysicalMaterial:THREE.MeshStandardMaterial;
-  const m=new C({ color:def.color, flatShading:true,
-    roughness:def.rough!==undefined?def.rough:.5,
-    metalness:def.metal!==undefined?def.metal:0 });
-  if(def.envI) m.envMapIntensity=def.envI;
-  if(def.emissive){ m.emissive=new THREE.Color(def.emissive); m.emissiveIntensity=def.ei||1; }
-  if(physical){ m.iridescence=.7; m.iridescenceIOR=1.6; }
-  return m;
-}
 export function buildBike(skin){
   const g=new THREE.Group();
-  const M={ frame:makeBikeMat(skin.frame, skin.physical),
-            accent:makeBikeMat(skin.accent, skin.physical),
-            wheel:makeBikeMat(skin.wheels) };
-  const dark=mat(0x14101f,{r:.6});
-  const wheelGeo=skin.discWheels
-    ? new THREE.CylinderGeometry(.48,.48,.1,18)
-    : new THREE.CylinderGeometry(.48,.48,.14,10);
-  wheelGeo.rotateZ(Math.PI/2);
+  const physical=skin.physical, f=skin.frame;
+  const C=physical?THREE.MeshPhysicalMaterial:THREE.MeshStandardMaterial;
+  const frameMat=new C({vertexColors:true, flatShading:true,
+    roughness:f.rough??.45, metalness:f.metal??.12, envMapIntensity:f.envI??1,
+    emissive:new THREE.Color(f.emissive??0), emissiveIntensity:f.ei??1});
+  if(physical){ frameMat.iridescence=.6; frameMat.iridescenceIOR=1.5; }
+  const darkMat=mat(0x14101f,{r:.6});
+  const rimMat=new THREE.MeshStandardMaterial({color:0x061a1c,
+    emissive:new THREE.Color(skin.glow), emissiveIntensity:2.2, flatShading:true});
+  const paint=grad(0.35,1.25, skin.frame.color, skin.accent.color);   // two-tone vertical
+  // real MTB frame from painted tubes (matches the in-game silhouette)
+  const BB=V3(0,.46,-.08), ST=V3(0,1.0,-.44), HT=V3(0,1.08,.5);
+  g.add(new THREE.Mesh(mergeAll([
+    tube(BB,V3(0,.86,.6),.048), tube(ST,HT,.036), tube(BB,ST,.042),
+    tube(V3(0,.8,.58),V3(0,1.16,.52),.052), tube(HT,V3(0,1.14,.64),.032),
+    tube(V3(-.3,1.14,.68),V3(.3,1.14,.68),.03,7), tube(V3(0,1.0,-.44),V3(0,1.12,-.5),.03),
+    tube(V3(-.07,.84,.62),V3(-.07,.48,.78),.032), tube(V3(.07,.84,.62),V3(.07,.48,.78),.032),
+    tube(V3(-.06,.44,-.1),V3(-.06,.48,-.82),.026), tube(V3(.06,.44,-.1),V3(.06,.48,-.82),.026),
+    tube(V3(-.05,.98,-.46),V3(-.06,.5,-.8),.024), tube(V3(.05,.98,-.46),V3(.06,.5,-.8),.024),
+  ].map(gg=>colorGeo(gg,paint))), frameMat));
+  // dark hardware: saddle, grips, cranks, pedals, number plate
+  const saddle=new THREE.SphereGeometry(.1,8,6); saddle.scale(1.15,.5,2.3); saddle.translate(0,1.16,-.5);
+  g.add(new THREE.Mesh(mergeAll([ saddle,
+    tube(V3(-.38,1.14,.68),V3(-.28,1.14,.68),.042), tube(V3(.28,1.14,.68),V3(.38,1.14,.68),.042),
+    tube(V3(-.15,.46,-.08),V3(.15,.46,-.08),.028),
+    boxGeo(.09,.03,.2,-.16,.46,-.06), boxGeo(.09,.03,.2,.16,.46,-.06),
+    boxGeo(.2,.15,.03,0,1.06,.76,-.15),
+  ]), darkMat));
+  // wheels: dark tire + spokes (or disc), neon rim ring
+  const tireGeo=new THREE.TorusGeometry(.4,.085,5,14);
   for(const z of [.82,-.82]){
-    const w=new THREE.Mesh(wheelGeo,M.wheel); w.position.set(0,.48,z); g.add(w);
-    const hub=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,.18,8),M.accent);
-    hub.rotation.z=Math.PI/2; hub.position.set(0,.48,z); g.add(hub);
+    const tire=tireGeo.clone(); tire.rotateY(Math.PI/2);
+    const hub=new THREE.CylinderGeometry(.05,.05,.12,6); hub.rotateZ(Math.PI/2);
+    const parts=[tire,hub];
+    if(skin.discWheels){ const disc=new THREE.CylinderGeometry(.34,.34,.035,16); disc.rotateZ(Math.PI/2); parts.push(disc); }
+    else for(let i=0;i<5;i++){ const s=new THREE.BoxGeometry(.02,.72,.03); s.rotateX(i/5*Math.PI); parts.push(s); }
+    const wm=new THREE.Mesh(mergeAll(parts), darkMat); wm.position.set(0,.48,z); g.add(wm);
+    const rimg=new THREE.TorusGeometry(.35,.03,4,12); rimg.rotateY(Math.PI/2);
+    const rm=new THREE.Mesh(rimg, rimMat); rm.position.set(0,.48,z); g.add(rm);
   }
-  const box=(w,h,d,x,y,z,m,rx=0)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
-    b.position.set(x,y,z); b.rotation.x=rx; g.add(b); return b; };
-  box(.14,.14,1.7, 0,.62,0, M.frame);
-  box(.12,.12,1.15, 0,1.04,.03, M.frame, .1);
-  box(.12,.55,.12, 0,.85,.72, M.frame, .25);
-  box(.12,.5,.12, 0,.85,-.55, M.frame, -.2);
-  box(.34,.07,.46, 0,1.14,-.6, dark);
-  box(.6,.08,.08, 0,1.16,.68, M.accent);
-  box(.09,.09,.1, .3,1.16,.68, dark);
-  box(.09,.09,.1,-.3,1.16,.68, dark);
-  const cr=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.06,10),M.accent);
-  cr.rotation.z=Math.PI/2; cr.position.set(0,.5,-.12); g.add(cr);
-  box(.3,.05,.05, 0,.5,-.12, dark);
-  box(.1,.04,.16, .18,.5,-.12, dark);
-  box(.1,.04,.16,-.18,.5,-.12, dark);
+  // extras get solid theme materials (their small geoms carry no vertex colors)
+  const A=skin.accent;
+  const M={ frame:mat(skin.frame.color,{r:f.rough??.4, m:f.metal||0, envI:f.envI||1}),
+            accent:mat(A.color,{r:A.rough??.4, e:A.emissive||0, ei:A.ei||1}),
+            wheel:darkMat };
   if(skin.extras) skin.extras(g,M);
   return g;
 }
@@ -131,41 +166,47 @@ export function buildBike(skin){
 /* ============================ RIDER BUILDER =============================== */
 export function riderRig(g, o){
   // o: skin, top, pants, shoes, eyes, shirt?, legTop?, legBot?, headScale?, bulk?, crop?, topMat?
-  const S={ skin:mat(o.skin), top:o.topMat||mat(o.top), pants:mat(o.pants), shoes:mat(o.shoes,{r:.35}) };
   const bulk=o.bulk||1, hs=o.headScale||1;
+  const skinTone=o.skin, topCol=o.top, shoeCol=o.shoes;
+  const legGrad=grad(0.05,.9, darken(o.legTop||o.pants,.6), o.legBot||o.pants);
+  const armGrad=grad(1.0,1.55, darken(topCol,.6), topCol);
   const box=(w,h,d,x,y,z,m,rx=0,ry=0,rz=0)=>{
     const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
     b.position.set(x,y,z); b.rotation.set(rx,ry,rz); g.add(b); return b; };
+  // body = capsule limbs + shoes + hands + neck + head, all vertex-colored into one mesh
+  const parts=[];
   for(const s of [-1,1]){
-    box(.17,.5,.17, s*.12,.75,0, o.legTop?mat(o.legTop):S.pants);
-    box(.15,.5,.15, s*.12,.28,0, o.legBot?mat(o.legBot):S.pants);
-    box(.17,.12,.32, s*.12,.06,.05, S.shoes);
-  }
-  let torso;
-  if(o.crop){                                    // cropped top: bare midriff strip
-    torso=box(.5*bulk,.46,.29*bulk, 0,1.44,0, S.top);
-    box(.44,.18,.25, 0,1.12,0, S.skin);
-  } else {
-    torso=box(.52*bulk,.64,.3*bulk, 0,1.34,0, S.top);
-  }
-  if(o.shirt) box(.2,.52,.05, 0,1.32,.16*bulk, mat(o.shirt));
-  for(const s of [-1,1]){
-    box(.14*bulk,.56,.14*bulk, s*(.34*bulk),1.3,0, S.top, 0,0,-s*.1);
-    box(.1,.1,.1, s*(.37*bulk),.97,0, S.skin);
+    parts.push(colorGeo(tube(V3(s*.13,.9,0), V3(s*.13,.1,.03), .11*bulk,6,true), legGrad));   // leg
+    parts.push(colorGeo(boxGeo(.17,.1,.32, s*.13,.06,.06), solid(shoeCol)));                  // shoe
+    parts.push(colorGeo(tube(V3(s*.3*bulk,1.54,0), V3(s*.34,1.02,.06), .075*bulk,6,true), armGrad)); // arm
+    parts.push(colorGeo(new THREE.IcosahedronGeometry(.075,0).translate(s*.34,1.0,.07), solid(skinTone))); // hand
   }
   const headY=1.86+(hs-1)*.12;
-  const head=new THREE.Mesh(new THREE.IcosahedronGeometry(.23*hs,0),S.skin);
-  head.position.set(0,headY,0); g.add(head);
-  for(const s of [-1,1])
-    box(.055*hs,.06*hs,.02, s*.08*hs, headY+.02, .2*hs, mat(0x111111,{e:o.eyes,ei:1.2}));
-  return { S, box, head, headY, hs, torso,
+  parts.push(colorGeo(tube(V3(0,1.48,0),V3(0,1.7,.02),.09), solid(skinTone)));                // neck
+  parts.push(colorGeo(new THREE.IcosahedronGeometry(.23*hs,0).translate(0,headY,0), solid(skinTone))); // head
+  g.add(new THREE.Mesh(mergeAll(parts), bodyMat));
+  // torso — its own mesh so it can take a special material (e.g. Mendo's pearlescent jacket)
+  const torsoGeo=new THREE.CapsuleGeometry(.2*bulk,.46,4,8); torsoGeo.scale(1.1,1,.74); torsoGeo.translate(0,1.3,0);
+  if(o.topMat){ g.add(new THREE.Mesh(torsoGeo,o.topMat)); }
+  else {
+    const tTop=new THREE.Color(topCol), tBot=new THREE.Color(darken(topCol,.72)), tSkin=new THREE.Color(skinTone);
+    colorGeo(torsoGeo,(x,y,z,c)=>{
+      if(o.crop && y<1.24){ c.copy(tSkin); return; }                 // bare midriff
+      if(y>1.52){ c.copy(tTop); return; }                            // shoulders (brighter)
+      c.lerpColors(tBot,tTop,THREE.MathUtils.clamp((y-1.0)/.55,0,1));
+    });
+    g.add(new THREE.Mesh(torsoGeo, bodyMat));
+  }
+  if(o.shirt){ const sh=box(.18,.5,.06, 0,1.3,.17*bulk, mat(o.shirt)); }
+  for(const s of [-1,1]) box(.055*hs,.06*hs,.02, s*.08*hs, headY+.02, .2*hs, mat(0x111111,{e:o.eyes,ei:1.4}));
+  return { box, headY, hs,
     hairCap(color,scale=1){ const h=new THREE.Mesh(new THREE.IcosahedronGeometry(.25*hs*scale,0),mat(color,{r:.7}));
-      h.scale.y=.75; h.position.set(0,headY+.1,-.02); g.add(h); return h; },
-    hairBack(color,len=.5,w=.34){ const h=box(w,len,.1, 0,headY-len/2+.12,-.2*hs, mat(color,{r:.7})); return h; },
+      h.scale.y=.78; h.position.set(0,headY+.1,-.02); g.add(h); return h; },
+    hairBack(color,len=.5,w=.34){ return box(w,len,.1, 0,headY-len/2+.12,-.2*hs, mat(color,{r:.7})); },
     hat(color,r=.26){ const b=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.9,.09,10),mat(color,{r:.6}));
       b.position.set(0,headY+.22,0); b.rotation.z=.12; g.add(b); return b; },
-    skirt(color,r=.44){ const s=new THREE.Mesh(new THREE.CylinderGeometry(.26,r,.32,10),mat(color,{r:.6}));
-      s.position.set(0,.94,0); g.add(s); return s; },
+    skirt(color,r=.44){ const s=new THREE.Mesh(new THREE.CylinderGeometry(.26,r,.34,10),mat(color,{r:.6}));
+      s.position.set(0,.92,0); g.add(s); return s; },
   };
 }
 
