@@ -111,6 +111,45 @@ export const BIKES=[
      const at=(x,y,z,s)=>{ const gem=new THREE.Mesh(new THREE.OctahedronGeometry(s),gemMat);
        gem.position.set(x,y,z); gem.rotation.y=.5; g.add(gem); };
      at(0,1.14,-.05,.09); at(0,.7,.28,.07); at(0,.66,-.28,.07); at(0,1.26,.68,.06); } },
+
+ { id:'tidebreaker', name:'TIDEBREAKER', tier:'common', price:500, glow:0x2ee6ff,
+   flavor:'Rides the break, never the wake.',
+   frame:{color:0x0a5a7a, rough:.5}, accent:{color:0x2ee6ff, rough:.4},
+   wheels:{color:0x06202e, emissive:0x2ee6ff, ei:1.3},
+   extras(g,M){ for(let i=0;i<3;i++){ const w=new THREE.Mesh(new THREE.ConeGeometry(.06,.18,4),
+     mat(0x2ee6ff,{e:0x2ee6ff,ei:.7})); w.position.set(0,.72+i*.02,-.08-i*.26); w.rotation.z=.5; g.add(w);} } },
+
+ { id:'gridrunner', name:'GRIDRUNNER', tier:'rare', price:1400, glow:0x00e5ff,
+   flavor:'Straight lines. Neon dreams.',
+   frame:{color:0x1a1040, rough:.35, metal:.2}, accent:{color:0xff2ecb, rough:.4},
+   wheels:{color:0x0a0620, emissive:0x00e5ff, ei:1.5},
+   extras(g,M){ const line=(x,y,z,len,rz,c)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(.018,len,.018),
+     mat(c,{e:c,ei:1.3})); b.position.set(x,y,z); b.rotation.z=rz; g.add(b); };
+     line(0,.66,.26,.8,-.7,0x00e5ff); line(0,.9,-.02,.5,.7,0xff2ecb); line(0,.6,-.2,.5,-.6,0x00e5ff); } },
+
+ { id:'obsidian', name:'OBSIDIAN', tier:'epic', price:4200, glow:0xff5a2a,
+   flavor:'Cooled lava. Still dangerous.',
+   frame:{color:0x0c0c12, rough:.22, metal:.4}, accent:{color:0x5a1a0a, rough:.3, emissive:0xff5a2a, ei:.4},
+   wheels:{color:0x1a0806, emissive:0xff5a2a, ei:1.4},
+   extras(g,M){ for(let i=0;i<4;i++){ const s=new THREE.Mesh(new THREE.TetrahedronGeometry(.07+(i%2)*.02),
+     mat(0xff5a2a,{e:0xff5a2a,ei:1})); s.position.set(0,.66+i*.02,.24-i*.28); s.rotation.set(.5,i,.3); g.add(s);} } },
+
+ { id:'aurora', name:'AURORA', tier:'legendary', price:11000, glow:0x4dffa8, physical:true,
+   flavor:'Borrowed from the night sky.',
+   frame:{color:0x123a2e, rough:.15, metal:.7, envI:1.6, emissive:0x184436, ei:.2},
+   accent:{color:0x7a4dff, rough:.2, metal:.6, envI:1.5},
+   wheels:{color:0x0a2018, metal:.6, rough:.2, emissive:0x4dffa8, ei:1.0}, discWheels:true,
+   extras(g,M){ const band=(c,x,rz)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(.02,.7,.05),
+     mat(c,{e:c,ei:.9})); b.position.set(x,.86,0); b.rotation.z=rz; g.add(b); };
+     band(0x4dffa8,-.02,-.5); band(0x7a4dff,.02,-.42); } },
+
+ { id:'phantom', name:'PHANTOM', tier:'legendary', price:15000, glow:0xc9b3ff,
+   flavor:'You will swear it was never there.',
+   frame:{color:0x2a2440, rough:.2, metal:.5, envI:1.4, emissive:0x1a1630, ei:.15},
+   accent:{color:0xc9b3ff, rough:.25, metal:.4}, discWheels:true,
+   wheels:{color:0x14101f, metal:.5, rough:.2, emissive:0xc9b3ff, ei:1.2},
+   extras(g,M){ for(let i=0;i<4;i++){ const w=new THREE.Mesh(new THREE.SphereGeometry(.03+(i%2)*.015,6,5),
+     mat(0xc9b3ff,{e:0xc9b3ff,ei:1})); w.position.set(i%2?.06:-.06,.7+i*.1,-.1+i*.05); g.add(w);} } },
 ];
 export function buildBike(skin){
   const g=new THREE.Group();

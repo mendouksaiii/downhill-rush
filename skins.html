@@ -148,7 +148,9 @@ function makeGallery(defs, order, root, buildFn, cols){
   return items;
 }
 const bikeItems=makeGallery(BIKES,
-  ['inferno','silver','diamond','gold','voltage','sunset','night','frost','toxic','sakura'],
+  ['diamond','gold','aurora','phantom','silver',
+   'inferno','obsidian','voltage','gridrunner','sakura',
+   'frost','toxic','tidebreaker','sunset','night'],
   bikesRoot, (s,m)=>{ m.add(buildBike(s)); }, 5);
 const riderItems=makeGallery(RIDERS,
   ['mendo','spike','himars','ronin',
