@@ -104,13 +104,13 @@ module.exports = async (req, res) => {
       const changed = (await redis([['ZADD', KEY, 'GT', String(rankScore), name]]))[0];
       if (changed) await redis([['HSET', META_KEY, name, JSON.stringify(entry)]]);
       const r = await redis([
-        ['ZREMRANGEBYRANK', KEY, '0', String(-(CAP + 1))],
-        ['ZREVRANK', KEY, name],
-        ['ZCARD', KEY],
-        ['ZRANGE', KEY, '0', String(SHOW - 1), 'REV', 'WITHSCORES'],
+        ['ZREMRANGEBYRANK', KEY, '0', String(-(CAP + 1))],   // r[0] = # trimmed
+        ['ZREVRANK', KEY, name],                             // r[1] = rank (0-based)
+        ['ZCARD', KEY],                                      // r[2] = total count
+        ['ZRANGE', KEY, '0', String(SHOW - 1), 'REV', 'WITHSCORES'], // r[3] = top
       ]);
-      const rank = r[0] != null ? r[0] + 1 : null;         // null = trimmed out (below top CAP)
-      res.status(200).json({ top: await hydrateTop(r[3]), rank, count: r[1] || 0 });
+      const rank = r[1] != null ? r[1] + 1 : null;         // null = trimmed out (below top CAP)
+      res.status(200).json({ top: await hydrateTop(r[3]), rank, count: r[2] || 0 });
       return;
     }
 
