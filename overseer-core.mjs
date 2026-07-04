@@ -142,9 +142,9 @@ export function createOverseerRuntime(options = {}){
     if(event.type === 'style'){
       const points = Math.max(0, Number(event.points || 0));
       state.events.style += points;
-      state.pressure = clamp01(state.pressure + points / 1400);
-      state.manifestation = clamp01(state.manifestation + points / 3500);
-      if(event.trick) state.tilt = clamp01(state.tilt + points / 2600);
+      state.pressure = clamp01(state.pressure + points / 2200);
+      state.manifestation = clamp01(state.manifestation + points / 5200);
+      if(event.trick) state.tilt = clamp01(state.tilt + points / 3600);
     } else if(event.type === 'landing'){
       if(event.quality === 'perfect'){
         state.events.perfects++;
@@ -167,8 +167,8 @@ export function createOverseerRuntime(options = {}){
     } else if(event.type === 'pickup'){
       if(event.power === 'green'){
         state.events.greenPickups++;
-        state.tilt = clamp01(state.tilt + 0.2);
-        state.pressure = clamp01(state.pressure + 0.07);
+        state.tilt = clamp01(state.tilt + 0.12);
+        state.pressure = clamp01(state.pressure + 0.04);
       } else if(event.power === 'red'){
         state.mercy = clamp01(state.mercy + 0.04);
       }
@@ -211,12 +211,13 @@ export function createOverseerRuntime(options = {}){
     const combo = Math.max(0, Number(game.combo || 0));
     const cleanT = Math.max(0, Number(game.cleanT || 0));
     const z = Math.max(0, Number(game.z || 0));
-    state.pressure = clamp01(state.pressure + dt * 0.006 + combo * 0.012 + Math.max(0, speed - 30) / 900);
+    const progressGate = clamp01((z - 520) / 520);
+    state.pressure = clamp01(state.pressure + (dt * 0.004 + combo * 0.007 + Math.max(0, speed - 38) / 1250) * (0.35 + progressGate * 0.65));
     state.respect = clamp01(state.respect + Math.min(0.04, cleanT / 800));
     state.trapBudget = clamp01(state.pressure * 0.75 + state.tilt * 0.35 - state.mercy * 0.55);
-    state.attackBudget = clamp01(state.manifestation * 0.6 + Math.max(0, z - 500) / 1800 - state.mercy * 0.5);
+    state.attackBudget = clamp01(state.manifestation * 0.48 + Math.max(0, z - 820) / 2100 - state.mercy * 0.5);
     state.attackCooldown = Math.max(0, state.attackCooldown - dt);
-    state.manifestation = clamp01(state.manifestation + Math.max(0, state.pressure - 0.55) * dt * 0.018 + state.tilt * dt * 0.012);
+    state.manifestation = clamp01(state.manifestation + Math.max(0, state.pressure - 0.62) * dt * 0.012 + state.tilt * dt * 0.007 * (0.4 + progressGate * 0.6));
     updateArchetype();
   }
 
@@ -240,8 +241,8 @@ export function createOverseerRuntime(options = {}){
       return directive;
     }
 
-    const canAttack = state.attackBudget > 0.28 && state.manifestation > 0.38
-      && state.attackCooldown <= 0 && state.attackShield <= 0 && Number(context.z0 || 0) > 420;
+    const canAttack = state.attackBudget > 0.32 && state.manifestation > 0.44
+      && state.attackCooldown <= 0 && state.attackShield <= 0 && Number(context.z0 || 0) >= 900;
     if(canAttack){
       const attackTypes = {
         judge: ['mirrorGate', 'collapsePulse', 'redEyeSweep'],

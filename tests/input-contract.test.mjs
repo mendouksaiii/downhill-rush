@@ -97,6 +97,18 @@ test('gas meter gates player acceleration progression', () => {
   assert.doesNotMatch(html, /PEDAL_ACC/);
 });
 
+test('gas acceleration tuning is responsive without being free', () => {
+  const boost = functionBody('boostAccelForGas');
+  const updateGas = functionBody('updateGas');
+
+  assert.match(html, /const GAS_FILL_RATE = 0\.1[0-9]/);
+  assert.match(html, /const GAS_BURN_RATE = 0\.3[0-9]/);
+  assert.match(html, /const GAS_ACC_MIN = 5\.5, GAS_ACC_MAX = 18/);
+  assert.match(html, /const GAS_FULL_CLEAN_T = 6/);
+  assert.match(boost, /GAS_ACC_MAX/);
+  assert.match(updateGas, /g\.cleanT\/GAS_FULL_CLEAN_T/);
+});
+
 test('hang time is tracked as a personal and leaderboard stat', () => {
   const reset = functionBody('resetRun');
   const showDeath = functionBody('showDeath');
@@ -139,12 +151,17 @@ test('ring timing uses mobile touch taps but not desktop mouse clicks', () => {
 
 test('landing ring is faster and placed per jump', () => {
   const launch = functionBody('doLaunch');
+  const draw = functionBody('drawRing');
 
   assert.match(html, /const RING_TIMING_SPAN = 0\.[0-9]+/);
   assert.match(html, /function placeRingRandom\(\)/);
   assert.match(html, /ringWrap\.style\.left=/);
   assert.match(html, /ringWrap\.style\.top=/);
   assert.match(launch, /placeRingRandom\(\)/);
+  assert.match(draw, /gameT\*8/);
+  assert.match(draw, /ringCtx\.setLineDash/);
+  assert.match(draw, /ringCtx\.arc\(c,c,r,spin,spin\+Math\.PI\*1\.55\)/);
+  assert.match(draw, /pulse/);
 });
 
 test('terrain dropout does not create a generic auto-launch', () => {

@@ -107,10 +107,10 @@ test('high manifestation unlocks a budgeted direct attack with cooldown', () => 
 
   overseer.observe({ type: 'style', points: 1600, trick: true });
   overseer.observe({ type: 'pickup', power: 'green' });
-  overseer.tick(18, { speed: 72, combo: 6, cleanT: 4, z: 980 });
+  overseer.tick(18, { speed: 72, combo: 6, cleanT: 4, z: 1280 });
 
-  const first = overseer.chooseDirective({ ci: 18, z0: 1080, density: 0.8, speed: 72 });
-  const second = overseer.chooseDirective({ ci: 19, z0: 1140, density: 0.8, speed: 72 });
+  const first = overseer.chooseDirective({ ci: 23, z0: 1380, density: 0.8, speed: 72 });
+  const second = overseer.chooseDirective({ ci: 24, z0: 1440, density: 0.8, speed: 72 });
   const snap = overseer.snapshot();
 
   assert.equal(first.kind, 'attack');
@@ -118,6 +118,25 @@ test('high manifestation unlocks a budgeted direct attack with cooldown', () => 
   assert.ok(first.params.cooldown > 0);
   assert.notEqual(second.kind, 'attack');
   assert.ok(snap.attackCooldown > 0);
+});
+
+test('direct Overseer attacks are gated until later distance', () => {
+  const overseer = createOverseerRuntime({ seed: 45 });
+
+  overseer.observe({ type: 'style', points: 2400, trick: true });
+  overseer.observe({ type: 'pickup', power: 'green' });
+  overseer.tick(22, { speed: 76, combo: 8, cleanT: 5, z: 760 });
+
+  const early = overseer.chooseDirective({ ci: 13, z0: 780, density: 0.9, speed: 76 });
+  const earlySnap = overseer.snapshot();
+
+  assert.notEqual(early.kind, 'attack');
+  assert.ok(earlySnap.manifestation > 0.5);
+
+  overseer.tick(4, { speed: 78, combo: 8, cleanT: 6, z: 940 });
+  const late = overseer.chooseDirective({ ci: 16, z0: 960, density: 0.9, speed: 78 });
+
+  assert.equal(late.kind, 'attack');
 });
 
 test('three perfect landings create a chain break that cancels the next attack', () => {

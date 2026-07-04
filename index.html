@@ -239,10 +239,10 @@ const JUMP_SPEED_GATE = MAX_SPEED*0.78;
 const JUMP_INSANE_SPEED = MAX_SPEED*0.96;
 const JUMP_VY_MAX = 9.4;
 const PEDAL_CAP = 0.66;           // held acceleration alone can't reach trick-speed territory
-const GAS_FILL_RATE = 0.075;      // full tank takes sustained clean riding
-const GAS_BURN_RATE = 0.42;       // full tank burns in ~2.4 seconds
-const GAS_ACC_MIN = 3.0, GAS_ACC_MAX = 14.5;
-const GAS_FULL_CLEAN_T = 9;
+const GAS_FILL_RATE = 0.13;       // full tank still requires clean riding, but no longer feels starved
+const GAS_BURN_RATE = 0.36;       // longer, readable boost burn
+const GAS_ACC_MIN = 5.5, GAS_ACC_MAX = 18;
+const GAS_FULL_CLEAN_T = 6;
 const CLEAN_RAMP = 0.5;           // extra passive accel/s earned by a clean streak (~10s)
 const SPIN_RATE = 5.0, FLIP_RATE = 5.4;   // trick rotation speeds (rad/s)
 const TRICK_OFF = 0.9;            // landing this far (rad) from level = stumble, not death
@@ -1324,13 +1324,20 @@ function placeRingRandom(){
 
 function drawRing(tLand){
   const W=150, c=W/2; ringCtx.clearRect(0,0,W,W);
-  const R=26, p=Math.min(Math.max(tLand,0),RING_TIMING_SPAN)/RING_TIMING_SPAN, r=R+p*44;
-  ringCtx.lineWidth=3; ringCtx.strokeStyle='rgba(255,255,255,0.85)';
+  const R=26, p=Math.min(Math.max(tLand,0),RING_TIMING_SPAN)/RING_TIMING_SPAN;
+  const spin=gameT*8, pulse=0.5+0.5*Math.sin(gameT*18);
+  const r=R+p*44+Math.sin(gameT*12)*2.5;
+  ringCtx.lineCap='round';
+  ringCtx.lineWidth=3+pulse*1.5; ringCtx.strokeStyle='rgba(255,255,255,0.85)';
+  ringCtx.setLineDash([10,7]); ringCtx.lineDashOffset=-gameT*70;
   ringCtx.beginPath(); ringCtx.arc(c,c,R,0,Math.PI*2); ringCtx.stroke();
-  ringCtx.lineWidth=5; ringCtx.strokeStyle='#00e5ff';
-  ringCtx.shadowColor='#00e5ff'; ringCtx.shadowBlur=12;
-  ringCtx.beginPath(); ringCtx.arc(c,c,r,0,Math.PI*2); ringCtx.stroke();
-  ringCtx.shadowBlur=0;
+  ringCtx.setLineDash([]);
+  ringCtx.lineWidth=5+pulse*2; ringCtx.strokeStyle='#00e5ff';
+  ringCtx.shadowColor='#00e5ff'; ringCtx.shadowBlur=12+pulse*12;
+  ringCtx.beginPath(); ringCtx.arc(c,c,r,spin,spin+Math.PI*1.55); ringCtx.stroke();
+  ringCtx.lineWidth=2; ringCtx.strokeStyle='rgba(255,215,110,0.9)';
+  ringCtx.beginPath(); ringCtx.arc(c,c,R+7+pulse*4,spin+Math.PI,spin+Math.PI*1.38); ringCtx.stroke();
+  ringCtx.shadowBlur=0; ringCtx.setLineDash([]);
 }
 
 /* ============================== LEADERBOARD / IDENTITY ================= */
