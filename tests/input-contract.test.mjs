@@ -58,6 +58,20 @@ test('ArrowUp accelerates without feeding air trick input', () => {
   assert.doesNotMatch(flip, /keys\.ArrowUp/);
 });
 
+test('held acceleration and speed-based jump height are capped', () => {
+  const jump = functionBody('jumpImpulseForSpeed');
+  const doJump = functionBody('doJump');
+
+  assert.match(html, /const PEDAL_CAP = 0\.6[0-9]/);
+  assert.match(html, /const JUMP_SPEED_GATE = MAX_SPEED\*0\.78/);
+  assert.match(html, /const JUMP_INSANE_SPEED = MAX_SPEED\*0\.96/);
+  assert.match(html, /const JUMP_VY_MAX = 9\.4/);
+  assert.match(jump, /THREE\.MathUtils\.clamp/);
+  assert.match(jump, /t\*t\*\(3-2\*t\)/);
+  assert.match(doJump, /jumpImpulseForSpeed\(g\.speed\)/);
+  assert.doesNotMatch(doJump, /g\.speed\*0\.045/);
+});
+
 test('ring timing uses mobile touch taps but not desktop mouse clicks', () => {
   const pointerdown = listenerBody('pointerdown');
 

@@ -221,9 +221,12 @@ const PERFECT_WIN = 0.08, GOOD_WIN = 0.20, FAULT_WIN = 0.40;
 const RING_TIMING_SPAN = 0.82;    // visual ring closes quicker than before
 const POWER_DUR = 6;              // seconds a powerup effect lasts
 const MIN_AIR_FOR_TAP = 0.8;      // only real jumps engage the landing ring — rollers stay free
-const JUMP_VY = 7.5;              // base jump impulse (grows slightly with speed)
+const JUMP_VY = 7.5;              // base jump impulse; speed bonus is gated below
+const JUMP_SPEED_GATE = MAX_SPEED*0.78;
+const JUMP_INSANE_SPEED = MAX_SPEED*0.96;
+const JUMP_VY_MAX = 9.4;
 const PEDAL_ACC = 9;              // hold-to-pedal acceleration (m/s^2), soft-capped
-const PEDAL_CAP = 0.75;           // pedaling alone can't exceed this fraction of MAX_SPEED
+const PEDAL_CAP = 0.66;           // held acceleration alone can't reach trick-speed territory
 const CLEAN_RAMP = 0.5;           // extra passive accel/s earned by a clean streak (~10s)
 const SPIN_RATE = 5.0, FLIP_RATE = 5.4;   // trick rotation speeds (rad/s)
 const TRICK_OFF = 0.9;            // landing this far (rad) from level = stumble, not death
@@ -1672,11 +1675,16 @@ function doLaunch(vy0){
     jumpsSeen++;
   }
 }
+function jumpImpulseForSpeed(speed){
+  const t=THREE.MathUtils.clamp((speed-JUMP_SPEED_GATE)/(JUMP_INSANE_SPEED-JUMP_SPEED_GATE),0,1);
+  const eased=t*t*(3-2*t);
+  return Math.min(JUMP_VY_MAX, JUMP_VY+eased*(JUMP_VY_MAX-JUMP_VY));
+}
 function doJump(){
   const g=game;
   if(state!=='riding' || g.airborne) return;
   spawnParticles(6, g.x, g.y, g.z, 3, 0, 2.4, g.speed*0.15);
-  doLaunch(JUMP_VY + g.speed*0.045);
+  doLaunch(jumpImpulseForSpeed(g.speed));
   if(AC) blip(masterG,'sine',280,520,AC.currentTime,0.1,0.3);
 }
 
