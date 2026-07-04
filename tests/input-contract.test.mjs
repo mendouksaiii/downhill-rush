@@ -65,6 +65,16 @@ test('ring timing uses mobile touch taps but not desktop mouse clicks', () => {
   assert.doesNotMatch(pointerdown, /if\(!pressConsumed && game\.airborne\) airTap\(\)/);
 });
 
+test('landing ring is faster and placed per jump', () => {
+  const launch = functionBody('doLaunch');
+
+  assert.match(html, /const RING_TIMING_SPAN = 0\.[0-9]+/);
+  assert.match(html, /function placeRingRandom\(\)/);
+  assert.match(html, /ringWrap\.style\.left=/);
+  assert.match(html, /ringWrap\.style\.top=/);
+  assert.match(launch, /placeRingRandom\(\)/);
+});
+
 test('terrain dropout does not create a generic auto-launch', () => {
   assert.doesNotMatch(html, /doLaunch\(Math\.max\(g\.prevGvy,0\)\)/);
   assert.match(html, /else if\(pitDepthAt\(g\.x,g\.z\)>4\)/);

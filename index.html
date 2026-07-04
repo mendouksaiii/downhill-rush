@@ -39,7 +39,7 @@
     background:rgba(255,255,255,.12); border-radius:3px; overflow:hidden; }
   #speedfill { position:absolute; bottom:0; left:0; right:0; height:0%;
     background:#2effa4; border-radius:3px; transition:background .3s; }
-  #ringWrap { position:absolute; left:50%; bottom:16%; transform:translateX(-50%);
+  #ringWrap { position:absolute; left:50%; top:72%; transform:translate(-50%,-50%);
     display:none; text-align:center; }
   #ring { display:block; }
   #hint { margin-top:2px; font-size:19px; font-weight:700; letter-spacing:2px; color:#00e5ff;
@@ -218,6 +218,7 @@ const START_SPEED = 14;
 const SPEED_RAMP = 0.30;          // passive accel per second
 const MAX_SPEED = 88;
 const PERFECT_WIN = 0.08, GOOD_WIN = 0.20, FAULT_WIN = 0.40;
+const RING_TIMING_SPAN = 0.82;    // visual ring closes quicker than before
 const POWER_DUR = 6;              // seconds a powerup effect lasts
 const MIN_AIR_FOR_TAP = 0.8;      // only real jumps engage the landing ring — rollers stay free
 const JUMP_VY = 7.5;              // base jump impulse (grows slightly with speed)
@@ -1275,9 +1276,22 @@ function overseerSay(text, hold=1.15){
   overseerVoiceEl.classList.add('show');
 }
 
+function placeRingRandom(){
+  const pad=92;
+  const minX=pad, maxX=Math.max(pad, innerWidth-pad);
+  const minY=Math.max(118, pad+Math.max(0, window.visualViewport?.offsetTop||0));
+  const maxY=Math.max(minY, innerHeight-150);
+  const x=THREE.MathUtils.clamp(minX+Math.random()*(maxX-minX), minX, maxX);
+  const y=THREE.MathUtils.clamp(minY+Math.random()*(maxY-minY), minY, maxY);
+  ringWrap.style.left=x+'px';
+  ringWrap.style.top=y+'px';
+  ringWrap.style.bottom='auto';
+  ringWrap.style.transform='translate(-50%,-50%)';
+}
+
 function drawRing(tLand){
   const W=150, c=W/2; ringCtx.clearRect(0,0,W,W);
-  const R=26, p=Math.min(Math.max(tLand,0),1.3)/1.3, r=R+p*44;
+  const R=26, p=Math.min(Math.max(tLand,0),RING_TIMING_SPAN)/RING_TIMING_SPAN, r=R+p*44;
   ringCtx.lineWidth=3; ringCtx.strokeStyle='rgba(255,255,255,0.85)';
   ringCtx.beginPath(); ringCtx.arc(c,c,R,0,Math.PI*2); ringCtx.stroke();
   ringCtx.lineWidth=5; ringCtx.strokeStyle='#00e5ff';
@@ -1652,6 +1666,7 @@ function doLaunch(vy0){
   g.totalAirPredict=predictLand();
   if(g.totalAirPredict>=MIN_AIR_FOR_TAP){
     if(AC) masterFilt.frequency.setTargetAtTime(700, AC.currentTime, 0.22);
+    placeRingRandom();
     ringWrap.style.display='block';
     hintEl.style.display=jumpsSeen<2?'block':'none';
     jumpsSeen++;
