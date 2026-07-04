@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const leaderboardApi = readFileSync(new URL('../api/leaderboard.js', import.meta.url), 'utf8');
 
 function functionBody(name) {
   const start = html.indexOf(`function ${name}(`);
@@ -70,6 +71,63 @@ test('held acceleration and speed-based jump height are capped', () => {
   assert.match(jump, /t\*t\*\(3-2\*t\)/);
   assert.match(doJump, /jumpImpulseForSpeed\(g\.speed\)/);
   assert.doesNotMatch(doJump, /g\.speed\*0\.045/);
+});
+
+test('gas meter gates player acceleration progression', () => {
+  const reset = functionBody('resetRun');
+  const updateGas = functionBody('updateGas');
+  const burn = functionBody('burnGasForBoost');
+  const refresh = functionBody('refreshHUD');
+  const stumble = functionBody('stumble');
+  const absorbShield = functionBody('absorbShield');
+
+  assert.match(html, /id="gasbar"/);
+  assert.match(html, /id="gasfill"/);
+  assert.match(html, /const GAS_FILL_RATE = /);
+  assert.match(html, /const GAS_BURN_RATE = /);
+  assert.match(reset, /gas:0/);
+  assert.match(updateGas, /cleanT/);
+  assert.match(updateGas, /pedalHeld\(\)/);
+  assert.match(updateGas, /burnGasForBoost\(dt\)/);
+  assert.match(burn, /GAS_BURN_RATE\*dt/);
+  assert.match(burn, /boostAccelForGas\(gas0\)/);
+  assert.match(refresh, /gasFill\.style\.height/);
+  assert.match(stumble, /g\.gas=0/);
+  assert.match(absorbShield, /game\.gas=0/);
+  assert.doesNotMatch(html, /PEDAL_ACC/);
+});
+
+test('hang time is tracked as a personal and leaderboard stat', () => {
+  const reset = functionBody('resetRun');
+  const showDeath = functionBody('showDeath');
+  const submitRun = functionBody('submitRun');
+  const renderLB = functionBody('renderLB');
+
+  assert.match(html, /id="dHang"/);
+  assert.match(reset, /hangT:0/);
+  assert.match(showDeath, /\$\('dHang'\)\.textContent=fmtT\(game\.hangT\)/);
+  assert.match(showDeath, /submitRun\(game\.runT, game\.score, game\.z-game\.dist0, game\.hangT\)/);
+  assert.match(submitRun, /hang:\+hang\.toFixed\(1\)/);
+  assert.match(renderLB, /e\.hang/);
+  assert.match(leaderboardApi, /const hang = /);
+  assert.match(leaderboardApi, /rankValue/);
+  assert.match(leaderboardApi, /hang/);
+});
+
+test('powerups are tiered with rare gold as the strongest tier', () => {
+  const applyPower = functionBody('applyPower');
+  const choosePowerTier = functionBody('choosePowerTier');
+
+  assert.match(html, /const POWER_TIERS = /);
+  assert.match(html, /white:\{[^}]*speedFactor:1\.18/);
+  assert.match(html, /gold:\{[^}]*speedFactor:1\.55/);
+  assert.match(html, /gold:\{[^}]*weight:0\.08/);
+  assert.match(choosePowerTier, /POWER_TIERS\.gold\.weight/);
+  assert.match(html, /tier:choosePowerTier\(rng\)/);
+  assert.match(html, /puMats\[p\.tier\]/);
+  assert.match(html, /applyPower\(p\.type,p\.tier\)/);
+  assert.match(applyPower, /POWER_TIERS\[tierId\]/);
+  assert.doesNotMatch(applyPower, /Math\.min\(2, MAX_SPEED/);
 });
 
 test('ring timing uses mobile touch taps but not desktop mouse clicks', () => {

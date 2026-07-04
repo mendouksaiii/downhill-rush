@@ -39,6 +39,14 @@
     background:rgba(255,255,255,.12); border-radius:3px; overflow:hidden; }
   #speedfill { position:absolute; bottom:0; left:0; right:0; height:0%;
     background:#2effa4; border-radius:3px; transition:background .3s; }
+  #gasbar { position:absolute; left:22px; top:20%; bottom:20%; width:7px;
+    background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.18);
+    border-radius:4px; overflow:hidden; }
+  #gasfill { position:absolute; bottom:0; left:0; right:0; height:0%;
+    background:#f4f6ff; border-radius:4px; box-shadow:0 0 10px rgba(244,246,255,.75); }
+  #gasbar::after { content:'GAS'; position:absolute; left:12px; bottom:-2px;
+    transform:rotate(-90deg); transform-origin:left bottom; font-size:10px; font-weight:700;
+    letter-spacing:2px; color:#e8e8ff; text-shadow:0 0 8px rgba(255,255,255,.7); }
   #ringWrap { position:absolute; left:50%; top:72%; transform:translate(-50%,-50%);
     display:none; text-align:center; }
   #ring { display:block; }
@@ -65,6 +73,9 @@
   #power.green .plabel{ color:#2eff8a; text-shadow:0 0 10px rgba(46,255,138,.8);} #power.green .pfill{ background:#2eff8a; }
   #power.red .plabel{ color:#ff4e66; text-shadow:0 0 10px rgba(255,78,102,.8);} #power.red .pfill{ background:#ff4e66; }
   #power.blue .plabel{ color:#4db8ff; text-shadow:0 0 10px rgba(77,184,255,.8);} #power.blue .pfill{ background:#4db8ff; }
+  #power.white .pbar{ border:1px solid rgba(244,246,255,.42); } #power.white .pfill{ background:#f4f6ff; }
+  #power.silver .pbar{ border:1px solid rgba(169,204,255,.5); } #power.silver .pfill{ background:#a9ccff; }
+  #power.gold .pbar{ border:1px solid rgba(255,215,110,.6); } #power.gold .pfill{ background:#ffd76e; }
   #overseerVoice { position:absolute; left:50%; top:calc(104px + env(safe-area-inset-top));
     transform:translateX(-50%); min-width:min(440px,82vw); text-align:center; opacity:0;
     font-size:clamp(16px,3vw,24px); font-weight:700; letter-spacing:5px; color:#ff304c;
@@ -159,6 +170,7 @@
   <div id="comboBox"><span class="flame">🔥</span><span class="mult">×1.5</span></div>
   <div id="power"><span class="plabel"></span><div class="pbar"><div class="pfill"></div></div></div>
   <div id="speedbar"><div id="speedfill"></div></div>
+  <div id="gasbar"><div id="gasfill"></div></div>
   <div id="ringWrap"><canvas id="ring" width="150" height="150"></canvas><div id="hint">TAP WHEN RINGS MEET</div></div>
   <div id="overseerVoice"></div>
   <div id="popups"></div>
@@ -184,6 +196,7 @@
     <span class="k">BEST</span><span class="v" id="dBest">0</span>
     <span class="k">TIME</span><span class="v" id="dTime">0s</span>
     <span class="k">DISTANCE</span><span class="v" id="dDist">0 m</span>
+    <span class="k">HANG</span><span class="v" id="dHang">0s</span>
     <span class="k">TOP COMBO</span><span class="v" id="dCombo">0</span>
   </div>
   <div id="dRank" class="hidden"></div>
@@ -225,13 +238,21 @@ const JUMP_VY = 7.5;              // base jump impulse; speed bonus is gated bel
 const JUMP_SPEED_GATE = MAX_SPEED*0.78;
 const JUMP_INSANE_SPEED = MAX_SPEED*0.96;
 const JUMP_VY_MAX = 9.4;
-const PEDAL_ACC = 9;              // hold-to-pedal acceleration (m/s^2), soft-capped
 const PEDAL_CAP = 0.66;           // held acceleration alone can't reach trick-speed territory
+const GAS_FILL_RATE = 0.075;      // full tank takes sustained clean riding
+const GAS_BURN_RATE = 0.42;       // full tank burns in ~2.4 seconds
+const GAS_ACC_MIN = 3.0, GAS_ACC_MAX = 14.5;
+const GAS_FULL_CLEAN_T = 9;
 const CLEAN_RAMP = 0.5;           // extra passive accel/s earned by a clean streak (~10s)
 const SPIN_RATE = 5.0, FLIP_RATE = 5.4;   // trick rotation speeds (rad/s)
 const TRICK_OFF = 0.9;            // landing this far (rad) from level = stumble, not death
 const SHIELD_TIME = 1.6;          // green speed gems grant a short trap grace window
 const OVERSEER_KEY = 'dr_overseer_profile_v1';
+const POWER_TIERS = {
+  white:{label:'WHITE', weight:0.68, speedFactor:1.18, shield:0.55, steady:2.8, slowFactor:0.78, scale:0.88, tone:560},
+  silver:{label:'SILVER', weight:0.24, speedFactor:1.35, shield:1.0, steady:4.2, slowFactor:0.65, scale:1.0, tone:720},
+  gold:{label:'GOLD', weight:0.08, speedFactor:1.55, shield:1.6, steady:6.0, slowFactor:0.52, scale:1.18, tone:920}
+};
 const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 /* ============================== RNG / NOISE ============================ */
@@ -602,11 +623,18 @@ const logGeo=new THREE.CylinderGeometry(0.5,0.56,3.4,7); logGeo.rotateZ(Math.PI/
 const postGeo=new THREE.BoxGeometry(0.26,1.5,0.26);
 const puGeo=new THREE.OctahedronGeometry(0.55,0);
 const puMats={
-  green:new THREE.MeshStandardMaterial({color:0x0a3320, emissive:0x2eff8a, emissiveIntensity:1.3, flatShading:true}),
-  red:new THREE.MeshStandardMaterial({color:0x33101a, emissive:0xff2e56, emissiveIntensity:1.3, flatShading:true}),
-  blue:new THREE.MeshStandardMaterial({color:0x0a2233, emissive:0x00a2ff, emissiveIntensity:1.3, flatShading:true}),
+  white:new THREE.MeshStandardMaterial({color:0xdfe6ff, emissive:0xf4f6ff, emissiveIntensity:0.95, flatShading:true}),
+  silver:new THREE.MeshStandardMaterial({color:0x446188, emissive:0xa9ccff, emissiveIntensity:1.15, flatShading:true}),
+  gold:new THREE.MeshStandardMaterial({color:0x5a3b08, emissive:0xffd76e, emissiveIntensity:1.55, flatShading:true}),
 };
 const dummy=new THREE.Object3D();
+
+function choosePowerTier(rng){
+  const r=rng(), gold=POWER_TIERS.gold.weight, silver=POWER_TIERS.silver.weight;
+  if(r<gold) return 'gold';
+  if(r<gold+silver) return 'silver';
+  return 'white';
+}
 
 /* ============================== BIKE =================================== */
 const bikeRoot=new THREE.Group();     // world position
@@ -1025,8 +1053,9 @@ function genChunk(ci){
   if(pits.length && rng()<baitChance && !directive.params?.suppressBait){
     // rage bait: a gem line leading straight across the hole
     const p=pits[0], rimY=baseH(p.x,p.z0-1.5)+1.4;
+    const tier=choosePowerTier(rng);
     for(let k=0;k<3;k++)
-      powerups.push({type:'green', x:p.x, z:p.z0-1.5+k*(p.len+3)/2, taken:false,
+      powerups.push({type:'green', tier, x:p.x, z:p.z0-1.5+k*(p.len+3)/2, taken:false,
         phase:rng()*6.28, fixedY:rimY});
   }
   if(ci>=3 && rng()<0.6){
@@ -1034,7 +1063,7 @@ function genChunk(ci){
     for(let a=0;a<6;a++){
       const px=rng()*14-7, pz=z0+6+rng()*(CHUNK-12);
       if(clearOfRamps(px,pz,ramps) && pitDepthAt(px,pz)<0.4){
-        powerups.push({type, x:px, z:pz, taken:false, phase:rng()*6.28});
+        powerups.push({type, tier:choosePowerTier(rng), x:px, z:pz, taken:false, phase:rng()*6.28});
         break;
       }
     }
@@ -1098,7 +1127,8 @@ function genChunk(ci){
   }
   for(const p of powerups){
     p.baseY=p.fixedY!==undefined?p.fixedY:terrainH(p.x,p.z)+1.4;
-    p.mesh=new THREE.Mesh(puGeo, puMats[p.type]);
+    p.mesh=new THREE.Mesh(puGeo, puMats[p.tier]);
+    p.mesh.scale.setScalar(POWER_TIERS[p.tier].scale);
     p.mesh.position.set(p.x, p.baseY, p.z);
     group.add(p.mesh);
   }
@@ -1251,7 +1281,7 @@ const sfx={
 /* ============================== HUD ==================================== */
 const $=id=>document.getElementById(id);
 const scoreEl=$('score'), comboBox=$('comboBox'), comboMult=comboBox.querySelector('.mult'),
-  comboFlame=comboBox.querySelector('.flame'), speedFill=$('speedfill'),
+  comboFlame=comboBox.querySelector('.flame'), speedFill=$('speedfill'), gasFill=$('gasfill'),
   powerEl=$('power'), pLabel=powerEl.querySelector('.plabel'), pFill=powerEl.querySelector('.pfill'),
   ringWrap=$('ringWrap'), ringCv=$('ring'), ringCtx=ringCv.getContext('2d'),
   hintEl=$('hint'), popupsEl=$('popups'), flashEl=$('flash'), overseerVoiceEl=$('overseerVoice'),
@@ -1318,18 +1348,19 @@ function renderLB(top, me){
   if(!top||!top.length){ lbList.innerHTML='<li class="lbNote">no runs yet — be the first</li>'; return; }
   const mine=(playerName||'').toLowerCase();
   let shown=false;
+  const lbTime=e=>fmtT(e.time)+' · AIR '+fmtT(e.hang||0);
   top.forEach((e,i)=>{
     const li=document.createElement('li');
     let cls=i<3?'p'+(i+1):'';
     if(mine && e.name.toLowerCase()===mine){ cls+=' me'; shown=true; }
     if(cls) li.className=cls.trim();
-    li.innerHTML='<span class="r">'+(i+1)+'</span><span class="n"></span><span class="t">'+fmtT(e.time)+'</span>';
+    li.innerHTML='<span class="r">'+(i+1)+'</span><span class="n"></span><span class="t">'+lbTime(e)+'</span>';
     li.querySelector('.n').textContent=e.name;
     lbList.appendChild(li);
   });
   if(me && me.rank && !shown){                 // pin your rank if you placed below the visible list
     const li=document.createElement('li'); li.className='me youRow';
-    li.innerHTML='<span class="r">'+me.rank+'</span><span class="n"></span><span class="t">'+fmtT(me.time)+'</span>';
+    li.innerHTML='<span class="r">'+me.rank+'</span><span class="n"></span><span class="t">'+lbTime(me)+'</span>';
     li.querySelector('.n').textContent=me.name+' (you)';
     lbList.appendChild(li);
   }
@@ -1343,15 +1374,15 @@ async function fetchLB(){
     renderLB(d.top, d.me); lbHasData=true;
   }catch(e){ if(!lbHasData) lbList.innerHTML='<li class="lbNote">leaderboard offline</li>'; }
 }
-function submitRun(time,score,dist){
+function submitRun(time,score,dist,hang=0){
   if(!playerName || time<2) return;
   fetch(LB_API,{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({name:playerName, time:+time.toFixed(1), score:Math.floor(score), dist:Math.floor(dist)})})
+    body:JSON.stringify({name:playerName, time:+time.toFixed(1), score:Math.floor(score), dist:Math.floor(dist), hang:+hang.toFixed(1)})})
     .then(r=>r.ok?r.json():null)
     .then(d=>{
       if(!d||!d.top) return;
       lbHasData=true;
-      renderLB(d.top, d.rank?{rank:d.rank, name:playerName, time:+time.toFixed(1)}:null);
+      renderLB(d.top, d.rank?{rank:d.rank, name:playerName, time:+time.toFixed(1), hang:+hang.toFixed(1)}:null);
       if(d.rank && state==='dead'){
         const el=$('dRank'); el.textContent='WORLD RANK #'+d.rank; el.classList.remove('hidden');
       }
@@ -1414,10 +1445,10 @@ function resetRun(startState){
     airborne:false, airTime:0, totalAirPredict:0,
     prevGY:0, prevGvy:0,
     lastAirTap:-99, faults:0, pendingLand:null,
-    combo:0, topCombo:0, score:0, airPts:0,
+    combo:0, topCombo:0, score:0, airPts:0, hangT:0,
     nearChain:0, nearChainT:-99,
     steer:0, dist0:6, power:null, runT:0,
-    cleanT:0, trickFlip:0, trickSpin:0, graceUntil:0,
+    cleanT:0, gas:0, trickFlip:0, trickSpin:0, graceUntil:0,
   });
   gameT=0; timeScale=1; shake=0;
   dispScore=0; hitstopUntil=0; squashT=9; dipT=9; dipAmp=0;
@@ -1469,6 +1500,7 @@ const pieceGeos=[wheelGeo, wheelGeo, new THREE.BoxGeometry(0.16,0.16,1.6),
 function crash(cause='impact'){
   if(state!=='riding') return;
   lastDeathCause=cause;
+  game.gas=0;
   overseerEvent({type:'crash', cause});
   state='crashed';
   sfx.crash(); shake=1.2;
@@ -1511,18 +1543,20 @@ function showDeath(){
   $('dDist').textContent=Math.floor(game.z-game.dist0)+' m';
   $('dCombo').textContent=game.topCombo;
   $('dTime').textContent=fmtT(game.runT);
+  $('dHang').textContent=fmtT(game.hangT);
   $('dRank').classList.add('hidden');
   if(overseer){
     const summary=overseer.finishRun({
       score:game.score,
       distance:game.z-game.dist0,
       runT:game.runT,
+      hangT:game.hangT,
       deathCause:lastDeathCause
     });
     overseerProfile=updateOverseerProfile(overseerProfile, summary);
     saveOverseerProfile();
   }
-  submitRun(game.runT, game.score, game.z-game.dist0);
+  submitRun(game.runT, game.score, game.z-game.dist0, game.hangT);
   deathEl.classList.remove('hidden');
   canRestartAt=performance.now()+400;
   ringWrap.style.display='none';
@@ -1574,6 +1608,7 @@ function stumble(msg){
   // floor at 16 m/s so a stumble never leaves you too slow to hop the next pit;
   // grace window keeps one mistake from cascading into an unavoidable death
   g.speed=Math.max(16, g.speed*0.5);
+  g.gas=0;
   g.graceUntil=gameT+2.5;
   overseerEvent({type:'stumble', reason:msg});
   stepDownCombo('STREAK HIT');
@@ -1770,6 +1805,29 @@ function readFlip(){
   if(steerPointer!==null) return touchFlip;
   return 0;
 }
+
+function boostAccelForGas(gas){
+  return THREE.MathUtils.lerp(GAS_ACC_MIN, GAS_ACC_MAX, THREE.MathUtils.clamp(gas,0,1));
+}
+function burnGasForBoost(dt){
+  const gas0=game.gas;
+  const maxBurn=GAS_BURN_RATE*dt;
+  const burn=Math.min(gas0,maxBurn);
+  game.gas=Math.max(0,gas0-burn);
+  return boostAccelForGas(gas0)*(burn/Math.max(maxBurn,0.0001));
+}
+function updateGas(dt,god){
+  const g=game;
+  if(god){ g.gas=0; return 0; }
+  if(g.airborne) return 0;
+  const wantsBoost=pedalHeld() && !(g.power&&g.power.type==='blue') && g.speed<MAX_SPEED*PEDAL_CAP;
+  if(wantsBoost && g.gas>0) return burnGasForBoost(dt);
+  if(!pedalHeld() && g.cleanT>0.1){
+    const clean=THREE.MathUtils.clamp(g.cleanT/GAS_FULL_CLEAN_T,0.12,1);
+    g.gas=Math.min(1,g.gas+GAS_FILL_RATE*clean*dt);
+  }
+  return 0;
+}
 $('mute').addEventListener('pointerdown',e=>{ e.stopPropagation(); });
 $('mute').addEventListener('click',e=>{
   e.stopPropagation(); muted=!muted;
@@ -1894,32 +1952,33 @@ function endPower(){
   if(g.power.factor!==1) g.speed=Math.max(10, g.speed/g.power.factor);
   g.power=null;
 }
-function applyPower(type){
+function applyPower(type,tierId='white'){
   const g=game;
-  overseerEvent({type:'pickup', power:type});
+  const tier=POWER_TIERS[tierId]||POWER_TIERS.white;
+  overseerEvent({type:'pickup', power:type, tier:tierId});
   if(type==='blue'){
     if(g.power && g.power.type!=='blue'){       // maintain the active effect: refresh its timer
-      g.power.t=POWER_DUR;
-      popup('EXTENDED!','pblue');
+      g.power.t=Math.max(g.power.t,tier.steady);
+      popup(tier.label+' EXTEND','pblue');
     } else {                                     // nothing active: hold current speed steady
       endPower();
-      g.power={type:'blue', t:POWER_DUR, factor:1};
-      popup('STEADY','pblue');
+      g.power={type:'blue', tier:tierId, tierLabel:tier.label, t:tier.steady, maxT:tier.steady, factor:1};
+      popup(tier.label+' STEADY','pblue');
     }
-    sfx.pickup(660);
+    sfx.pickup(tier.tone);
   } else if(type==='green'){
     endPower();
-    const f=Math.min(2, MAX_SPEED/Math.max(g.speed,1));
-    g.power={type:'green', t:POWER_DUR, factor:f, shield:SHIELD_TIME};
+    const f=Math.min(tier.speedFactor, MAX_SPEED/Math.max(g.speed,1));
+    g.power={type:'green', tier:tierId, tierLabel:tier.label, t:POWER_DUR, maxT:POWER_DUR, factor:f, shield:tier.shield};
     g.speed*=f;
-    popup('×2 SPEED!','pgreen');
-    sfx.pickup(880); fovKick=6;
+    popup(tier.label+' BOOST ×'+f.toFixed(2),'pgreen');
+    sfx.pickup(tier.tone); fovKick=3+3*tier.scale;
   } else {
     endPower();
-    g.power={type:'red', t:POWER_DUR, factor:0.55};
-    g.speed*=0.55;
-    popup('SLOWED','pred');
-    sfx.pickup(240);
+    g.power={type:'red', tier:tierId, tierLabel:tier.label, t:POWER_DUR, maxT:POWER_DUR, factor:tier.slowFactor};
+    g.speed*=tier.slowFactor;
+    popup(tier.label+' SLOW','pred');
+    sfx.pickup(Math.max(220,tier.tone*0.45));
   }
   updatePowerHUD();
 }
@@ -1927,6 +1986,7 @@ function absorbShield(){
   const p=game.power;
   if(!(p && p.type==='green' && p.shield>0)) return false;
   p.shield=0;
+  game.gas=0;
   game.speed=Math.max(16, game.speed*0.58);
   shake=Math.max(shake,0.5);
   popup('SHIELD BREAK','pgreen');
@@ -1937,8 +1997,9 @@ function updatePowerHUD(){
   const p=game.power;
   powerEl.style.display=p?'block':'none';
   if(p){
-    powerEl.className=p.type;
-    pLabel.textContent=p.type==='green'?(p.shield>0?'×2 SHIELD':'×2 SPEED'):(p.type==='red'?'SLOW':'STEADY');
+    powerEl.className=p.type+' '+(p.tier||'white');
+    const label=p.tierLabel||'WHITE';
+    pLabel.textContent=label+' '+(p.type==='green'?(p.shield>0?'SHIELD':'SPEED'):(p.type==='red'?'SLOW':'STEADY'));
   }
 }
 function updatePowerups(dt, god){
@@ -1955,7 +2016,7 @@ function updatePowerups(dt, god){
         if(Math.hypot(p.x-game.x,dz)<1.7 && Math.abs(game.y+0.9-p.mesh.position.y)<1.9){
           p.taken=true; p.mesh.visible=false;
           spawnParticles(14, p.x, p.baseY, p.z, 3, 0, 2.5, game.speed*0.2);
-          applyPower(p.type);
+          applyPower(p.type,p.tier);
         }
       }
     }
@@ -1974,9 +2035,9 @@ function update(dt){
   const ramp=(SPEED_RAMP+CLEAN_RAMP*Math.min(1,g.cleanT/10))*(1-0.55*g.speed/MAX_SPEED);
   if(g.speed<targetSpeed && !(g.power&&g.power.type==='blue'))
     g.speed=Math.min(g.speed+ramp*dt*(god?0.2:1), targetSpeed);
-  if(!god && pedalHeld() && !g.airborne && g.speed<MAX_SPEED*PEDAL_CAP
-     && !(g.power&&g.power.type==='blue'))
-    g.speed=Math.min(g.speed+PEDAL_ACC*dt, MAX_SPEED*PEDAL_CAP);
+  const gasBoost=updateGas(dt,god);
+  if(gasBoost>0)
+    g.speed=Math.min(g.speed+gasBoost*dt, MAX_SPEED*PEDAL_CAP);
   // powerup effect timer
   if(g.power){
     g.power.t-=dt;
@@ -2015,14 +2076,14 @@ function update(dt){
     if(dz>0.0001){
       const ratio=m.z/dz;
       if(ratio<0.25 && g.speed>25){
-        if(absorbShield()){ g.cleanT=0; }
+        if(absorbShield()){ g.cleanT=0; g.gas=0; }
         else if(gameT<g.graceUntil){ stumble('SAVED IT!'); }   // post-stumble grace
         else { crash('wall'); return; }
       } else if(ratio<0.45 && g.speed>38){
         stumble('CLIPPED!');
       } else if(ratio<0.65){
         g.speed=Math.max(9,g.speed*Math.pow(0.04,dt));
-        shake=Math.max(shake,0.2); g.cleanT=0;
+        shake=Math.max(shake,0.2); g.cleanT=0; g.gas=0;
       }
     }
     const grounded=charCtl.computedGrounded();
@@ -2061,6 +2122,7 @@ function update(dt){
       }
       if(g.airborne){
         g.airTime+=dt;
+        if(!god) g.hangT+=dt;
         tLand=predictLand();
         if(ringWrap.style.display==='block') drawRing(tLand);
       }
@@ -2082,6 +2144,7 @@ function update(dt){
     }
     if(g.airborne){
       g.vy-=G*dt; g.y+=g.vy*dt; g.airTime+=dt;
+      if(!god) g.hangT+=dt;
       if(g.y<=gy){ onLandContact(); }
       else{
         tLand=predictLand();
@@ -2236,7 +2299,9 @@ function refreshHUD(dt){
   scoreEl.textContent=Math.floor(dispScore);
   const sp=THREE.MathUtils.clamp((game.speed-10)/(MAX_SPEED-10),0,1);
   speedFill.style.height=(sp*100)+'%';
-  if(game.power) pFill.style.width=Math.max(0,game.power.t/POWER_DUR*100)+'%';
+  gasFill.style.height=(THREE.MathUtils.clamp(game.gas||0,0,1)*100)+'%';
+  gasFill.style.background=(game.gas||0)<0.35?'#f4f6ff':((game.gas||0)<0.72?'#a9ccff':'#ffd76e');
+  if(game.power) pFill.style.width=Math.max(0,game.power.t/(game.power.maxT||POWER_DUR)*100)+'%';
   speedFill.style.background=sp<0.45?'#2effa4':(sp<0.75?'#ffd76e':'#ff2e56');
   if(AC){
     windFilt.frequency.value=300+game.speed*24;
