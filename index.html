@@ -1342,7 +1342,7 @@ function resetRun(startState){
     combo:0, topCombo:0, score:0, airPts:0,
     nearChain:0, nearChainT:-99,
     steer:0, dist0:6, power:null, runT:0,
-    cleanT:0, trickFlip:0, trickSpin:0,
+    cleanT:0, trickFlip:0, trickSpin:0, graceUntil:0,
   });
   gameT=0; timeScale=1; shake=0;
   dispScore=0; hitstopUntil=0; squashT=9; dipT=9; dipAmp=0;
@@ -1496,7 +1496,10 @@ function resolveLanding(kind){
 }
 function stumble(msg){
   const g=game;
-  g.speed=Math.max(9, g.speed*0.5);
+  // floor at 16 m/s so a stumble never leaves you too slow to hop the next pit;
+  // grace window keeps one mistake from cascading into an unavoidable death
+  g.speed=Math.max(16, g.speed*0.5);
+  g.graceUntil=gameT+2.5;
   overseerEvent({type:'stumble', reason:msg});
   stepDownCombo('STREAK HIT');
   g.cleanT=0; shake=Math.max(shake,0.55);
@@ -1702,7 +1705,14 @@ function checkObstacles(){
       if(dz>4||dz<-4) continue;
       const alt=game.y-terrainH(game.x,game.z);
       const dx=o.x-game.x, d=Math.hypot(dx,dz);
-      if(!phys && d<o.r+0.45 && alt<o.h){ crash('obstacle'); return; }   // solid-world handles hits
+      // fallback-only collision (Rapier handles hits normally) — shape-aware per #6:
+      // trunk-only trees, tight rocks, log AABB; no fat kill-ring around visuals
+      if(!phys && alt<o.h){
+        const hit=o.type==='tree' ? d<0.25*o.s+0.4
+          : o.type==='rock' ? d<0.8*o.r+0.3
+          : (Math.abs(dx)<1.7*o.s+0.3 && Math.abs(dz)<0.5*o.s+0.35);
+        if(hit){ crash('obstacle'); return; }
+      }
       if(!o.passed && dz<-0.3){
         o.passed=true;
         if(Math.abs(dx)<o.r+1.5 && Math.abs(dx)>=o.r+0.35 && alt<o.h+0.5){
@@ -1921,6 +1931,7 @@ function update(dt){
       const ratio=m.z/dz;
       if(ratio<0.25 && g.speed>25){
         if(absorbShield()){ g.cleanT=0; }
+        else if(gameT<g.graceUntil){ stumble('SAVED IT!'); }   // post-stumble grace
         else { crash('wall'); return; }
       } else if(ratio<0.45 && g.speed>38){
         stumble('CLIPPED!');
