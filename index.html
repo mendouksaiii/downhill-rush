@@ -114,6 +114,12 @@
     color:#04222a; background:linear-gradient(135deg,#00e5ff,#39f7c1); border:none; border-radius:12px;
     cursor:pointer; box-shadow:0 0 26px rgba(0,229,255,.45); transition:transform .08s; }
   #startBtn:active { transform:scale(.94); }
+  .ghostBtn { padding:11px 18px; font:700 14px 'Rajdhani',sans-serif; letter-spacing:3px;
+    color:#e8e8ff; background:rgba(10,6,28,.62); border:1px solid rgba(255,255,255,.22);
+    border-radius:10px; cursor:pointer; }
+  .ghostBtn:active { transform:scale(.96); }
+  #tutorialBtn { margin-top:14px; color:#00e5ff; border-color:rgba(0,229,255,.38);
+    box-shadow:0 0 18px rgba(0,229,255,.12); }
   #lbPanel { margin-top:24px; width:min(360px,88vw); background:rgba(14,8,36,.55);
     border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:14px 18px 10px;
     backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); text-align:left; }
@@ -158,6 +164,41 @@
     font-size:clamp(18px,3.6vw,26px); letter-spacing:2px; }
   #stats .k { text-align:right; color:#9a92c9; }
   #stats .v { text-align:left; font-weight:700; color:#ffd76e; font-variant-numeric:tabular-nums; }
+  .deathActions { margin-top:24px; display:flex; flex-wrap:wrap; justify-content:center; gap:10px; }
+  #againBtn { color:#04222a; border:none; background:linear-gradient(135deg,#00e5ff,#39f7c1);
+    box-shadow:0 0 22px rgba(0,229,255,.32); }
+  #homeBtn { color:#ffd76e; border-color:rgba(255,215,110,.4); }
+  #tutorial { z-index:35; background:rgba(7,4,20,.82); padding:20px; overflow-y:auto;
+    overscroll-behavior:contain; touch-action:pan-y; -webkit-overflow-scrolling:touch; }
+  #tutorialCard { width:min(880px,94vw); max-height:92vh; display:grid; grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);
+    background:rgba(12,7,32,.78); border:1px solid rgba(255,255,255,.16); border-radius:14px;
+    overflow:hidden; box-shadow:0 24px 80px rgba(0,0,0,.45), 0 0 42px rgba(0,229,255,.12);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); touch-action:pan-y; }
+  #tutorialArt { min-height:380px; background:#120820; }
+  #tutorialImg { width:100%; height:100%; object-fit:cover; display:block; }
+  #tutorialCopy { padding:28px 26px 22px; text-align:left; display:flex; flex-direction:column; min-height:380px;
+    overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y; -webkit-overflow-scrolling:touch; }
+  #tutorialStep { color:#00e5ff; font-weight:700; letter-spacing:3px; font-size:13px; }
+  #tutorialTitle { margin-top:8px; font-size:clamp(28px,4.3vw,46px); line-height:.95; letter-spacing:3px;
+    color:#ffd76e; text-shadow:0 0 18px rgba(255,215,110,.35); }
+  #tutorialBody { margin-top:14px; color:#e8e4ff; font-size:18px; line-height:1.3; letter-spacing:1px; }
+  #tutorialRules { margin:16px 0 0 18px; color:#bfb8e8; font-size:16px; line-height:1.45; letter-spacing:1px; }
+  #tutorialRules li { margin-top:7px; }
+  #tutorialDots { margin-top:auto; display:flex; gap:8px; padding-top:18px; }
+  #tutorialDots i { width:34px; height:4px; border-radius:4px; background:rgba(255,255,255,.18); }
+  #tutorialDots i.on { background:#00e5ff; box-shadow:0 0 12px rgba(0,229,255,.8); }
+  .tutorialActions { margin-top:18px; display:flex; gap:10px; align-items:center; justify-content:flex-end; }
+  #tutNext { color:#04222a; border:none; background:linear-gradient(135deg,#00e5ff,#39f7c1);
+    box-shadow:0 0 22px rgba(0,229,255,.3); }
+  @media (max-width: 720px){
+    #tutorial { justify-content:flex-start; padding:12px; }
+    #tutorialCard { grid-template-columns:1fr; width:min(460px,94vw); max-height:none; margin:auto 0; }
+    #tutorialArt { min-height:28vh; max-height:34vh; }
+    #tutorialCopy { min-height:0; max-height:58vh; padding:20px 18px 18px; }
+    #tutorialBody { font-size:16px; }
+    #tutorialRules { font-size:14px; }
+    .tutorialActions { justify-content:space-between; }
+  }
   #paused { z-index:30; background:rgba(12,7,32,.6); font-size:22px; letter-spacing:4px; color:#00e5ff; }
 </style>
 </head>
@@ -183,6 +224,7 @@
     <input id="nameInput" maxlength="14" placeholder="USERNAME" autocomplete="off" spellcheck="false">
     <button id="startBtn">RIDE</button>
   </div>
+  <button id="tutorialBtn" class="ghostBtn">HOW TO RIDE</button>
   <div id="lbPanel">
     <div class="lbHead">🏔 LONGEST RUNS · LIVE<span id="lbLive"></span></div>
     <ol id="lbList"><li class="lbNote">loading…</li></ol>
@@ -200,7 +242,28 @@
     <span class="k">TOP COMBO</span><span class="v" id="dCombo">0</span>
   </div>
   <div id="dRank" class="hidden"></div>
-  <div class="tapline">TAP TO RIDE AGAIN</div>
+  <div class="deathActions">
+    <button id="homeBtn" class="ghostBtn">HOME</button>
+    <button id="againBtn" class="ghostBtn">RIDE AGAIN</button>
+  </div>
+  <div class="tapline">TAP BACKDROP TO RIDE AGAIN</div>
+</div>
+<div id="tutorial" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
+  <div id="tutorialCard">
+    <div id="tutorialArt"><img id="tutorialImg" alt=""></div>
+    <div id="tutorialCopy">
+      <div id="tutorialStep">LESSON 1 / 3</div>
+      <h2 id="tutorialTitle">OWN THE LINE</h2>
+      <p id="tutorialBody"></p>
+      <ul id="tutorialRules"></ul>
+      <div id="tutorialDots" aria-hidden="true"></div>
+      <div class="tutorialActions">
+        <button id="tutPrev" class="ghostBtn">BACK</button>
+        <button id="tutSkip" class="ghostBtn">SKIP</button>
+        <button id="tutNext" class="ghostBtn">NEXT</button>
+      </div>
+    </div>
+  </div>
 </div>
 <div id="paused" class="overlay hidden">PAUSED — TAP TO RESUME</div>
 
@@ -238,7 +301,7 @@ const JUMP_VY = 7.5;              // base jump impulse; speed bonus is gated bel
 const JUMP_SPEED_GATE = MAX_SPEED*0.78;
 const JUMP_INSANE_SPEED = MAX_SPEED*0.96;
 const JUMP_VY_MAX = 9.4;
-const PEDAL_CAP = 0.66;           // held acceleration alone can't reach trick-speed territory
+const GAS_BOOST_CAP = 1.0;        // gas adds onto momentum up to the normal top-speed ceiling
 const GAS_FILL_RATE = 0.13;       // full tank still requires clean riding, but no longer feels starved
 const GAS_BURN_RATE = 0.36;       // longer, readable boost burn
 const GAS_ACC_MIN = 5.5, GAS_ACC_MAX = 18;
@@ -1286,8 +1349,33 @@ const scoreEl=$('score'), comboBox=$('comboBox'), comboMult=comboBox.querySelect
   ringWrap=$('ringWrap'), ringCv=$('ring'), ringCtx=ringCv.getContext('2d'),
   hintEl=$('hint'), popupsEl=$('popups'), flashEl=$('flash'), overseerVoiceEl=$('overseerVoice'),
   titleEl=$('title'), deathEl=$('death'), pausedEl=$('paused'),
+  tutorialEl=$('tutorial'), tutorialImg=$('tutorialImg'), tutorialStep=$('tutorialStep'),
+  tutorialTitle=$('tutorialTitle'), tutorialBody=$('tutorialBody'), tutorialRules=$('tutorialRules'),
+  tutorialDots=$('tutorialDots'), tutPrev=$('tutPrev'), tutSkip=$('tutSkip'), tutNext=$('tutNext'),
   fxCv=$('fx'), fxCtx=fxCv.getContext('2d');
 let overseerVoiceT=0, overseerLastVoice='';
+const TUTORIAL_KEY='dr_tutorial_seen_v1';
+const tutorialSlides=[
+  {
+    img:'assets/tutorial/slide-steer.png',
+    title:'OWN THE LINE',
+    body:'Stay inside the glowing downhill lane and build clean speed before you get greedy.',
+    rules:['Arrow keys steer. On mobile, drag to steer.','ArrowUp or SPACE spends gas for acceleration.','Gas starts empty and refills only while you ride clean.']
+  },
+  {
+    img:'assets/tutorial/slide-jump-ring.png',
+    title:'JUMP, TRICK, LAND',
+    body:'Jumps are deliberate. The ring is your landing timing window, not a random click target.',
+    rules:['SPACE jumps on desktop. Big height only comes at insane speed.','Use W/S or vertical drag for flips while airborne.','Press A on desktop, or tap on mobile, when the rings meet.']
+  },
+  {
+    img:'assets/tutorial/slide-overseer.png',
+    title:'THE OVERSEER WATCHES',
+    body:'Style points make the run hotter. The enemy adapts with traps, attacks, and a stronger presence.',
+    rules:['Powerups have tiers: white is weak, gold is rare and strong.','Perfect landings can break attack chains.','Longer runs, hang time, and clean survival climb the board.']
+  }
+];
+let tutorialOpen=false, tutorialI=0, tutorialStartAfter=false;
 
 const popupPool=[];
 function popup(text, cls, dy=0){
@@ -1297,6 +1385,68 @@ function popup(text, cls, dy=0){
   el.textContent=text; el.style.top=dy+'px';
   el.className='popup '+cls;
   void el.offsetWidth; el.classList.add('show');
+}
+function tutorialSeen(){
+  try{ return localStorage.getItem(TUTORIAL_KEY)==='1'; }catch(e){ return false; }
+}
+function markTutorialSeen(){
+  try{ localStorage.setItem(TUTORIAL_KEY,'1'); }catch(e){}
+}
+function renderTutorial(){
+  const s=tutorialSlides[tutorialI];
+  tutorialImg.src=s.img;
+  tutorialImg.alt=s.title;
+  tutorialStep.textContent='LESSON '+(tutorialI+1)+' / '+tutorialSlides.length;
+  tutorialTitle.textContent=s.title;
+  tutorialBody.textContent=s.body;
+  tutorialRules.innerHTML='';
+  s.rules.forEach(rule=>{
+    const li=document.createElement('li');
+    li.textContent=rule;
+    tutorialRules.appendChild(li);
+  });
+  tutorialDots.innerHTML='';
+  tutorialSlides.forEach((_,i)=>{
+    const d=document.createElement('i');
+    if(i===tutorialI) d.className='on';
+    tutorialDots.appendChild(d);
+  });
+  tutPrev.style.visibility=tutorialI===0?'hidden':'visible';
+  tutNext.textContent=tutorialI===tutorialSlides.length-1 ? (tutorialStartAfter?'RIDE':'DONE') : 'NEXT';
+}
+function openTutorial(startAfter=false){
+  tutorialStartAfter=startAfter;
+  tutorialOpen=true;
+  tutorialI=0;
+  renderTutorial();
+  tutorialEl.classList.remove('hidden');
+}
+function closeTutorial(markSeen=true){
+  if(markSeen) markTutorialSeen();
+  tutorialOpen=false;
+  tutorialEl.classList.add('hidden');
+}
+function finishTutorial(){
+  const startAfter=tutorialStartAfter;
+  closeTutorial(true);
+  tutorialStartAfter=false;
+  if(startAfter) beginRide();
+}
+function nextTutorial(){
+  if(tutorialI<tutorialSlides.length-1){ tutorialI++; renderTutorial(); }
+  else finishTutorial();
+}
+function prevTutorial(){
+  if(tutorialI>0){ tutorialI--; renderTutorial(); }
+}
+function tutorialKey(e){
+  if(!tutorialOpen) return false;
+  if(e.code==='Escape'){ e.preventDefault(); closeTutorial(true); tutorialStartAfter=false; return true; }
+  if(e.code==='ArrowLeft'){ e.preventDefault(); prevTutorial(); return true; }
+  if(e.code==='ArrowRight'||e.code==='Enter'||e.code==='Space'){
+    e.preventDefault(); nextTutorial(); return true;
+  }
+  return true;
 }
 function screenFlash(){ flashEl.style.transition='none'; flashEl.style.opacity=0.22;
   requestAnimationFrame(()=>{ flashEl.style.transition='opacity .3s ease-out'; flashEl.style.opacity=0; }); }
@@ -1395,14 +1545,32 @@ function submitRun(time,score,dist,hang=0){
       }
     }).catch(()=>{});
 }
+function beginRide(){
+  nameInput.blur();
+  resetRun('riding');
+}
 function startRun(){
   playerName=sanitizeName(nameInput.value);
   nameInput.value=playerName;
   try{ localStorage.setItem('dr_name',playerName); }catch(e){}
-  nameInput.blur();
-  resetRun('riding');
+  if(!tutorialSeen()){ openTutorial(true); return; }
+  beginRide();
+}
+function goHome(){
+  closeTutorial(false);
+  tutorialStartAfter=false;
+  resetRun('title');
 }
 $('startBtn').addEventListener('click',e=>{ e.stopPropagation(); startRun(); });
+$('tutorialBtn').addEventListener('click',e=>{ e.stopPropagation(); openTutorial(false); });
+$('againBtn').addEventListener('click',e=>{ e.stopPropagation(); beginRide(); });
+$('homeBtn').addEventListener('click',e=>{ e.stopPropagation(); goHome(); });
+for(const id of ['tutorial','tutorialCard','tutPrev','tutSkip','tutNext','againBtn','homeBtn','tutorialBtn']){
+  $(id).addEventListener('pointerdown',e=>e.stopPropagation());
+}
+tutPrev.addEventListener('click',e=>{ e.stopPropagation(); prevTutorial(); });
+tutSkip.addEventListener('click',e=>{ e.stopPropagation(); closeTutorial(true); tutorialStartAfter=false; });
+tutNext.addEventListener('click',e=>{ e.stopPropagation(); nextTutorial(); });
 nameInput.addEventListener('pointerdown',e=>e.stopPropagation());
 fetchLB();
 // live refresh: poll while the board is on screen (title/score), pause during play
@@ -1474,6 +1642,9 @@ function resetRun(startState){
   camera.position.set(0, game.y+5, game.z-9);
   deathEl.classList.add('hidden');
   titleEl.classList.toggle('hidden', startState!=='title');
+  tutorialOpen=false;
+  tutorialStartAfter=false;
+  tutorialEl.classList.add('hidden');
   ringWrap.style.display='none';
   document.body.classList.remove('flow');
   updateComboHUD();
@@ -1686,6 +1857,7 @@ function routeUI(){
   // returns true when the press was consumed by an overlay / non-riding state
   initAudio(); if(AC && AC.state==='suspended') AC.resume();
   const now=performance.now();
+  if(tutorialOpen) return true;
   if(paused){ paused=false; pausedEl.classList.add('hidden'); return true; }
   if(state==='title') return true;   // title starts via RIDE button / Enter / Space
   if(state==='dead'){ if(now>=canRestartAt) resetRun('riding'); return true; }
@@ -1740,6 +1912,7 @@ const activePtrs=new Set();
 let pressT=0, pressX=0, pressY=0, pressMoved=false, pressConsumed=false;
 function pedalHeld(){ return keys.Space===true || keys.ArrowUp===true || activePtrs.size>0; }
 addEventListener('keydown',e=>{
+  if(tutorialKey(e)) return;
   if(state==='title'){
     if(e.code==='Enter'){ startRun(); return; }
     if(e.code==='Space'){
@@ -1827,7 +2000,7 @@ function updateGas(dt,god){
   const g=game;
   if(god){ g.gas=0; return 0; }
   if(g.airborne) return 0;
-  const wantsBoost=pedalHeld() && !(g.power&&g.power.type==='blue') && g.speed<MAX_SPEED*PEDAL_CAP;
+  const wantsBoost=pedalHeld() && !(g.power&&g.power.type==='blue') && g.speed<MAX_SPEED*GAS_BOOST_CAP;
   if(wantsBoost && g.gas>0) return burnGasForBoost(dt);
   if(!pedalHeld() && g.cleanT>0.1){
     const clean=THREE.MathUtils.clamp(g.cleanT/GAS_FULL_CLEAN_T,0.12,1);
@@ -2044,7 +2217,7 @@ function update(dt){
     g.speed=Math.min(g.speed+ramp*dt*(god?0.2:1), targetSpeed);
   const gasBoost=updateGas(dt,god);
   if(gasBoost>0)
-    g.speed=Math.min(g.speed+gasBoost*dt, MAX_SPEED*PEDAL_CAP);
+    g.speed=Math.min(g.speed+gasBoost*dt, MAX_SPEED*GAS_BOOST_CAP);
   // powerup effect timer
   if(g.power){
     g.power.t-=dt;
@@ -2383,6 +2556,7 @@ addEventListener('resize',()=>{
 fxCv.width=innerWidth; fxCv.height=innerHeight;
 
 resetRun('title');
+if(!tutorialSeen()) setTimeout(()=>{ if(state==='title'&&!tutorialOpen) openTutorial(false); }, 350);
 window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk,
   airTap, doJump, predictLand, onLandContact, applyPower, absorbShield, camera, bikeRoot,
   get state(){ return state; },
@@ -2391,12 +2565,19 @@ window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk,
   get overseerAttacks(){ return overseerAttacks; },
   resetOverseerProfile(){ overseerProfile=createDefaultOverseerProfile(); saveOverseerProfile(); return overseerProfile; },
   overseerEvent,
-  finishOverseerRun(cause='test'){ lastDeathCause=cause; showDeath(); return overseerProfile; },
+  finishOverseerRun(cause='test'){
+    lastDeathCause=cause;
+    if(!game.crashPos) game.crashPos=new THREE.Vector3(game.x, game.y+1.2, game.z);
+    showDeath();
+    return overseerProfile;
+  },
   step(dt){ gameT+=dt; if(state==='riding'||state==='title') update(dt); },
   freeze(on){ timeScale=on===false?1:0; },
   mood(v){ moodN=v; updateMood(); },
   degrade(){ stepQuality(); return qTier; },
   start(){ startRun(); },
+  openTutorial,
+  goHome,
   snapCam(){
     camera.position.set(game.x*0.85, game.y+4.2+game.speed*0.02, game.z-8.5-game.speed*0.028);
     camera.lookAt(game.x, game.y+1.4, game.z+9);
