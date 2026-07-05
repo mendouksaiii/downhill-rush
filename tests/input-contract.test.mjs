@@ -313,6 +313,8 @@ test('bike speed has no passive timer, pickup, shield, edge, or soft-collider sl
   assert.doesNotMatch(update, /g\.speed=Math\.max\(9,g\.speed\*Math\.pow\(0\.04,dt\)\)/);
   assert.doesNotMatch(updateHud, /SLOW/);
   assert.match(applyPower, /RED FLARE/);
+});
+
 test('account gate requires new players to claim email plus available username', () => {
   const start = functionBody('startRun');
   const refresh = functionBody('refreshAccountGate');
