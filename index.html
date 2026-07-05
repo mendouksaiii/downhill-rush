@@ -275,6 +275,7 @@
     <button id="profileBtn" class="hidden">PROFILE</button>
   </div>
   <button id="tutorialBtn" class="ghostBtn">HOW TO RIDE</button>
+  <button id="shopBtn" class="ghostBtn" style="margin-top:14px;margin-left:8px;color:#ffd76e;border-color:rgba(255,215,110,.38);box-shadow:0 0 18px rgba(255,215,110,.12)">◈ MARKET</button>
   <div id="lbPanel">
     <div class="lbHead">🏔 LONGEST RUNS · LIVE<span id="lbLive"></span></div>
     <ol id="lbList"><li class="lbNote">loading…</li></ol>
@@ -290,6 +291,7 @@
     <span class="k">DISTANCE</span><span class="v" id="dDist">0 m</span>
     <span class="k">HANG</span><span class="v" id="dHang">0s</span>
     <span class="k">TOP COMBO</span><span class="v" id="dCombo">0</span>
+    <span class="k">COINS</span><span class="v" id="dCoins" style="color:#ffd76e;text-shadow:0 0 12px rgba(255,215,110,.6)">+0 ◈</span>
   </div>
   <div id="dRank" class="hidden"></div>
   <div class="deathActions">
@@ -349,6 +351,7 @@ import {
   createOverseerRuntime,
   updateOverseerProfile
 } from './overseer-core.mjs';
+import { Economy } from './economy.js';
 
 /* ============================== CONSTANTS ============================== */
 const CHUNK = 60;                 // chunk length (m)
@@ -1685,6 +1688,7 @@ try{
   playerName=localStorage.getItem(NAME_KEY)||'';
   playerEmail=localStorage.getItem(EMAIL_KEY)||'';
 }catch(e){}
+if(playerName) Economy.signIn(playerName, playerEmail);   // load durable account (coins/skins)
 const nameInput=$('nameInput'), emailInput=$('emailInput'), nameStatus=$('nameStatus'),
   accountHint=$('accountHint'), startBtn=$('startBtn'), profileBtn=$('profileBtn'),
   lbList=$('lbList'), profilePanel=$('profilePanel');
@@ -1826,6 +1830,7 @@ function startRun(){
   nameInput.blur();
   emailInput.blur();
   refreshAccountGate();
+  Economy.signIn(playerName, playerEmail);   // load/create the durable account
   if(!tutorialSeen()){ openTutorial(true); return; }
   beginRide();
 }
@@ -1844,6 +1849,8 @@ function renderProfile(){
 }
 $('startBtn').addEventListener('click',e=>{ e.stopPropagation(); startRun(); });
 $('tutorialBtn').addEventListener('click',e=>{ e.stopPropagation(); openTutorial(false); });
+$('shopBtn').addEventListener('click',async e=>{ e.stopPropagation(); await Economy.flush(); location.href='market.html'; });
+$('shopBtn').addEventListener('pointerdown',e=>e.stopPropagation());
 $('againBtn').addEventListener('click',e=>{ e.stopPropagation(); beginRide(); });
 $('homeBtn').addEventListener('click',e=>{ e.stopPropagation(); goHome(); });
 for(const id of ['tutorial','tutorialCard','tutPrev','tutSkip','tutNext','againBtn','homeBtn','tutorialBtn']){
@@ -1861,6 +1868,7 @@ $('profileClose').addEventListener('click',e=>{ e.stopPropagation(); profilePane
 $('profileSignOut').addEventListener('click',e=>{
   e.stopPropagation();
   playerName=''; playerEmail=''; profileMe=null; nameInput.value=''; emailInput.value='';
+  Economy.signOut();   // clears local session; the account stays safe on the server
   try{ localStorage.removeItem(NAME_KEY); localStorage.removeItem(EMAIL_KEY); }catch(err){}
   profilePanel.classList.add('hidden');
   refreshAccountGate();
@@ -2043,6 +2051,8 @@ function showDeath(){
   $('dCombo').textContent=game.topCombo;
   $('dTime').textContent=fmtT(game.runT);
   $('dHang').textContent=fmtT(game.hangT);
+  const coinsEarned=Economy.awardRun({dist:game.z-game.dist0, combo:game.topCombo});
+  $('dCoins').textContent='+'+coinsEarned.toLocaleString()+' ◈';
   $('dRank').classList.add('hidden');
   if(overseer){
     const summary=overseer.finishRun({
