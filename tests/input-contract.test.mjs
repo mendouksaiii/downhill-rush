@@ -314,3 +314,44 @@ test('bike speed has no passive timer, pickup, shield, edge, or soft-collider sl
   assert.doesNotMatch(updateHud, /SLOW/);
   assert.match(applyPower, /RED FLARE/);
 });
+
+test('account gate requires new players to claim email plus available username', () => {
+  const start = functionBody('startRun');
+  const refresh = functionBody('refreshAccountGate');
+  const check = functionBody('checkUsernameAvailability');
+
+  assert.match(html, /const EMAIL_KEY='dr_email'/);
+  assert.match(html, /id="emailInput"/);
+  assert.match(html, /id="profileBtn"/);
+  assert.match(html, /id="accountHint"/);
+  assert.match(html, /function validEmail\(v\)/);
+  assert.match(refresh, /const isReturning=!!playerName/);
+  assert.match(refresh, /startBtn\.disabled=!canStart/);
+  assert.match(refresh, /nameStatus\.textContent='taken'/);
+  assert.match(check, /fetch\(LB_API\+'\?me='/);
+  assert.match(start, /if\(!canStartRun\) return/);
+  assert.match(start, /localStorage\.setItem\(EMAIL_KEY,playerEmail\)/);
+});
+
+test('returning local players can ride without adding email', () => {
+  const refresh = functionBody('refreshAccountGate');
+
+  assert.match(refresh, /const isReturning=!!playerName/);
+  assert.match(refresh, /isReturning \|\| validEmail\(emailInput\.value\)/);
+  assert.match(refresh, /emailHint\.textContent=isReturning/);
+  assert.match(html, /profileBtn\.hidden=!playerName/);
+  assert.match(refresh, /profileBtn\.classList\.toggle\('hidden',!playerName\)/);
+});
+
+test('leaderboard metadata stores optional email without exposing it on the public board', () => {
+  const submit = functionBody('submitRun');
+  const entry = leaderboardApi.slice(
+    leaderboardApi.indexOf('function entryFromMeta'),
+    leaderboardApi.indexOf('// Upstash returns')
+  );
+
+  assert.match(submit, /email:playerEmail/);
+  assert.match(leaderboardApi, /const email = /);
+  assert.match(leaderboardApi, /email,/);
+  assert.doesNotMatch(entry, /email/);
+});
