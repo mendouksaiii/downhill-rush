@@ -647,7 +647,10 @@ function updateMood(){
 let eyeDebugM=-1;   // DR.eyeDebug(0..1) forces manifestation for visual testing; -1 = live
 function updateOverseerManifestation(dt){
   const snap=overseer?.snapshot?.()||{pressure:0,tilt:0,manifestation:0,archetype:'judge'};
-  const m=eyeDebugM>=0 ? eyeDebugM : (state==='riding' ? snap.manifestation : 0);
+  // a live attack forces the eye open even at low manifestation — the player
+  // SEES who is doing this to them
+  const m=eyeDebugM>=0 ? eyeDebugM
+    : (state==='riding' ? Math.max(snap.manifestation, liveAttack?0.62:0) : 0);
   const level=m>0.82?4:(m>0.58?3:(m>0.34?2:(m>0.18?1:0)));
   if(level>overseerManifestLevel){
     const lines={
@@ -679,10 +682,16 @@ function updateOverseerManifestation(dt){
   eyeU.uAlpha.value=0.32+0.68*eyeAlpha;
   eyeU.uAggr.value=aggr;
   eyeU.uFlash.value=snap.lastDirective?.kind==='attack' ? Math.abs(Math.sin(gameT*8.5))*0.75 : 0;
-  eyeU.uLook.value.set(
-    snap.archetype==='hunter' ? Math.sin(gameT*1.7)*0.28 : Math.sin(gameT*0.7)*0.12,
-    snap.archetype==='trickster' ? Math.sin(gameT*2.9)*0.22 : Math.cos(gameT*0.5)*0.08
-  );
+  if(liveAttack){   // pupil snaps to where the strike is landing
+    eyeU.uLook.value.set(
+      THREE.MathUtils.clamp((liveAttack.x-overseerEyeG.position.x)/80,-0.6,0.6),
+      THREE.MathUtils.clamp((terrainH(liveAttack.x,liveAttack.z)-overseerEyeG.position.y)/300,-0.6,0));
+  } else {
+    eyeU.uLook.value.set(
+      snap.archetype==='hunter' ? Math.sin(gameT*1.7)*0.28 : Math.sin(gameT*0.7)*0.12,
+      snap.archetype==='trickster' ? Math.sin(gameT*2.9)*0.22 : Math.cos(gameT*0.5)*0.08
+    );
+  }
   const sx=snap.archetype==='judge'?1.65:(snap.archetype==='hunter'?1.05:1.35+0.18*Math.sin(gameT*9));
   const sy=snap.archetype==='judge'?0.42:(snap.archetype==='hunter'?0.9:0.58+0.2*Math.sin(gameT*5));
   const sc=24+30*m;
@@ -1325,9 +1334,11 @@ function genChunk(ci){
 
   // --- solid colliders (terrain + ramps as trimesh, obstacles as primitives)
   const cols=[];
+  let tCol=null;
   if(phys){
     for(const cd of wallCols) cols.push(phys.createCollider(cd));
     trimeshCollider(tMesh.geometry, cols);
+    tCol=cols[cols.length-1];             // terrain trimesh — swapped on live carving
     group.traverse(o=>{ if(o.userData.rampCollider) trimeshCollider(o.geometry, cols); });
     for(const o of obstacles){
       const y=terrainH(o.x,o.z); let cd;
@@ -1340,7 +1351,29 @@ function genChunk(ci){
       cols.push(phys.createCollider(cd));
     }
   }
-  chunks.set(ci,{group, obstacles, geoms, powerups, cols, directive, attacks:plannedAttack?[plannedAttack]:[]});
+  chunks.set(ci,{group, obstacles, geoms, powerups, cols, tMesh, tCol, directive, attacks:plannedAttack?[plannedAttack]:[]});
+}
+
+// Rebuild one chunk's terrain mesh + trimesh collider in place (live pit carving).
+// Everything else in the chunk (obstacles, ramps, deco, colliders) stays.
+function rebuildChunkTerrain(ci){
+  const c=chunks.get(ci); if(!c) return;
+  const fresh=buildTerrainMesh(ci);
+  c.group.add(fresh);
+  if(c.tMesh){
+    c.group.remove(c.tMesh);
+    const gi=c.geoms.indexOf(c.tMesh.geometry);
+    c.tMesh.geometry.dispose();
+    if(gi>=0) c.geoms[gi]=fresh.geometry; else c.geoms.push(fresh.geometry);
+  }
+  c.tMesh=fresh;
+  if(phys && c.tCol){
+    const idx=c.cols.indexOf(c.tCol);
+    phys.removeCollider(c.tCol,false);
+    const arr=[]; trimeshCollider(fresh.geometry, arr);
+    c.tCol=arr[0];
+    if(idx>=0) c.cols[idx]=c.tCol; else c.cols.push(c.tCol);
+  }
 }
 
 function dropChunk(ci){
@@ -1735,6 +1768,8 @@ function resetRun(startState){
   lastDeathCause='unknown';
   overseerManifestLevel=0;
   overseerAttacks=[];
+  liveAttack=null; liveAttackCooldownUntil=6;
+  beamMesh.visible=false; impactRing.visible=false; beamMat.opacity=0; impactMat.opacity=0;
   for(const ci of [...chunks.keys()]) dropChunk(ci);
   for(const p of pieces){ scene.remove(p.mesh); p.mesh.geometry.dispose?.(); }
   pieces=[];
@@ -2226,6 +2261,127 @@ function resolveOverseerHit(a, kind='hit'){
   crash('overseer');
 }
 
+/* ====================== OVERSEER LIVE ATTACKS ========================== */
+// The Overseer strikes IN VIEW: the eye opens, a red beam hits the trail at
+// the reaction-window minimum (~2s of travel ahead), and the world tears
+// open — a pit carved live into the terrain (mesh + collider rebuilt) or a
+// wall slammed up from the ground. Cooldown-gated, mercy- and grace-aware.
+let liveAttack=null, liveAttackCooldownUntil=6;
+const beamMat=new THREE.MeshBasicMaterial({color:0xff2038, transparent:true, opacity:0, fog:false,
+  depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide});
+const beamMesh=new THREE.Mesh(new THREE.CylinderGeometry(0.9,2.8,1,8,1,true), beamMat);
+beamMesh.visible=false; beamMesh.frustumCulled=false; scene.add(beamMesh);
+const impactMat=new THREE.MeshBasicMaterial({color:0xff304c, transparent:true, opacity:0, fog:false,
+  depthWrite:false, blending:THREE.AdditiveBlending});
+const impactRing=new THREE.Mesh(new THREE.TorusGeometry(4,0.35,6,28), impactMat);
+impactRing.rotation.x=Math.PI/2; impactRing.visible=false; scene.add(impactRing);
+const beamUp=new THREE.Vector3(0,1,0), beamDir=new THREE.Vector3(), beamTarget=new THREE.Vector3();
+
+function flashRed(){
+  flashEl.style.transition='none'; flashEl.style.background='#ff1830'; flashEl.style.opacity=0.3;
+  requestAnimationFrame(()=>{ flashEl.style.transition='opacity .45s ease-out'; flashEl.style.opacity=0;
+    setTimeout(()=>{ flashEl.style.background='#fff'; },500); });
+}
+
+function tryStartLiveAttack(dt){
+  const g=game, snap=overseer?.snapshot?.();
+  if(!snap || snap.manifestation<0.22 || snap.pressure<0.35) return;
+  if(gameT<g.graceUntil) return;
+  const mercy=THREE.MathUtils.clamp(snap.mercy+OT.mercyBias,0,1);
+  const rate=0.35*(snap.pressure+snap.tilt)*(1-mercy);   // attempts per second
+  if(Math.random()>rate*dt) return;
+  const z=g.z+Math.max(2.0*g.speed,35);
+  const ci=Math.floor(z/CHUNK); if(!chunks.get(ci)) return;
+  const x=THREE.MathUtils.clamp(g.x,-6,6);
+  const len=THREE.MathUtils.clamp(5+g.speed*0.09,6,10), w=6.5;
+  const z0=THREE.MathUtils.clamp(z-len/2, ci*CHUNK+5, (ci+1)*CHUNK-5-len);
+  const ramps=rampsByChunk.get(ci)||[];
+  const pitOK=ramps.every(r=>z0+len<r.z0-6 || z0>r.z0+r.len+20)
+    && (pitsByChunk.get(ci)||[]).every(p=>z0+len<p.z0-6 || z0>p.z0+p.len+6)
+    && pitDepthAt(x,z)<0.4;
+  const wallOK=ramps.every(r=>z<r.z0-8 || z>r.z0+r.len+24)
+    && (wallsByChunk.get(ci)||[]).every(wl=>Math.abs(wl.z0-z)>16);
+  const type=pitOK?'pit':(wallOK?'wall':null);
+  if(!type){ liveAttackCooldownUntil=gameT+1.5; return; }
+  liveAttack={type, x, z, z0, len, w, ci, phase:'aim', t:0};
+  overseerSay(type==='pit'?'OPEN WIDE':'RISE',1.2);
+}
+
+function spawnLiveWall(w, rec){
+  const zC=w.z0+w.len/2;
+  for(const side of [[-18,w.gapX-w.gapW/2],[w.gapX+w.gapW/2,18]]){
+    const [x0,x1]=side; if(x1-x0<0.5) continue;
+    const xC=(x0+x1)/2, base=terrainH(xC,zC);
+    const geo=new THREE.BoxGeometry(x1-x0,w.h+5,w.len);
+    const mesh=new THREE.Mesh(geo,rockMat);
+    mesh.position.set(xC, base+w.h-(w.h+5)/2, zC);
+    mesh.castShadow=mesh.receiveShadow=true;
+    rec.group.add(mesh); rec.geoms.push(geo);
+    if(phys) rec.cols.push(phys.createCollider(RAPIER.ColliderDesc.cuboid((x1-x0)/2,(w.h+5)/2,w.len/2)
+      .setTranslation(xC, base+w.h-(w.h+5)/2, zC)));
+  }
+  for(const sx of [-1,1]){   // neon posts mark the one way through
+    const p=new THREE.Mesh(postGeo, postMat);
+    const px=w.gapX+sx*w.gapW/2;
+    p.position.set(px, terrainH(px,zC)+0.75, zC);
+    rec.group.add(p);
+  }
+}
+
+function executeLiveSpawn(a){
+  const rec=chunks.get(a.ci); if(!rec) return;
+  if(a.type==='pit'){
+    const list=pitsByChunk.get(a.ci)||[];
+    list.push({x:a.x, z0:a.z0, len:a.len, w:a.w, depth:9+Math.random()*3});
+    pitsByChunk.set(a.ci,list);
+    rebuildChunkTerrain(a.ci);
+  } else {
+    const w={z0:a.z-1.3, len:2.6, h:2.6+Math.random()*1.4,
+      gapX:THREE.MathUtils.clamp(a.x+(Math.random()<0.5?-6:6),-8,8), gapW:5};
+    const list=wallsByChunk.get(a.ci)||[]; list.push(w); wallsByChunk.set(a.ci,list);
+    spawnLiveWall(w, rec);
+  }
+  const gy=terrainH(a.x,a.z0-1);   // rim height after the carve
+  spawnParticles(26, a.x, gy+0.5, a.z, 7, 0, 5, 0);
+  impactRing.visible=true; impactRing.scale.setScalar(1);
+  impactRing.position.set(a.x, gy+0.35, a.z0-0.5); impactMat.opacity=1.1;
+  if(AC) noiseHit(masterG, AC.currentTime, 0.3, 0.7, 'lowpass', 700);
+}
+
+function updateLiveAttack(dt){
+  if(!liveAttack){
+    if(state==='riding' && phys && gameT>liveAttackCooldownUntil) tryStartLiveAttack(dt);
+    return;
+  }
+  const a=liveAttack; a.t+=dt;
+  beamTarget.set(a.x, terrainH(a.x,a.z), a.z);
+  if(a.phase==='aim'){
+    eyeU.uFlash.value=Math.min(1, a.t*1.8);
+    if(a.t>0.55){ a.phase='beam'; a.t=0;
+      beamMesh.visible=true; flashRed(); shake=Math.max(shake,0.32); sfx.whoosh();
+    }
+  } else if(a.phase==='beam'){
+    const from=overseerEyeG.position;
+    beamDir.subVectors(beamTarget,from);
+    const L=beamDir.length();
+    beamMesh.position.copy(from).addScaledVector(beamDir,0.5);
+    beamMesh.quaternion.setFromUnitVectors(beamUp, beamDir.normalize());
+    beamMesh.scale.set(1,L,1);
+    beamMat.opacity=0.8*Math.sin(Math.min(1,a.t/0.4)*Math.PI);
+    eyeU.uFlash.value=1;
+    if(a.t>=0.4){ a.phase='settle'; a.t=0; executeLiveSpawn(a); }
+  } else if(a.phase==='settle'){
+    beamMat.opacity=Math.max(0, 0.7-a.t*3);
+    impactMat.opacity=Math.max(0, 1.1-a.t*0.9);
+    impactRing.scale.setScalar(1+a.t*1.6);
+    if(a.t>1.3){
+      beamMesh.visible=false; impactRing.visible=false;
+      liveAttack=null;
+      liveAttackCooldownUntil=gameT+(8+Math.random()*4)*OT.attackCooldownMul;
+    }
+  }
+}
+
 function updateOverseerAttacks(dt){
   if(!overseerAttacks.length || state!=='riding') return;
   for(const a of overseerAttacks){
@@ -2466,6 +2622,7 @@ function update(dt){
     g.trickFlip+=readFlip()*FLIP_RATE*dt;
   }
   if(!god) updateOverseerAttacks(dt);
+  if(!god) updateLiveAttack(dt);
   overseerDarkT=Math.max(0,overseerDarkT-dt*1.15);
   if(state!=='riding' && state!=='title') return;
   // pending late-tap window expiry
@@ -2696,6 +2853,15 @@ resetRun('title');
 if(!tutorialSeen()) setTimeout(()=>{ if(state==='title'&&!tutorialOpen) openTutorial(false); }, 350);
 window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk, OT, eyeU, overseerEyeG,
   eyeDebug(v){ eyeDebugM=v===undefined?-1:v; },
+  liveAttackDebug(type){
+    if(liveAttack) return 'busy';
+    const g=game, z=g.z+Math.max(2*g.speed,35), ci=Math.floor(z/CHUNK);
+    if(!chunks.get(ci)) return 'no chunk';
+    const len=8, z0=THREE.MathUtils.clamp(z-len/2, ci*CHUNK+5, (ci+1)*CHUNK-5-len);
+    liveAttack={type:type||'pit', x:THREE.MathUtils.clamp(g.x,-6,6), z, z0, len, w:6.5, ci, phase:'aim', t:0};
+    return 'started '+(type||'pit')+' at z'+z.toFixed(0);
+  },
+  get liveAttack(){ return liveAttack; },
   airTap, doJump, predictLand, onLandContact, applyPower, absorbShield, camera, bikeRoot,
   get state(){ return state; },
   get overseer(){ return overseer; },
