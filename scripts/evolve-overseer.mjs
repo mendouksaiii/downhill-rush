@@ -1,16 +1,18 @@
 // Overseer evolution job — the "poker loop" for the rage director.
-// Pulls aggregated run telemetry from /api/overseer, asks Claude for small,
+// Pulls aggregated run telemetry from /api/overseer, asks Groq's free-tier
+// llama-3.3-70b (same loop AgentFloat runs) for small,
 // bounded tuning adjustments, validates them against hard clamps, and writes
 // overseer-tuning.json (which the game fetches at boot). No live LLM calls
 // ever happen during gameplay; this runs on a schedule in CI.
 //
-// Env: ANTHROPIC_API_KEY (required), GAME_URL (default: production deploy).
+// Env: GROQ_API_KEY (required — free tier), GAME_URL (default: production deploy).
 // Run:  node scripts/evolve-overseer.mjs
 
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const GAME_URL = process.env.GAME_URL || 'https://downhill-rush-steel.vercel.app';
-const API_KEY = process.env.ANTHROPIC_API_KEY;
+const API_KEY = process.env.GROQ_API_KEY;
+const MODEL = process.env.EVOLVE_MODEL || 'llama-3.3-70b-versatile';
 const TUNING_PATH = new URL('../overseer-tuning.json', import.meta.url);
 const MIN_RUNS = 25;
 
@@ -73,7 +75,7 @@ const OUTPUT_SCHEMA = {
 };
 
 async function main() {
-  if (!API_KEY) throw new Error('ANTHROPIC_API_KEY is not set');
+  if (!API_KEY) throw new Error('GROQ_API_KEY is not set');
 
   const current = JSON.parse(readFileSync(TUNING_PATH, 'utf8'));
 
@@ -113,29 +115,34 @@ ${JSON.stringify(stats, null, 2)}
 Propose the next tuning values. Bounds (enforced after you answer):
 attackCooldownMul ${BOUNDS.attackCooldownMul}, trapAggressionMul ${BOUNDS.trapAggressionMul},
 baitChanceMul ${BOUNDS.baitChanceMul}, mercyBias ${BOUNDS.mercyBias},
-each archetypeBias component ${BOUNDS.archetype} (they will be renormalized to sum to 1).`;
+each archetypeBias component ${BOUNDS.archetype} (they will be renormalized to sum to 1).
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+Respond with ONLY a JSON object, no prose, exactly these keys:
+{"rationale": string, "attackCooldownMul": number, "trapAggressionMul": number,
+ "baitChanceMul": number, "mercyBias": number,
+ "archetypeBias": {"judge": number, "hunter": number, "trickster": number}}`;
+
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'x-api-key': API_KEY,
-      'anthropic-version': '2023-06-01',
+      authorization: `Bearer ${API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'claude-opus-4-8',
-      max_tokens: 4096,
-      thinking: { type: 'adaptive' },
-      output_config: { format: { type: 'json_schema', schema: OUTPUT_SCHEMA } },
+      model: MODEL,
+      max_tokens: 1024,
+      temperature: 0.4,
+      response_format: { type: 'json_object' },
       messages: [{ role: 'user', content: prompt }],
     }),
   });
-  if (!resp.ok) throw new Error(`anthropic api ${resp.status}: ${await resp.text()}`);
+  if (!resp.ok) throw new Error(`groq api ${resp.status}: ${await resp.text()}`);
   const message = await resp.json();
-  if (message.stop_reason === 'refusal') throw new Error('model refused the tuning request');
-  const text = message.content.find((b) => b.type === 'text')?.text;
-  if (!text) throw new Error('no text block in response');
+  const text = message.choices?.[0]?.message?.content;
+  if (!text) throw new Error('no content in response');
   const proposal = JSON.parse(text);
+  // json_object mode guarantees JSON, not our shape — OUTPUT_SCHEMA keys are
+  // enforced below by the clamp/step validators, unknown keys ignored.
 
   // Validate: clamp to hard bounds AND to a ±0.1 step from current values.
   const step = (next, cur, bounds) =>
