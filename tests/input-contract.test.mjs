@@ -73,6 +73,33 @@ test('held acceleration and speed-based jump height are capped', () => {
   assert.doesNotMatch(doJump, /g\.speed\*0\.045/);
 });
 
+test('Space jumps use five rechargeable charges while ramp launches stay free', () => {
+  const reset = functionBody('resetRun');
+  const doJump = functionBody('doJump');
+  const doLaunch = functionBody('doLaunch');
+  const updateJumpCharges = functionBody('updateJumpCharges');
+  const update = functionBody('update');
+  const refresh = functionBody('refreshHUD');
+
+  assert.match(html, /id="jumpbar"/);
+  assert.match(html, /id="jumpCharges"/);
+  assert.match(html, /const JUMP_CHARGE_MAX = 5/);
+  assert.match(html, /const JUMP_RECHARGE_T = /);
+  assert.match(reset, /jumpCharges:JUMP_CHARGE_MAX/);
+  assert.match(reset, /jumpChargeT:0/);
+  assert.match(doJump, /g\.jumpCharges<=0/);
+  assert.match(doJump, /g\.jumpCharges--/);
+  assert.match(doJump, /jumpImpulseForSpeed\(g\.speed\)/);
+  assert.doesNotMatch(doLaunch, /jumpCharges--|jumpChargeT/);
+  assert.match(updateJumpCharges, /g\.jumpCharges<JUMP_CHARGE_MAX/);
+  assert.match(updateJumpCharges, /g\.jumpChargeT\+=dt/);
+  assert.match(updateJumpCharges, /JUMP_RECHARGE_T/);
+  assert.match(updateJumpCharges, /Math\.min\(JUMP_CHARGE_MAX/);
+  assert.match(update, /updateJumpCharges\(dt,god\)/);
+  assert.match(refresh, /jumpFill\.style\.height/);
+  assert.match(refresh, /jumpCharges\.textContent/);
+});
+
 test('gas meter gates player acceleration progression', () => {
   const reset = functionBody('resetRun');
   const updateGas = functionBody('updateGas');
@@ -208,4 +235,82 @@ test('new players get an image-backed tutorial carousel', () => {
   assert.match(startRun, /!tutorialSeen\(\)[\s\S]*openTutorial\(true\)/);
   assert.match(keydown, /tutorialKey\(e\)/);
   assert.match(html, /setTimeout\(\(\)=>\{ if\(state==='title'&&!tutorialOpen\) openTutorial\(false\); \}, 350\)/);
+});
+
+test('Kaisei rider render sticks to the source sheet while staying procedural', () => {
+  const hair = functionBody('makeKaiseiHair');
+  const katana = functionBody('makeKaiseiKatana');
+  const bag = functionBody('makeKaiseiBag');
+  const emblem = functionBody('makeKaiseiEmblem');
+
+  assert.match(html, /const KAISEI_CORAL=0xff4f6f/);
+  assert.match(html, /const KAISEI_SLEEVE=0x8fa4a0/);
+  assert.match(html, /const KAISEI_HAIR=0x090a0d/);
+  assert.match(html, /const KAISEI_EYE=0xff243c/);
+  assert.match(html, /const kaiseiTorsoGeo=/);
+  assert.match(html, /const kaiseiFace=/);
+  assert.match(html, /const kaiseiJacketBackMark=/);
+  assert.match(html, /makeKaiseiKatana\(\)/);
+  assert.match(html, /makeKaiseiBag\(\)/);
+  assert.match(html, /makeKaiseiEmblem/);
+  assert.match(hair, /ConeGeometry/);
+  assert.match(hair, /KAISEI_HAIR/);
+  assert.match(katana, /katana/);
+  assert.match(katana, /diagonal/);
+  assert.match(bag, /crossbody/);
+  assert.match(emblem, /eight-point/);
+});
+
+test('the sky sun becomes the Overseer eye instead of a separate construct', () => {
+  const updateEye = functionBody('updateOverseerManifestation');
+  const updateLiveAttack = functionBody('updateLiveAttack');
+
+  assert.match(html, /const sunEyeSlitMat=/);
+  assert.match(html, /const sunEyeSlit=/);
+  assert.match(updateEye, /sunEyeSlitMat\.opacity/);
+  assert.match(updateEye, /sunMesh\.material\.color\.lerp/);
+  assert.match(updateEye, /sunGlowMat\.color\.lerp/);
+  assert.match(updateEye, /overseerEyeWorldPosition\(\)/);
+  assert.match(updateLiveAttack, /overseerEyeWorldPosition\(\)/);
+  assert.doesNotMatch(html, /const overseerEyeG=new THREE\.Group/);
+  assert.doesNotMatch(updateEye, /overseerEyeG|eyeU\./);
+});
+
+test('Overseer attacks do not slow rider speed or pull airborne velocity', () => {
+  const planAttack = functionBody('planOverseerAttack');
+  const addVisual = functionBody('addOverseerAttackVisual');
+  const resolveHit = functionBody('resolveOverseerHit');
+  const updateAttacks = functionBody('updateOverseerAttacks');
+  const drawFX = functionBody('drawFX');
+  const reset = functionBody('resetRun');
+
+  assert.doesNotMatch(html, /gravitySnare/);
+  assert.doesNotMatch(planAttack, /gravitySnare/);
+  assert.doesNotMatch(addVisual, /gravitySnare/);
+  assert.doesNotMatch(updateAttacks, /game\.vy\s*[-+*/]?=/);
+  assert.doesNotMatch(resolveHit, /stumble\(/);
+  assert.match(resolveHit, /crash\('overseer'\)/);
+  assert.match(html, /let overseerDarkT=0/);
+  assert.match(reset, /overseerDarkT=0/);
+  assert.match(updateAttacks, /overseerDarkT=Math\.max\(overseerDarkT,0\.7\)/);
+  assert.match(updateAttacks, /shake=Math\.max\(shake,0\.12\)/);
+  assert.match(drawFX, /overseerDarkT/);
+  assert.match(drawFX, /rgba\(3,0,8/);
+});
+
+test('bike speed has no passive timer, pickup, shield, edge, or soft-collider slowdowns', () => {
+  const endPower = functionBody('endPower');
+  const applyPower = functionBody('applyPower');
+  const absorbShield = functionBody('absorbShield');
+  const update = functionBody('update');
+  const updateHud = functionBody('updatePowerHUD');
+
+  assert.doesNotMatch(html, /slowFactor/);
+  assert.doesNotMatch(endPower, /speed\s*=/);
+  assert.doesNotMatch(applyPower, /SLOW|speed\*=tier|tier\.slowFactor/);
+  assert.doesNotMatch(absorbShield, /speed\s*=/);
+  assert.doesNotMatch(update, /g\.speed=Math\.max\(g\.speed-g\.speed\*1\.3\*dt,\s*9\)/);
+  assert.doesNotMatch(update, /g\.speed=Math\.max\(9,g\.speed\*Math\.pow\(0\.04,dt\)\)/);
+  assert.doesNotMatch(updateHud, /SLOW/);
+  assert.match(applyPower, /RED FLARE/);
 });

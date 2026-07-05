@@ -246,7 +246,7 @@ export function createOverseerRuntime(options = {}){
     if(canAttack){
       const attackTypes = {
         judge: ['mirrorGate', 'collapsePulse', 'redEyeSweep'],
-        hunter: ['redEyeSweep', 'gravitySnare', 'collapsePulse'],
+        hunter: ['redEyeSweep', 'mirrorGate', 'collapsePulse'],
         trickster: ['falseGift', 'mirrorGate', 'redEyeSweep']
       }[state.archetype] || ['redEyeSweep'];
       const attackType = attackTypes[Math.floor(rng() * attackTypes.length)];
