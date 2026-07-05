@@ -114,10 +114,28 @@ test('high manifestation unlocks a budgeted direct attack with cooldown', () => 
   const snap = overseer.snapshot();
 
   assert.equal(first.kind, 'attack');
-  assert.match(first.params.attackType, /redEyeSweep|collapsePulse|gravitySnare|falseGift|mirrorGate/);
+  assert.match(first.params.attackType, /redEyeSweep|collapsePulse|falseGift|mirrorGate/);
+  assert.notEqual(first.params.attackType, 'gravitySnare');
   assert.ok(first.params.cooldown > 0);
   assert.notEqual(second.kind, 'attack');
   assert.ok(snap.attackCooldown > 0);
+});
+
+test('direct Overseer attacks never choose slowdown/snare attacks', () => {
+  const seen = new Set();
+
+  for (let seed = 1; seed <= 80; seed++) {
+    const overseer = createOverseerRuntime({ seed });
+    overseer.observe({ type: 'style', points: 2200, trick: true });
+    overseer.observe({ type: 'pickup', power: 'green' });
+    overseer.observe({ type: 'pickup', power: 'green' });
+    overseer.tick(22, { speed: 78, combo: 8, cleanT: 6, z: 1400 });
+    const directive = overseer.chooseDirective({ ci: 26, z0: 1500, density: 0.9, speed: 78 });
+    if (directive.kind === 'attack') seen.add(directive.params.attackType);
+  }
+
+  assert.ok(seen.size > 0, 'expected at least one direct attack in seeded sample');
+  assert.deepEqual([...seen].filter(type => type === 'gravitySnare'), []);
 });
 
 test('direct Overseer attacks are gated until later distance', () => {
