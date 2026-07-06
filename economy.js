@@ -122,6 +122,11 @@ export const Economy = {
     try { await fetch(ACCT_API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(S) }); } catch {}
   },
 
+  // re-read the localStorage cache into memory (another tab — e.g. the market —
+  // may have written a purchase/equip there). Keeps whichever is richer safe:
+  // only replaces in-memory state, never posts.
+  reloadCache() { const c = loadLS(); if (c) S = normalize(c); return { ...S.equipped }; },
+
   // testing / plumbing
   _setApi(u) { ACCT_API = u; },
   _state() { return JSON.parse(JSON.stringify(S)); },
