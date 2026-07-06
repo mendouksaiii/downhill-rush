@@ -1753,9 +1753,44 @@ if(playerName) Economy.signIn(playerName, playerEmail).then(syncRig);   // load 
 // account and rebuild the rig if the equipped loadout changed there
 window.addEventListener('pageshow',e=>{
   if(!e.persisted) return;
-  syncRig();                                                   // cache updated by the market page
+  Economy.reloadCache(); syncRig();                            // cache updated by the market page
   if(playerName) Economy.signIn(playerName, playerEmail).then(syncRig);   // and re-fetch to be sure
+  checkBuild();
 });
+// the market open in ANOTHER tab writes purchases/equips to localStorage — apply
+// them here live so the skin is on the mountain the moment it's equipped
+window.addEventListener('storage',e=>{
+  if(e.key!=='dr_acct' || state==='riding') return;
+  Economy.reloadCache(); syncRig();
+});
+
+// AUTO-UPDATE: long-lived tabs keep playing an old build forever (stale HTML =
+// old skin/physics code, "deployed fixes don't show"). Compare the server's
+// build fingerprint and quietly reload on the title screen when it changed.
+const BUILD_KEY='dr_build_tag';
+let buildUpdatePending=false;
+async function checkBuild(){
+  try{
+    const r=await fetch('/',{method:'HEAD',cache:'no-store'});
+    const tag=r.headers.get('etag')||r.headers.get('last-modified')||'';
+    if(!tag) return;
+    const prev=localStorage.getItem(BUILD_KEY);
+    localStorage.setItem(BUILD_KEY,tag);
+    if(prev && prev!==tag) buildUpdatePending=true;
+    maybeApplyUpdate();
+  }catch(err){}
+}
+function maybeApplyUpdate(){
+  if(!buildUpdatePending || state!=='title') return;
+  // loop guard: at most one auto-reload per minute
+  let last=0; try{ last=+sessionStorage.getItem('dr_build_reload')||0; }catch(err){}
+  if(Date.now()-last<60000) return;
+  try{ sessionStorage.setItem('dr_build_reload',String(Date.now())); }catch(err){}
+  location.reload();
+}
+checkBuild();
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkBuild(); });
+setInterval(maybeApplyUpdate, 4000);   // applies a pending update once back on the title screen
 const nameInput=$('nameInput'), emailInput=$('emailInput'), nameStatus=$('nameStatus'),
   accountHint=$('accountHint'), startBtn=$('startBtn'), profileBtn=$('profileBtn'),
   lbList=$('lbList'), profilePanel=$('profilePanel');
