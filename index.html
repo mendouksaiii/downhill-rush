@@ -352,6 +352,7 @@ import {
   updateOverseerProfile
 } from './overseer-core.mjs';
 import { Economy } from './economy.js';
+import { RIDER_GAME, bikeGame } from './skins-data.js';
 
 /* ============================== CONSTANTS ============================== */
 const CHUNK = 60;                 // chunk length (m)
@@ -800,7 +801,12 @@ bikeRoot.add(bikeTilt); scene.add(bikeRoot);
 // two-tone vertical paint gradients baked into vertex colors — one flat material for
 // the whole bike + rider, no textures
 const paintMat=new THREE.MeshStandardMaterial({vertexColors:true, flatShading:true, roughness:.45, metalness:.1});
-const rimMat=new THREE.MeshStandardMaterial({color:0x073036, emissive:0x00e5ff, emissiveIntensity:2.2, flatShading:true});
+// equipped skins (market purchases) recolor the shared bike + rider — cached in
+// localStorage so this is sync even before the account fetch lands
+const EQUIPPED=Economy.equipped();
+const BIKE_PAINT=bikeGame(EQUIPPED.bikes);
+const shade=(hex,f)=>new THREE.Color(hex).multiplyScalar(f).getHex();
+const rimMat=new THREE.MeshStandardMaterial({color:shade(BIKE_PAINT.rim,.18), emissive:BIKE_PAINT.rim, emissiveIntensity:2.2, flatShading:true});
 const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
 function colorGeo(geo,fn){
   const p=geo.attributes.position, cols=new Float32Array(p.count*3), c=new THREE.Color();
@@ -812,20 +818,33 @@ const grad=(y0,y1,bot,top)=>{ const A=new THREE.Color(bot), B=new THREE.Color(to
   return (x,y,z,c)=>c.lerpColors(A,B,THREE.MathUtils.clamp((y-y0)/(y1-y0),0,1)); };
 const solid=col=>{ const A=new THREE.Color(col); return (x,y,z,c)=>c.copy(A); };
 const mergeAll=arr=>mergeGeometries(arr.map(g=>g.index?g.toNonIndexed():g));
-const PAINT=grad(0.35,1.25,0x8f1560,0xff6a3d);    // frame: deep magenta -> sunset orange
+const PAINT=grad(0.35,1.25,BIKE_PAINT.bot,BIKE_PAINT.top);   // frame two-tone from equipped bike
 const KAISEI_CORAL=0xff4f6f;
 const KAISEI_SLEEVE=0x8fa4a0;
 const KAISEI_HAIR=0x090a0d;
 const KAISEI_EYE=0xff243c;
 const KAISEI_SKIN=0xffc0a0, KAISEI_SHIRT=0x09080c, KAISEI_PANTS=0x2b2b2d, KAISEI_SOLE=0xe6dfd2;
+// The rider model follows the player's equipped skin (free starter = ROOKIE, a
+// dark silhouette with cyan visor + chest stripe). Kaisei — the full katana/bag/
+// emblem build below — is Ronin's legendary skin. Every other skin recolors the
+// same rig from its RIDER_GAME palette; RSKIN resolves palette + props.
+const RIDER_SKIN=RIDER_GAME[EQUIPPED.riders]?EQUIPPED.riders:'rookie';
+const RG=RIDER_GAME[RIDER_SKIN];
+const RSKIN = RIDER_SKIN==='ronin'
+  ? {coral:KAISEI_CORAL, sleeve:KAISEI_SLEEVE, hair:KAISEI_HAIR, eye:KAISEI_EYE,
+     skin:KAISEI_SKIN, shirt:KAISEI_SHIRT, pants:KAISEI_PANTS, sole:KAISEI_SOLE,
+     bootTop:0x09080c, katana:true, bag:true, emblem:true, stripe:false}
+  : {coral:RG.top, sleeve:shade(RG.top,.72), hair:RG.hair, eye:RG.eyes,
+     skin:RG.skin, shirt:RG.shirt, pants:RG.pants, sole:shade(RG.shoes,1.6),
+     bootTop:RG.shoes, katana:false, bag:false, emblem:false, stripe:RIDER_SKIN==='rookie'};
 const SUIT_LEG=(x,y,z,c)=>{
-  if(y<-0.49 && z>0.19) c.set(0x09080c);
-  else c.set(KAISEI_PANTS);
+  if(y<-0.49 && z>0.19) c.set(RSKIN.bootTop);
+  else c.set(RSKIN.pants);
 };
 const SUIT_ARM=(x,y,z,c)=>{
-  if(y>-0.06) c.set(KAISEI_CORAL);
+  if(y>-0.06) c.set(RSKIN.coral);
   else if(y<-0.25) c.set(0x171419);
-  else c.set(KAISEI_SLEEVE);
+  else c.set(RSKIN.sleeve);
 };
 function tube(a,b,r,seg=6,cap=false){
   const d=V3(b.x-a.x,b.y-a.y,b.z-a.z), l=d.length();
@@ -917,7 +936,7 @@ function makeKaiseiHair(){
   for(const [x,y,z,rx,rz,sc] of spikeData){
     const g=new THREE.ConeGeometry(.055*sc,.25*sc,5);
     g.rotateX(rx); g.rotateZ(rz); g.translate(x,y,z);
-    spikes.push(colorGeo(g,solid(KAISEI_HAIR)));
+    spikes.push(colorGeo(g,solid(RSKIN.hair??KAISEI_HAIR)));
   }
   return new THREE.Mesh(mergeAll(spikes),paintMat);
 }
@@ -946,7 +965,7 @@ const pad=(x,y,z,r)=>colorGeo(new THREE.IcosahedronGeometry(r,0).translate(x,y,z
 function makeLeg(sx){
   const kx=sx>0?.04:-.04;
   const shoe=colorGeo(boxGeo(.13,.09,.27, sx>0?.03:-.03,-.66,.32),solid(0x08080a));
-  const sole=colorGeo(boxGeo(.145,.025,.29, sx>0?.03:-.03,-.715,.33),solid(KAISEI_SOLE));
+  const sole=colorGeo(boxGeo(.145,.025,.29, sx>0?.03:-.03,-.715,.33),solid(RSKIN.sole));
   const cargo=colorGeo(boxGeo(.075,.14,.045, sx>0?.105:-.105,-.33,.15),solid(0x3b3b3d));
   const m=limbMesh(V3(kx,-.32,.24),V3(sx>0?.03:-.03,-.62,.28),.065,.05,SUIT_LEG,
     [shoe, sole, cargo, pad(kx,-.32,.28,.075)]);           // cargo pocket + knee pad
@@ -966,35 +985,46 @@ const armR=makeArm(.2), armL=makeArm(-.2);
 // pose rotation (.42 base) brings the shoulders to (0,~1.44,.09) above the arms
 const kaiseiTorsoGeo=mergeAll([
   colorGeo(tube(V3(0,0,0),V3(0,.26,.10),.15,7,true),(x,y,z,c)=>{
-    if(z>.07 && Math.abs(x)<.085) c.set(KAISEI_SHIRT);
-    else c.set(KAISEI_CORAL);
+    if(z>.07 && Math.abs(x)<.085) c.set(RSKIN.shirt);
+    else c.set(RSKIN.coral);
   }),
   colorGeo(tube(V3(0,.26,.10),V3(0,.44,.30),.13,7,true),(x,y,z,c)=>{
-    if(z>.18 && Math.abs(x)<.075) c.set(KAISEI_SHIRT);
-    else c.set(KAISEI_CORAL);
+    if(z>.18 && Math.abs(x)<.075) c.set(RSKIN.shirt);
+    else c.set(RSKIN.coral);
   }),
-  colorGeo(tube(V3(0,.44,.30),V3(0,.54,.36),.055,6,true),solid(KAISEI_SKIN)),
-  colorGeo(boxGeo(.33,.22,.035,0,.33,-.105),solid(KAISEI_CORAL)),        // jacket back
-  colorGeo(boxGeo(.085,.32,.045,-.14,.22,.12,-.06),solid(KAISEI_CORAL)), // open jacket panel
-  colorGeo(boxGeo(.085,.32,.045,.14,.22,.12,-.06),solid(KAISEI_CORAL)),
+  colorGeo(tube(V3(0,.44,.30),V3(0,.54,.36),.055,6,true),solid(RSKIN.skin)),
+  colorGeo(boxGeo(.33,.22,.035,0,.33,-.105),solid(RSKIN.coral)),        // jacket back
+  colorGeo(boxGeo(.085,.32,.045,-.14,.22,.12,-.06),solid(RSKIN.coral)), // open jacket panel
+  colorGeo(boxGeo(.085,.32,.045,.14,.22,.12,-.06),solid(RSKIN.coral)),
 ]);
 kaiseiTorsoGeo.scale(1.12,1,.9);
 const torso=new THREE.Mesh(kaiseiTorsoGeo,paintMat);
 torso.position.set(0,1.16,-.36); riderG.add(torso);
-torso.add(makeKaiseiKatana());
-torso.add(makeKaiseiBag());
-const kaiseiJacketBackMark=makeKaiseiEmblem(0,.34,-.126,.7); torso.add(kaiseiJacketBackMark);
-torso.add(makeKaiseiEmblem(-.11,.34,.14,.46));
+if(RSKIN.katana) torso.add(makeKaiseiKatana());
+if(RSKIN.bag) torso.add(makeKaiseiBag());
+if(RSKIN.emblem){
+  const kaiseiJacketBackMark=makeKaiseiEmblem(0,.34,-.126,.7); torso.add(kaiseiJacketBackMark);
+  torso.add(makeKaiseiEmblem(-.11,.34,.14,.46));
+}
+if(RSKIN.stripe){
+  // ROOKIE's glowing cyan chest bar — same neon material as the wheel rims.
+  const stripe=new THREE.Mesh(boxGeo(.12,.28,.03, 0,.22,.14,-.06),rimMat);
+  torso.add(stripe);
+}
 // visible head and hair replace the old full-face helmet, while keeping the same head variable for pose code.
 const head=new THREE.Group();
 head.position.set(0,1.58,.26); riderG.add(head);
 const kaiseiFace=new THREE.Mesh(mergeAll([
-  colorGeo(new THREE.SphereGeometry(.15,8,6).scale(.82,1.08,.62),solid(KAISEI_SKIN)),
-  colorGeo(boxGeo(.045,.014,.012,-.045,.02,.09),solid(KAISEI_EYE)),
-  colorGeo(boxGeo(.045,.014,.012,.045,.02,.09),solid(KAISEI_EYE)),
+  colorGeo(new THREE.SphereGeometry(.15,8,6).scale(.82,1.08,.62),solid(RSKIN.skin)),
   colorGeo(boxGeo(.075,.02,.018,0,-.055,.09),solid(0x231318)),
 ]),paintMat);
 head.add(kaiseiFace);
+// eyes/visor glow: ROOKIE cyan, Ronin red — emissive so it reads at any distance.
+const eyeMat=new THREE.MeshStandardMaterial({color:0x05060a, emissive:RSKIN.eye, emissiveIntensity:1.8, flatShading:true});
+head.add(new THREE.Mesh(mergeAll([
+  boxGeo(.045,.014,.012,-.045,.02,.09),
+  boxGeo(.045,.014,.012,.045,.02,.09),
+]),eyeMat));
 head.add(makeKaiseiHair());
 bikeRoot.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
 
@@ -1422,6 +1452,20 @@ function rebuildChunkTerrain(ci){
     c.tCol=arr[0];
     if(idx>=0) c.cols[idx]=c.tCol; else c.cols.push(c.tCol);
   }
+}
+
+// Is (x,z) inside some obstacle's footprint (plus the player capsule radius)?
+// Used to tell "climbing an obstacle" apart from "climbing terrain".
+function nearObstacle(x,z){
+  const ci=Math.floor(z/CHUNK);
+  for(let d=-1;d<=1;d++){
+    const c=chunks.get(ci+d); if(!c) continue;
+    for(const o of c.obstacles){
+      const dx=x-o.x, dz=z-o.z, rr=o.r+0.6;
+      if(dx*dx+dz*dz<rr*rr) return o;
+    }
+  }
+  return null;
 }
 
 function dropChunk(ci){
@@ -2267,11 +2311,12 @@ addEventListener('keydown',e=>{
   if(tutorialKey(e)) return;
   if(state==='title'){
     if(e.code==='Enter'){ startRun(); return; }
+    const typing=document.activeElement===nameInput||document.activeElement===emailInput;
     if(e.code==='Space'){
-      if(document.activeElement===nameInput) return;   // typing a space in the name
+      if(typing) return;                               // typing a space in a field
       e.preventDefault(); startRun(); return;
     }
-    if(document.activeElement===nameInput) return;     // don't capture typing as steering
+    if(typing) return;    // don't capture typing (e.g. the letter A) as game input
   }
   if(e.code==='Space'){
     e.preventDefault();
@@ -2742,6 +2787,38 @@ function update(dt){
         stumble('CLIPPED!');
       } else if(ratio<0.65){
         shake=Math.max(shake,0.2); g.cleanT=0; g.gas=0;
+      }
+    }
+    // obstacle vaulting: the capsule can ride up a box edge like a ramp, silently
+    // sailing over a full-size log ("drove through it"). Small hops stay free —
+    // that's the autostep — but climbing while inside an obstacle's footprint past
+    // the step budget is a hit. (Proximity, not collision handles: the compat
+    // build returns unusable collider handles from computedCollision.)
+    if(!wasAir){
+      const nearObs=m.y>0.001 && nearObstacle(g.x,g.z);
+      if(nearObs) g.obsClimb=(g.obsClimb||0)+m.y;
+      else if(m.y<=0.001) g.obsClimb=0;
+      if((g.obsClimb||0)>0.7){
+        g.obsClimb=0;
+        if(absorbShield()){ g.cleanT=0; g.gas=0; }
+        else if(g.speed>25 && gameT>=g.graceUntil){ crash('obstacle'); return; }
+        else stumble('CLIPPED!');
+      }
+    }
+    // stuck rescue: wedged against geometry with nowhere to go (slow head-on
+    // grinds never trip the ratio crashes above). First offense = free hop out;
+    // still pinned = crash so the run ends instead of soft-locking the game.
+    if(dz>0.0001){
+      if(m.z<dz*0.15){ g.stuckT=(g.stuckT||0)+dt; }
+      else { g.stuckT=0; g.stuckRescued=false; }
+      if(g.stuckT>2.2){
+        g.stuckT=0;
+        if(!g.stuckRescued){
+          g.stuckRescued=true;
+          spawnParticles(10, g.x, g.y, g.z, 4, 0, 3, 2);
+          doLaunch(jumpImpulseForSpeed(Math.max(g.speed,18)));
+          g.z+=1.5;                       // clear the lip of whatever pinned us
+        } else { crash('stuck'); return; }
       }
     }
     const grounded=charCtl.computedGrounded();
