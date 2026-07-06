@@ -104,7 +104,10 @@ module.exports = async (req, res) => {
       };
       const rankScore = +rankValue(entry).toFixed(3);
 
-      const changed = (await redis([['ZADD', KEY, 'GT', String(rankScore), name]]))[0];
+      // CH matters: without it ZADD returns only *newly added* members, so an
+      // existing player improving their score returned 0 and their display meta
+      // froze at their first-ever run (the "wisely 17.8s at #1 forever" bug).
+      const changed = (await redis([['ZADD', KEY, 'GT', 'CH', String(rankScore), name]]))[0];
       if (changed) await redis([['HSET', META_KEY, name, JSON.stringify(entry)]]);
       else if (email) {
         const existing = safeMeta((await redis([['HGET', META_KEY, name]]))[0]) || {};
