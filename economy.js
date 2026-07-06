@@ -1,4 +1,4 @@
-// Coin economy + skin ownership for Downhill Rush.
+// Coin economy + skin ownership for Redline Rider.
 // The account (coins, owned skins, equipped skins, email) is DURABLE on the
 // server keyed by username (/api/account) so it survives sign-out, cache
 // clears, and device changes. localStorage is only a fast cache of the

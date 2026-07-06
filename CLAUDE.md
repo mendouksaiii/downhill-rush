@@ -1,4 +1,4 @@
-# Downhill Rush — agent guide
+# Redline Rider — agent guide (formerly Downhill Rush)
 
 Endless downhill biking game. Two humans + two Claudes work on this repo; this file is the shared contract.
 

@@ -1,8 +1,8 @@
-# DOWNHILL RUSH
+# REDLINE RIDER
 
 Endless downhill mountain-biking in the browser. One tap. Infinite mountain.
 
-**Play: [downhill-rush-steel.vercel.app](https://downhill-rush-steel.vercel.app)**
+**Play: [redline-rider.vercel.app](https://redline-rider.vercel.app)**
 
 Tap to land clean. Don't die.
 
