@@ -47,6 +47,8 @@ function boxGeo(w,h,d,x,y,z,rx=0){ const g=new THREE.BoxGeometry(w,h,d);
 export const BIKES=[
  { id:'sunset', name:'SUNSET DRIFTER', tier:'common', price:400, glow:0xff7847,
    flavor:'Chases the horizon it came from.',
+   // in-game paint override: the classic launch look every player knows
+   game:{bot:0x8f1560, top:0xff6a3d, rim:0x00e5ff},
    frame:{color:0xff7847, rough:.55}, accent:{color:0xff2e88, rough:.5},
    wheels:{color:0x2a1020, emissive:0xff7847, ei:1.2},
    extras(g,M){ const badge=new THREE.Mesh(new THREE.CircleGeometry(.09,12),
@@ -572,3 +574,38 @@ export const RIDERS=[
      return t=>{ braids.forEach((b,i)=>{ b.rotation.x=Math.sin(t*1.6+i*2)*.1; }); };       // braid sway
    } },
 ];
+
+/* ===================== IN-GAME SKIN WIRING (v1: palettes) ================== */
+// The game renders one shared rider rig (Kaisei's build in index.html) and one
+// bike frame; equipping a skin recolors them. These palettes mirror each rider's
+// riderRig() colors above — full per-skin models in-game are the next step.
+// keys: skin tone, top (jacket), pants, shoes, eyes, hair, shirt (chest inset).
+export const RIDER_GAME={
+  rookie:     {skin:0x1c1c26, top:0x14141e, pants:0x111119, shoes:0x0b0b10, eyes:0x00e5ff, hair:0x0f0f16, shirt:0x0f0f16},
+  berna:      {skin:0xead0b2, top:0x6b6f52, pants:0x3a3d4a, shoes:0x23262e, eyes:0x35d6ff, hair:0x5a3d28, shirt:0x8a8f9c},
+  cherry:     {skin:0xe8b88a, top:0x1b1b22, pants:0xe8b88a, shoes:0xf2f2f2, eyes:0x3a2620, hair:0x15121a, shirt:0xc2233a},
+  princess:   {skin:0xb5773f, top:0xf7c6d8, pants:0x1c2440, shoes:0x1c1a18, eyes:0x3a2620, hair:0x14121c, shirt:0xffffff},
+  begone:     {skin:0x6e4a2f, top:0x9c1f2e, pants:0x1e1e24, shoes:0x16130f, eyes:0x5d766d, hair:0x8db8ee, shirt:0xf2f2f2},
+  titan:      {skin:0xd9a878, top:0x9a7448, pants:0x4c4a3a, shoes:0x2e2018, eyes:0x5ce8d8, hair:0x2e2118, shirt:0xe8dcc2},
+  bella:      {skin:0xf2cba8, top:0xb3a48c, pants:0xf2ede6, shoes:0xf2ede6, eyes:0xd8a03c, hair:0xc25b45, shirt:0xf6f3ec},
+  stephyberry:{skin:0xf6d7c2, top:0x1d1a20, pants:0xf2e2d8, shoes:0xffffff, eyes:0x8fa3c8, hair:0xf3e2e4, shirt:0xf2e2d8},
+  dave:       {skin:0x7a4a2c, top:0x1d2a4a, pants:0x1d2a4a, shoes:0x0d0d0f, eyes:0x2a2018, hair:0x0f0d0d, shirt:0xf2f2f2},
+  dylan:      {skin:0x6e4426, top:0x17171c, pants:0x121215, shoes:0x0c0c0f, eyes:0x111111, hair:0x121010, shirt:0x1f1f24},
+  ik:         {skin:0xe0b58c, top:0x6e6a5e, pants:0xa89878, shoes:0x4a3524, eyes:0x4a5a68, hair:0xd8b96e, shirt:0xb89a52},
+  ronin:      {skin:0xd9a878, top:0xc4356e, pants:0x1a1a20, shoes:0x111114, eyes:0xdd2233, hair:0x17141c, shirt:0x17151b},
+  raiden:     {skin:0xc98d5e, top:0x6a3fae, pants:0x3a2a5e, shoes:0x241a3e, eyes:0xff5d8f, hair:0xcfc4bc, shirt:0x5a3399},
+  spike:      {skin:0xd9a878, top:0x1b1b20, pants:0x17171c, shoes:0x101014, eyes:0x3a2620, hair:0x14121a, shirt:0x232329},
+  himars:     {skin:0xffffff, top:0x16161c, pants:0x16161c, shoes:0xe8901a, eyes:0x111111, hair:0x3b6fd4, shirt:0x1a3a8a},
+  mendo:      {skin:0x5e3a22, top:0xf2eef8, pants:0x8a5fd4, shoes:0xf2eef8, eyes:0x2a2018, hair:0x181410, shirt:0xe8dcc2},
+  miji:       {skin:0x3a2a24, top:0x121016, pants:0x0e0d12, shoes:0x0a0a0e, eyes:0xff2a2a, hair:0x141018, shirt:0xd41a1a},
+  maggi:      {skin:0x5a3a24, top:0x16151b, pants:0x14131a, shoes:0x0e0d12, eyes:0x3a2620, hair:0x140f14, shirt:0xffd76e},
+  lexxi:      {skin:0x5a3a28, top:0x121016, pants:0x0e0d12, shoes:0x141018, eyes:0x7a4a3a, hair:0x121016, shirt:0xd41a1a},
+  froggy:     {skin:0x5cc23a, top:0x5cc23a, pants:0x5cc23a, shoes:0x4aa82e, eyes:0x111111, hair:0x5cc23a, shirt:0xf2e8c2},
+  gem:        {skin:0x6e4428, top:0x16141c, pants:0x14121a, shoes:0x1a1620, eyes:0x3a2620, hair:0x120f16, shirt:0xffd76e},
+};
+// In-game bike paint: two-tone frame gradient + neon rim glow, straight from the
+// showroom definition (or its explicit `game` override).
+export function bikeGame(id){
+  const s=BIKES.find(b=>b.id===id)||BIKES[0];
+  return s.game||{bot:s.frame.color, top:s.accent.color, rim:s.glow};
+}
