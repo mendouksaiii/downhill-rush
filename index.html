@@ -1732,7 +1732,22 @@ try{
   playerName=localStorage.getItem(NAME_KEY)||'';
   playerEmail=localStorage.getItem(EMAIL_KEY)||'';
 }catch(e){}
-if(playerName) Economy.signIn(playerName, playerEmail);   // load durable account (coins/skins)
+// The rider/bike meshes were built once at boot from the cached loadout (EQUIPPED,
+// ~L806). signIn loads the AUTHORITATIVE account from the server; if the equipped
+// skin there differs from what we built (stale/cleared cache, or a fresh device),
+// reload once so the meshes rebuild from the now-correct cache. Self-converging:
+// signIn already wrote the server account to the cache, so the post-reload build
+// matches and won't reload again. The sig guard is belt-and-suspenders vs loops.
+function syncEquippedSkin(){
+  const eq=Economy.equipped(), sig=eq.riders+'/'+eq.bikes;
+  const bootSig=EQUIPPED.riders+'/'+EQUIPPED.bikes;
+  if(sig===bootSig) return;
+  let already=''; try{ already=sessionStorage.getItem('dr_skinsig')||''; }catch(e){}
+  if(already===sig) return;
+  try{ sessionStorage.setItem('dr_skinsig',sig); }catch(e){}
+  location.reload();
+}
+if(playerName) Economy.signIn(playerName, playerEmail).then(syncEquippedSkin);   // load durable account (coins/skins)
 const nameInput=$('nameInput'), emailInput=$('emailInput'), nameStatus=$('nameStatus'),
   accountHint=$('accountHint'), startBtn=$('startBtn'), profileBtn=$('profileBtn'),
   lbList=$('lbList'), profilePanel=$('profilePanel');
