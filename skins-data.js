@@ -1,4 +1,4 @@
-// Shared skin catalog + model builders for Downhill Rush.
+// Shared skin catalog + model builders for Redline Rider.
 // Used by skins.html (showroom), market.html (shop preview), and later the game itself.
 // Style matches the in-game bike/rider: real MTB frame from painted tubes, torus
 // wheels with neon rims, capsule limbs, two-tone vertical gradients baked into
