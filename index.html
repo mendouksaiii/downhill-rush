@@ -818,14 +818,26 @@ const KAISEI_SLEEVE=0x8fa4a0;
 const KAISEI_HAIR=0x090a0d;
 const KAISEI_EYE=0xff243c;
 const KAISEI_SKIN=0xffc0a0, KAISEI_SHIRT=0x09080c, KAISEI_PANTS=0x2b2b2d, KAISEI_SOLE=0xe6dfd2;
+// Which rider model the default (un-customized) player rides. Kaisei is Ronin's
+// legendary skin; the free starter every new player begins on is ROOKIE — a dark
+// silhouette with a cyan visor + chest stripe. RSKIN resolves the palette + which
+// props (katana/bag/emblem) get attached so the two share one rider rig.
+const RIDER_SKIN='rookie';
+const RSKIN = RIDER_SKIN==='ronin'
+  ? {coral:KAISEI_CORAL, sleeve:KAISEI_SLEEVE, hair:KAISEI_HAIR, eye:KAISEI_EYE,
+     skin:KAISEI_SKIN, shirt:KAISEI_SHIRT, pants:KAISEI_PANTS, sole:KAISEI_SOLE,
+     bootTop:0x09080c, katana:true, bag:true, emblem:true, stripe:false}
+  : {coral:0x14141e, sleeve:0x1a1a24, hair:KAISEI_HAIR, eye:0x00e5ff,
+     skin:0x1c1c26, shirt:0x0f0f16, pants:0x111119, sole:0x181820,
+     bootTop:0x0b0b10, katana:false, bag:false, emblem:false, stripe:true};
 const SUIT_LEG=(x,y,z,c)=>{
-  if(y<-0.49 && z>0.19) c.set(0x09080c);
-  else c.set(KAISEI_PANTS);
+  if(y<-0.49 && z>0.19) c.set(RSKIN.bootTop);
+  else c.set(RSKIN.pants);
 };
 const SUIT_ARM=(x,y,z,c)=>{
-  if(y>-0.06) c.set(KAISEI_CORAL);
+  if(y>-0.06) c.set(RSKIN.coral);
   else if(y<-0.25) c.set(0x171419);
-  else c.set(KAISEI_SLEEVE);
+  else c.set(RSKIN.sleeve);
 };
 function tube(a,b,r,seg=6,cap=false){
   const d=V3(b.x-a.x,b.y-a.y,b.z-a.z), l=d.length();
@@ -946,7 +958,7 @@ const pad=(x,y,z,r)=>colorGeo(new THREE.IcosahedronGeometry(r,0).translate(x,y,z
 function makeLeg(sx){
   const kx=sx>0?.04:-.04;
   const shoe=colorGeo(boxGeo(.13,.09,.27, sx>0?.03:-.03,-.66,.32),solid(0x08080a));
-  const sole=colorGeo(boxGeo(.145,.025,.29, sx>0?.03:-.03,-.715,.33),solid(KAISEI_SOLE));
+  const sole=colorGeo(boxGeo(.145,.025,.29, sx>0?.03:-.03,-.715,.33),solid(RSKIN.sole));
   const cargo=colorGeo(boxGeo(.075,.14,.045, sx>0?.105:-.105,-.33,.15),solid(0x3b3b3d));
   const m=limbMesh(V3(kx,-.32,.24),V3(sx>0?.03:-.03,-.62,.28),.065,.05,SUIT_LEG,
     [shoe, sole, cargo, pad(kx,-.32,.28,.075)]);           // cargo pocket + knee pad
@@ -966,35 +978,46 @@ const armR=makeArm(.2), armL=makeArm(-.2);
 // pose rotation (.42 base) brings the shoulders to (0,~1.44,.09) above the arms
 const kaiseiTorsoGeo=mergeAll([
   colorGeo(tube(V3(0,0,0),V3(0,.26,.10),.15,7,true),(x,y,z,c)=>{
-    if(z>.07 && Math.abs(x)<.085) c.set(KAISEI_SHIRT);
-    else c.set(KAISEI_CORAL);
+    if(z>.07 && Math.abs(x)<.085) c.set(RSKIN.shirt);
+    else c.set(RSKIN.coral);
   }),
   colorGeo(tube(V3(0,.26,.10),V3(0,.44,.30),.13,7,true),(x,y,z,c)=>{
-    if(z>.18 && Math.abs(x)<.075) c.set(KAISEI_SHIRT);
-    else c.set(KAISEI_CORAL);
+    if(z>.18 && Math.abs(x)<.075) c.set(RSKIN.shirt);
+    else c.set(RSKIN.coral);
   }),
-  colorGeo(tube(V3(0,.44,.30),V3(0,.54,.36),.055,6,true),solid(KAISEI_SKIN)),
-  colorGeo(boxGeo(.33,.22,.035,0,.33,-.105),solid(KAISEI_CORAL)),        // jacket back
-  colorGeo(boxGeo(.085,.32,.045,-.14,.22,.12,-.06),solid(KAISEI_CORAL)), // open jacket panel
-  colorGeo(boxGeo(.085,.32,.045,.14,.22,.12,-.06),solid(KAISEI_CORAL)),
+  colorGeo(tube(V3(0,.44,.30),V3(0,.54,.36),.055,6,true),solid(RSKIN.skin)),
+  colorGeo(boxGeo(.33,.22,.035,0,.33,-.105),solid(RSKIN.coral)),        // jacket back
+  colorGeo(boxGeo(.085,.32,.045,-.14,.22,.12,-.06),solid(RSKIN.coral)), // open jacket panel
+  colorGeo(boxGeo(.085,.32,.045,.14,.22,.12,-.06),solid(RSKIN.coral)),
 ]);
 kaiseiTorsoGeo.scale(1.12,1,.9);
 const torso=new THREE.Mesh(kaiseiTorsoGeo,paintMat);
 torso.position.set(0,1.16,-.36); riderG.add(torso);
-torso.add(makeKaiseiKatana());
-torso.add(makeKaiseiBag());
-const kaiseiJacketBackMark=makeKaiseiEmblem(0,.34,-.126,.7); torso.add(kaiseiJacketBackMark);
-torso.add(makeKaiseiEmblem(-.11,.34,.14,.46));
+if(RSKIN.katana) torso.add(makeKaiseiKatana());
+if(RSKIN.bag) torso.add(makeKaiseiBag());
+if(RSKIN.emblem){
+  const kaiseiJacketBackMark=makeKaiseiEmblem(0,.34,-.126,.7); torso.add(kaiseiJacketBackMark);
+  torso.add(makeKaiseiEmblem(-.11,.34,.14,.46));
+}
+if(RSKIN.stripe){
+  // ROOKIE's glowing cyan chest bar — same neon material as the wheel rims.
+  const stripe=new THREE.Mesh(boxGeo(.12,.28,.03, 0,.22,.14,-.06),rimMat);
+  torso.add(stripe);
+}
 // visible head and hair replace the old full-face helmet, while keeping the same head variable for pose code.
 const head=new THREE.Group();
 head.position.set(0,1.58,.26); riderG.add(head);
 const kaiseiFace=new THREE.Mesh(mergeAll([
-  colorGeo(new THREE.SphereGeometry(.15,8,6).scale(.82,1.08,.62),solid(KAISEI_SKIN)),
-  colorGeo(boxGeo(.045,.014,.012,-.045,.02,.09),solid(KAISEI_EYE)),
-  colorGeo(boxGeo(.045,.014,.012,.045,.02,.09),solid(KAISEI_EYE)),
+  colorGeo(new THREE.SphereGeometry(.15,8,6).scale(.82,1.08,.62),solid(RSKIN.skin)),
   colorGeo(boxGeo(.075,.02,.018,0,-.055,.09),solid(0x231318)),
 ]),paintMat);
 head.add(kaiseiFace);
+// eyes/visor glow: ROOKIE cyan, Ronin red — emissive so it reads at any distance.
+const eyeMat=new THREE.MeshStandardMaterial({color:0x05060a, emissive:RSKIN.eye, emissiveIntensity:1.8, flatShading:true});
+head.add(new THREE.Mesh(mergeAll([
+  boxGeo(.045,.014,.012,-.045,.02,.09),
+  boxGeo(.045,.014,.012,.045,.02,.09),
+]),eyeMat));
 head.add(makeKaiseiHair());
 bikeRoot.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
 
