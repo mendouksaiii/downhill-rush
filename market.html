@@ -284,7 +284,14 @@ rail.addEventListener('scroll',()=>{
   },110);
 });
 addEventListener('wheel',e=>{ rail.scrollLeft+=e.deltaY; },{passive:true});
-$('back').addEventListener('click',()=>{ location.href='/'; });
+// flush the purchase/equip to the server BEFORE returning to the game, so the
+// game's boot signIn reads the up-to-date account (not a stale one that would
+// clobber a just-bought skin back to rookie)
+$('back').addEventListener('click',async e=>{ e.preventDefault();
+  const b=$('back'); b.style.pointerEvents='none';
+  try{ await Economy.flush(); }catch(err){}
+  location.href='/';
+});
 
 /* ============================ LOOP ======================================== */
 let last=performance.now();
