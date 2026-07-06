@@ -801,12 +801,7 @@ bikeRoot.add(bikeTilt); scene.add(bikeRoot);
 // two-tone vertical paint gradients baked into vertex colors — one flat material for
 // the whole bike + rider, no textures
 const paintMat=new THREE.MeshStandardMaterial({vertexColors:true, flatShading:true, roughness:.45, metalness:.1});
-// equipped skins (market purchases) recolor the shared bike + rider — cached in
-// localStorage so this is sync even before the account fetch lands
-const EQUIPPED=Economy.equipped();
-const BIKE_PAINT=bikeGame(EQUIPPED.bikes);
 const shade=(hex,f)=>new THREE.Color(hex).multiplyScalar(f).getHex();
-const rimMat=new THREE.MeshStandardMaterial({color:shade(BIKE_PAINT.rim,.18), emissive:BIKE_PAINT.rim, emissiveIntensity:2.2, flatShading:true});
 const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
 function colorGeo(geo,fn){
   const p=geo.attributes.position, cols=new Float32Array(p.count*3), c=new THREE.Color();
@@ -818,12 +813,38 @@ const grad=(y0,y1,bot,top)=>{ const A=new THREE.Color(bot), B=new THREE.Color(to
   return (x,y,z,c)=>c.lerpColors(A,B,THREE.MathUtils.clamp((y-y0)/(y1-y0),0,1)); };
 const solid=col=>{ const A=new THREE.Color(col); return (x,y,z,c)=>c.copy(A); };
 const mergeAll=arr=>mergeGeometries(arr.map(g=>g.index?g.toNonIndexed():g));
-const PAINT=grad(0.35,1.25,BIKE_PAINT.bot,BIKE_PAINT.top);   // frame two-tone from equipped bike
 const KAISEI_CORAL=0xff4f6f;
 const KAISEI_SLEEVE=0x8fa4a0;
 const KAISEI_HAIR=0x090a0d;
 const KAISEI_EYE=0xff243c;
 const KAISEI_SKIN=0xffc0a0, KAISEI_SHIRT=0x09080c, KAISEI_PANTS=0x2b2b2d, KAISEI_SOLE=0xe6dfd2;
+function tube(a,b,r,seg=6,cap=false){
+  const d=V3(b.x-a.x,b.y-a.y,b.z-a.z), l=d.length();
+  const g=cap?new THREE.CapsuleGeometry(r,l,3,seg):new THREE.CylinderGeometry(r,r,l,seg);
+  g.translate(0,l/2,0);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(V3(0,1,0), d.normalize()));
+  g.translate(a.x,a.y,a.z); return g;
+}
+function boxGeo(w,h,d,x,y,z,rx=0){ const g=new THREE.BoxGeometry(w,h,d);
+  if(rx) g.rotateX(rx); g.translate(x,y,z); return g; }
+const wheelGeo=new THREE.TorusGeometry(.4,.085,5,14);   // shared with crash pieces
+
+// The whole bike + rider is (re)built by buildRig() from the player's equipped
+// loadout (market purchases). Rebuilt at boot, when the account fetch resolves
+// with a different loadout, and on every run start — so the skin you equip is
+// the skin you ride, regardless of caches or fetch timing.
+let rimMat=null, riderG, wheelF, wheelB, legR, legL, armR, armL, torso, head;
+let rigSig='';
+function buildRig(){
+const EQUIPPED=Economy.equipped();
+rigSig=EQUIPPED.riders+'/'+EQUIPPED.bikes;
+// tear down the previous build (geometry only — paintMat/darkMat are shared)
+bikeTilt.traverse(o=>{ if(o.isMesh&&o.geometry) o.geometry.dispose(); });
+bikeTilt.clear();
+if(rimMat) rimMat.dispose();
+const BIKE_PAINT=bikeGame(EQUIPPED.bikes);
+rimMat=new THREE.MeshStandardMaterial({color:shade(BIKE_PAINT.rim,.18), emissive:BIKE_PAINT.rim, emissiveIntensity:2.2, flatShading:true});
+const PAINT=grad(0.35,1.25,BIKE_PAINT.bot,BIKE_PAINT.top);   // frame two-tone from equipped bike
 // The rider model follows the player's equipped skin (free starter = ROOKIE, a
 // dark silhouette with cyan visor + chest stripe). Kaisei — the full katana/bag/
 // emblem build below — is Ronin's legendary skin. Every other skin recolors the
@@ -846,15 +867,6 @@ const SUIT_ARM=(x,y,z,c)=>{
   else if(y<-0.25) c.set(0x171419);
   else c.set(RSKIN.sleeve);
 };
-function tube(a,b,r,seg=6,cap=false){
-  const d=V3(b.x-a.x,b.y-a.y,b.z-a.z), l=d.length();
-  const g=cap?new THREE.CapsuleGeometry(r,l,3,seg):new THREE.CylinderGeometry(r,r,l,seg);
-  g.translate(0,l/2,0);
-  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(V3(0,1,0), d.normalize()));
-  g.translate(a.x,a.y,a.z); return g;
-}
-function boxGeo(w,h,d,x,y,z,rx=0){ const g=new THREE.BoxGeometry(w,h,d);
-  if(rx) g.rotateX(rx); g.translate(x,y,z); return g; }
 
 // frame: real MTB silhouette merged into one painted mesh
 const BB=V3(0,.46,-.08), ST=V3(0,1.0,-.44), HT=V3(0,1.08,.5);
@@ -891,7 +903,6 @@ const tail=new THREE.Mesh(new THREE.BoxGeometry(.06,.08,.04),rimMat);
 tail.position.set(0,1.06,-.56); bikeTilt.add(tail);  // seatpost taillight
 
 // wheels: dark tire + spokes, neon rim ring that catches the bloom
-const wheelGeo=new THREE.TorusGeometry(.4,.085,5,14);   // shared with crash pieces
 function makeWheel(){
   const grp=new THREE.Group();
   const tire=wheelGeo.clone(); tire.rotateY(Math.PI/2);
@@ -903,14 +914,14 @@ function makeWheel(){
   grp.add(new THREE.Mesh(rim,rimMat));
   return grp;
 }
-const wheelF=makeWheel(); wheelF.position.set(0,.48,.82);
-const wheelB=makeWheel(); wheelB.position.set(0,.48,-.82);
+wheelF=makeWheel(); wheelF.position.set(0,.48,.82);
+wheelB=makeWheel(); wheelB.position.set(0,.48,-.82);
 bikeTilt.add(wheelF,wheelB);
 
 // rider: proper downhill attack stance — hands ON the grips, feet ON the pedals.
 // Limbs are built in joint-local space with the reach baked in, so rest pose fits
 // the bike exactly and the pose code only adds flex on top.
-const riderG=new THREE.Group(); bikeTilt.add(riderG);   // posable rider rig
+riderG=new THREE.Group(); bikeTilt.add(riderG);   // posable rider rig
 function limbMesh(mid,end,r0,r1,colFn,extras){
   const parts=[ tube(V3(0,0,0),mid,r0,6,true), tube(mid,end,r1,6,true) ]
     .map(g=>colorGeo(g,colFn));
@@ -979,8 +990,8 @@ function makeArm(sx){
     [glove, pad(ex,-.20,.29,.062)]);                      // elbow pad
   m.position.set(sx,1.44,.08); riderG.add(m); return m;
 }
-const legR=makeLeg(.13), legL=makeLeg(-.13);
-const armR=makeArm(.2), armL=makeArm(-.2);
+legR=makeLeg(.13); legL=makeLeg(-.13);
+armR=makeArm(.2); armL=makeArm(-.2);
 // torso: two-segment "banana" pivoted at the hips, curling forward over the frame;
 // pose rotation (.42 base) brings the shoulders to (0,~1.44,.09) above the arms
 const kaiseiTorsoGeo=mergeAll([
@@ -998,7 +1009,7 @@ const kaiseiTorsoGeo=mergeAll([
   colorGeo(boxGeo(.085,.32,.045,.14,.22,.12,-.06),solid(RSKIN.coral)),
 ]);
 kaiseiTorsoGeo.scale(1.12,1,.9);
-const torso=new THREE.Mesh(kaiseiTorsoGeo,paintMat);
+torso=new THREE.Mesh(kaiseiTorsoGeo,paintMat);
 torso.position.set(0,1.16,-.36); riderG.add(torso);
 if(RSKIN.katana) torso.add(makeKaiseiKatana());
 if(RSKIN.bag) torso.add(makeKaiseiBag());
@@ -1012,7 +1023,7 @@ if(RSKIN.stripe){
   torso.add(stripe);
 }
 // visible head and hair replace the old full-face helmet, while keeping the same head variable for pose code.
-const head=new THREE.Group();
+head=new THREE.Group();
 head.position.set(0,1.58,.26); riderG.add(head);
 const kaiseiFace=new THREE.Mesh(mergeAll([
   colorGeo(new THREE.SphereGeometry(.15,8,6).scale(.82,1.08,.62),solid(RSKIN.skin)),
@@ -1027,6 +1038,10 @@ head.add(new THREE.Mesh(mergeAll([
 ]),eyeMat));
 head.add(makeKaiseiHair());
 bikeRoot.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
+}
+buildRig();
+// rebuild only when the equipped loadout actually changed since the last build
+function syncRig(){ const eq=Economy.equipped(); if(eq.riders+'/'+eq.bikes!==rigSig) buildRig(); }
 
 /* ============================== PARTICLES / TRAIL ====================== */
 const P_N=240;
@@ -1732,22 +1747,15 @@ try{
   playerName=localStorage.getItem(NAME_KEY)||'';
   playerEmail=localStorage.getItem(EMAIL_KEY)||'';
 }catch(e){}
-// The rider/bike meshes were built once at boot from the cached loadout (EQUIPPED,
-// ~L806). signIn loads the AUTHORITATIVE account from the server; if the equipped
-// skin there differs from what we built (stale/cleared cache, or a fresh device),
-// reload once so the meshes rebuild from the now-correct cache. Self-converging:
-// signIn already wrote the server account to the cache, so the post-reload build
-// matches and won't reload again. The sig guard is belt-and-suspenders vs loops.
-function syncEquippedSkin(){
-  const eq=Economy.equipped(), sig=eq.riders+'/'+eq.bikes;
-  const bootSig=EQUIPPED.riders+'/'+EQUIPPED.bikes;
-  if(sig===bootSig) return;
-  let already=''; try{ already=sessionStorage.getItem('dr_skinsig')||''; }catch(e){}
-  if(already===sig) return;
-  try{ sessionStorage.setItem('dr_skinsig',sig); }catch(e){}
-  location.reload();
-}
-if(playerName) Economy.signIn(playerName, playerEmail).then(syncEquippedSkin);   // load durable account (coins/skins)
+if(playerName) Economy.signIn(playerName, playerEmail).then(syncRig);   // load durable account (coins/skins)
+// coming back from the market via the browser's back gesture can restore this
+// page from the back/forward cache without re-running anything — re-check the
+// account and rebuild the rig if the equipped loadout changed there
+window.addEventListener('pageshow',e=>{
+  if(!e.persisted) return;
+  syncRig();                                                   // cache updated by the market page
+  if(playerName) Economy.signIn(playerName, playerEmail).then(syncRig);   // and re-fetch to be sure
+});
 const nameInput=$('nameInput'), emailInput=$('emailInput'), nameStatus=$('nameStatus'),
   accountHint=$('accountHint'), startBtn=$('startBtn'), profileBtn=$('profileBtn'),
   lbList=$('lbList'), profilePanel=$('profilePanel');
@@ -1889,7 +1897,8 @@ function startRun(){
   nameInput.blur();
   emailInput.blur();
   refreshAccountGate();
-  Economy.signIn(playerName, playerEmail);   // load/create the durable account
+  Economy.signIn(playerName, playerEmail).then(syncRig);   // load/create the durable account
+  syncRig();   // ride with whatever is equipped RIGHT NOW (cache), not what booted
   if(!tutorialSeen()){ openTutorial(true); return; }
   beginRide();
 }
