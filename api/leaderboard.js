@@ -34,7 +34,9 @@ function entryFromMeta(name, rankScore, rawMeta) {
   const meta = safeMeta(rawMeta);
   const fallbackTime = +(+rankScore || 0).toFixed(1);
   return {
-    name,
+    // members are stored lowercased (one identity per player regardless of how
+    // they typed it); the meta keeps the display casing
+    name: (meta && meta.name) || name,
     time: +(+((meta && meta.time) || fallbackTime)).toFixed(1),
     score: Math.floor(+((meta && meta.score) || 0)),
     dist: Math.floor(+((meta && meta.dist) || 0)),
@@ -66,7 +68,7 @@ module.exports = async (req, res) => {
 
   try {
     if (req.method === 'GET') {
-      const me = String((req.query && req.query.me) || '').trim().slice(0, 14);
+      const me = String((req.query && req.query.me) || '').trim().slice(0, 14).toLowerCase();
       const cmds = [
         ['ZCARD', KEY],
         ['ZRANGE', KEY, '0', String(SHOW - 1), 'REV', 'WITHSCORES'],
@@ -113,18 +115,21 @@ module.exports = async (req, res) => {
       };
       const rankScore = +rankValue(entry).toFixed(3);
 
+      // one identity per player: the zset member is the lowercased name, so
+      // "Mendo" and "mendo" rank as the same rider; display casing lives in meta
+      const member = name.toLowerCase();
       // CH matters: without it ZADD returns only *newly added* members, so an
       // existing player improving their score returned 0 and their display meta
       // froze at their first-ever run (the "wisely 17.8s at #1 forever" bug).
-      const changed = (await redis([['ZADD', KEY, 'GT', 'CH', String(rankScore), name]]))[0];
-      if (changed) await redis([['HSET', META_KEY, name, JSON.stringify(entry)]]);
+      const changed = (await redis([['ZADD', KEY, 'GT', 'CH', String(rankScore), member]]))[0];
+      if (changed) await redis([['HSET', META_KEY, member, JSON.stringify(entry)]]);
       else if (email) {
-        const existing = safeMeta((await redis([['HGET', META_KEY, name]]))[0]) || {};
-        await redis([['HSET', META_KEY, name, JSON.stringify({ ...existing, email })]]);
+        const existing = safeMeta((await redis([['HGET', META_KEY, member]]))[0]) || {};
+        await redis([['HSET', META_KEY, member, JSON.stringify({ ...existing, email })]]);
       }
       const r = await redis([
         ['ZREMRANGEBYRANK', KEY, '0', String(-(CAP + 1))],   // r[0] = # trimmed
-        ['ZREVRANK', KEY, name],                             // r[1] = rank (0-based)
+        ['ZREVRANK', KEY, member],                           // r[1] = rank (0-based)
         ['ZCARD', KEY],                                      // r[2] = total count
         ['ZRANGE', KEY, '0', String(SHOW - 1), 'REV', 'WITHSCORES'], // r[3] = top
       ]);
