@@ -1898,6 +1898,7 @@ let playerName='';
 let playerEmail='';
 let accountStatus='unknown';
 let accountCheckSeq=0;
+let accountEmailOnFile=null;   // null = no account for the typed name; '' = account without email
 let accountCheckTimer=0;
 let canStartRun=false;
 let profileMe=null;
@@ -1964,8 +1965,12 @@ function refreshAccountGate(){
   const typed=sanitizeName(nameInput.value);
   const isReturning=!!playerName && typed.toLowerCase()===playerName.toLowerCase();
   const nameValid=typed.length>=2;
-  const emailOk=isReturning || validEmail(emailInput.value);
-  const nameAllowed=isReturning || accountStatus==='available' || accountStatus==='unknown-offline';
+  // returning on a NEW device: the account's saved email is the key back in
+  const emailTyped=(emailInput.value||'').trim().toLowerCase();
+  const emailMatches=accountStatus==='claimed-email' && !!accountEmailOnFile && emailTyped===accountEmailOnFile;
+  const emailOk=isReturning || validEmail(emailInput.value) || accountStatus==='returning-open';
+  const nameAllowed=isReturning || accountStatus==='available' || accountStatus==='unknown-offline'
+    || accountStatus==='returning-open' || emailMatches;
   const canStart=nameValid && emailOk && nameAllowed;
   canStartRun=canStart;
   startBtn.disabled=!canStart;
@@ -1976,6 +1981,9 @@ function refreshAccountGate(){
   else if(isReturning){ nameStatus.textContent='saved'; nameStatus.className='ok'; }
   else if(accountStatus==='checking') nameStatus.textContent='...';
   else if(accountStatus==='available'){ nameStatus.textContent='free'; nameStatus.className='ok'; }
+  else if(accountStatus==='returning-open'){ nameStatus.textContent='found'; nameStatus.className='ok'; }
+  else if(emailMatches){ nameStatus.textContent='welcome back'; nameStatus.className='ok'; }
+  else if(accountStatus==='claimed-email'){ nameStatus.textContent='taken'; nameStatus.className='bad'; }
   else if(accountStatus==='taken'){ nameStatus.textContent='taken'; nameStatus.className='bad'; }
   else nameStatus.textContent='';
 
@@ -1986,6 +1994,15 @@ function refreshAccountGate(){
     accountHint.classList.add('ok');
   } else if(!nameValid){
     accountHint.textContent='pick a 2-14 character rider name';
+  } else if(accountStatus==='returning-open'){
+    accountHint.textContent='rider found - riding signs you into this account';
+    accountHint.classList.add('ok');
+  } else if(emailMatches){
+    accountHint.textContent='welcome back - your coins and skins are waiting';
+    accountHint.classList.add('ok');
+  } else if(accountStatus==='claimed-email'){
+    accountHint.textContent='this rider is registered - enter its account email to sign in';
+    accountHint.classList.add('bad');
   } else if(accountStatus==='taken'){
     accountHint.textContent='that username already has leaderboard history';
     accountHint.classList.add('bad');
@@ -2003,16 +2020,31 @@ function refreshAccountGate(){
 async function checkUsernameAvailability(){
   const name=sanitizeName(nameInput.value);
   const seq=++accountCheckSeq;
+  accountEmailOnFile=null;
   if(!name || name.length<2 || (playerName && name.toLowerCase()===playerName.toLowerCase())){
     accountStatus='unknown'; refreshAccountGate(); return;
   }
   accountStatus='checking'; refreshAccountGate();
   try{
+    // durable account first: a returning player on a NEW device signs back in
+    // with the email their account was saved with (email = the weak key; there
+    // are no passwords, same trust model as the rest of the game)
+    const ar=await fetch('/api/account?name='+encodeURIComponent(name)+'&t='+Date.now(),{cache:'no-store'});
+    if(!ar.ok) throw 0;
+    const acct=(await ar.json()).account;
+    if(seq!==accountCheckSeq) return;
+    if(acct){
+      accountEmailOnFile=(acct.email||'').trim().toLowerCase();
+      accountStatus=accountEmailOnFile?'claimed-email':'returning-open';
+      refreshAccountGate(); return;
+    }
     const r=await fetch(LB_API+'?me='+encodeURIComponent(name)+'&t='+Date.now(),{cache:'no-store'});
     if(!r.ok) throw 0;
     const d=await r.json();
     if(seq!==accountCheckSeq) return;
-    accountStatus=d.me?'taken':'available';
+    // leaderboard history without a durable account = pre-accounts player;
+    // claim-by-name, exactly like launch behavior
+    accountStatus=d.me?'returning-open':'available';
   }catch(e){
     if(seq!==accountCheckSeq) return;
     accountStatus='unknown-offline';
