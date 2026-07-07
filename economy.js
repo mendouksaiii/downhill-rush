@@ -72,10 +72,10 @@ export const Economy = {
   async signIn(name, email) {
     name = String(name || '').trim().slice(0, 14);
     if (name.length < 2) return S;
-    let server = null;
+    let server = null, serverAnswered = false;
     try {
       const r = await fetch(`${ACCT_API}?name=${encodeURIComponent(name)}&t=${Date.now()}`, { cache: 'no-store' });
-      if (r.ok) server = (await r.json()).account;
+      if (r.ok) { server = (await r.json()).account; serverAnswered = true; }
     } catch {}
     if (server) {
       S = normalize(server);                                   // durable state wins
@@ -87,8 +87,10 @@ export const Economy = {
     S.name = name;
     if (email) S.email = email;
     saveLS(S);
-    // push so a first-time or cache-only account gets written server-side
-    if (!server) syncUp(); else saveLS(S);
+    // Push ONLY when the server definitively answered "no such account" — a
+    // failed/erroring GET must never cause a blank POST that overwrites a real
+    // account (transient API hiccup at sign-in used to wipe player progress).
+    if (!server && serverAnswered) syncUp();
     return S;
   },
 
