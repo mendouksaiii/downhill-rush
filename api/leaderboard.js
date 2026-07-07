@@ -93,6 +93,15 @@ module.exports = async (req, res) => {
       const dist = Math.min(Math.max(Math.floor(+body.dist || 0), 0), 999999);
       const hang = Math.min(Math.max(+body.hang || 0, 0), 7200);
       if (name.length < 2 || time < 2) { res.status(400).json({ error: 'invalid entry' }); return; }
+      // plausibility gate: the game can't produce these, so a client that sends
+      // them is either a spoofed POST or a pre-fix soft-locked run.
+      //  - hang time can't exceed run time
+      //  - distance can't exceed terminal velocity (MAX_SPEED=88) for the whole run
+      //  - a long run must cover proportional ground (speed floor is 16 m/s;
+      //    a wedged/faked 9-minute "run" with no distance fails this)
+      if (hang > time + 1 || dist > time * 90 || (time > 90 && dist < time * 8)) {
+        res.status(400).json({ error: 'implausible entry' }); return;
+      }
       const entry = {
         name,
         time: +time.toFixed(1),
