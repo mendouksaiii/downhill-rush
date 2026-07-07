@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const html = readFileSync(new URL('../play.html', import.meta.url), 'utf8');
+const landing = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const leaderboardApi = readFileSync(new URL('../api/leaderboard.js', import.meta.url), 'utf8');
 
 function functionBody(name) {
@@ -235,6 +236,35 @@ test('new players get an image-backed tutorial carousel', () => {
   assert.match(startRun, /!tutorialSeen\(\)[\s\S]*openTutorial\(true\)/);
   assert.match(keydown, /tutorialKey\(e\)/);
   assert.match(html, /setTimeout\(\(\)=>\{ if\(state==='title'&&!tutorialOpen\) openTutorial\(false\); \}, 350\)/);
+});
+
+test('Redline Rider landing and HUD use the brand system', () => {
+  // game side (play.html): boot splash, STYLE/CHAIN HUD, death lines — from PR #11
+  const hideBoot = functionBody('hideBoot');
+  const showDeath = functionBody('showDeath');
+  const deathLine = functionBody('deathLineForCause');
+
+  assert.match(html, /<title>REDLINE RIDER/);
+  assert.match(html, /id="boot"/);
+  assert.match(html, /id="scoreWrap"/);
+  assert.match(html, /class="scoreLabel">STYLE/);
+  assert.match(html, /class="flame">CHAIN/);
+  assert.match(hideBoot, /boot\.classList\.add\('gone'\)/);
+  assert.match(html, /hideBoot\(\)/);
+  assert.match(deathLine, /THE EYE REMEMBERS/);
+  assert.match(showDeath, /\$\('dLine'\)\.textContent=deathLineForCause\(lastDeathCause\)/);
+  assert.match(html, /LINE LOCKED/);
+
+  // landing side (index.html): official landing at the root, game at /play.html
+  assert.match(landing, /<title>REDLINE RIDER/);
+  assert.match(landing, /media\/redline-rider-logo-1x1\.png/);
+  assert.match(landing, /media\/redline-rider-banner-1500x500\.png/);
+  assert.match(landing, /id="titleShell"/);
+  assert.match(landing, /id="heroCopy"/);
+  assert.match(landing, /id="mechanicStrip"/);
+  assert.match(landing, /RIDE THE LINE\. FEED THE EYE\./);
+  assert.match(landing, /Clean riding builds speed/);
+  assert.match(landing, /href="play\.html"/);
 });
 
 test('Kaisei rider render sticks to the source sheet while staying procedural', () => {
