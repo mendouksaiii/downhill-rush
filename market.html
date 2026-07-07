@@ -291,7 +291,7 @@ addEventListener('wheel',e=>{ rail.scrollLeft+=e.deltaY; },{passive:true});
 $('back').addEventListener('click',async e=>{ e.preventDefault();
   const b=$('back'); b.style.pointerEvents='none';
   try{ await Economy.flush(); }catch(err){}
-  location.href='/';
+  location.href='play.html';
 });
 
 /* ============================ LOOP ======================================== */
