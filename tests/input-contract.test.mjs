@@ -237,6 +237,28 @@ test('new players get an image-backed tutorial carousel', () => {
   assert.match(html, /setTimeout\(\(\)=>\{ if\(state==='title'&&!tutorialOpen\) openTutorial\(false\); \}, 350\)/);
 });
 
+test('Redline Rider landing and HUD use the brand system', () => {
+  const hideBoot = functionBody('hideBoot');
+  const showDeath = functionBody('showDeath');
+  const deathLine = functionBody('deathLineForCause');
+
+  assert.match(html, /<title>REDLINE RIDER/);
+  assert.match(html, /id="boot"/);
+  assert.match(html, /media\/redline-rider-logo-1x1\.png/);
+  assert.match(html, /media\/redline-rider-banner-1500x500\.png/);
+  assert.match(html, /id="titleShell"/);
+  assert.match(html, /id="heroCopy"/);
+  assert.match(html, /id="mechanicStrip"/);
+  assert.match(html, /id="scoreWrap"/);
+  assert.match(html, /class="scoreLabel">STYLE/);
+  assert.match(html, /RIDE THE LINE\. FEED THE EYE\./);
+  assert.match(html, /Clean riding builds speed/);
+  assert.match(hideBoot, /boot\.classList\.add\('gone'\)/);
+  assert.match(html, /hideBoot\(\)/);
+  assert.match(deathLine, /THE EYE REMEMBERS/);
+  assert.match(showDeath, /\$\('dLine'\)\.textContent=deathLineForCause\(lastDeathCause\)/);
+});
+
 test('Kaisei rider render sticks to the source sheet while staying procedural', () => {
   const hair = functionBody('makeKaiseiHair');
   const katana = functionBody('makeKaiseiKatana');
