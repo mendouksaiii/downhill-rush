@@ -854,6 +854,27 @@ const sunEyeRimMat=new THREE.MeshBasicMaterial({color:0xff304c, transparent:true
 const sunEyeRim=new THREE.Mesh(new THREE.RingGeometry(20,31,36,1), sunEyeRimMat);
 sunEyeRim.position.z=0.6;
 sunEyeRim.scale.y=0.34; sunEyeRim.renderOrder=1; sunMesh.add(sunEyeRim);
+
+// Late-game "manifestation": the eye grows a body of shadow geometry — a
+// radar-crown arc + angular shard spokes from broken-sign shapes. Fades in
+// only at extreme manifestation, anchored to the sun so it stays part of it,
+// not a separate floating monster. Restrained on purpose.
+const overseerBodyG=new THREE.Group(); overseerBodyG.position.z=0.4;
+const bodyDarkMat=new THREE.MeshBasicMaterial({color:0x0a0008, transparent:true, opacity:0,
+  depthWrite:false, depthTest:false, fog:false, side:THREE.DoubleSide});
+const bodyGlowMat=new THREE.MeshBasicMaterial({color:0xff304c, transparent:true, opacity:0,
+  depthWrite:false, depthTest:false, fog:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide});
+// radar crown: a thin glowing arc floating above the eye
+const crown=new THREE.Mesh(new THREE.RingGeometry(40,43,40,1,Math.PI*0.15,Math.PI*0.7), bodyGlowMat);
+crown.position.y=30; crown.scale.y=0.5; overseerBodyG.add(crown);
+// angular shard spokes — broken-sign geometry radiating from the eye
+for(let i=0;i<7;i++){
+  const a=(-0.5+i/6)*1.7, len=34+((i*13)%17);
+  const shard=new THREE.Mesh(new THREE.PlaneGeometry(2.4,len), i%2?bodyGlowMat:bodyDarkMat);
+  shard.position.set(Math.sin(a)*34, -22-Math.cos(a)*6, 0);
+  shard.rotation.z=a*1.3; overseerBodyG.add(shard);
+}
+sunMesh.add(overseerBodyG);
 const overseerEyePos=new THREE.Vector3();
 function overseerEyeWorldPosition(){
   return sunMesh.getWorldPosition(overseerEyePos);
@@ -947,6 +968,11 @@ function updateOverseerManifestation(dt){
     if(overseerVoiceT<=0) overseerVoiceEl.classList.remove('show');
   }
   const eyeOn=m>0.24;
+  // manifested body only at extreme manifestation — the late-game escalation
+  const bodyA=THREE.MathUtils.clamp((m-0.8)/0.2,0,1);
+  bodyGlowMat.opacity=bodyA*(0.35+0.25*Math.sin(gameT*2.3));
+  bodyDarkMat.opacity=bodyA*0.72;
+  overseerBodyG.rotation.z=Math.sin(gameT*0.4)*0.05;
   if(!eyeOn){
     sunEyeSlitMat.opacity=0;
     sunEyeRimMat.opacity=0;
