@@ -6,6 +6,8 @@
 <meta name="description" content="REDLINE RIDER — endless downhill arcade survival. Ride clean, build speed, get stylish… and the mountain starts to notice you. The better you play, the harder it hunts.">
 <link rel="icon" type="image/png" href="media/redline-rider-logo-1x1.png">
 <link rel="apple-touch-icon" href="media/redline-rider-logo-1x1.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="preload" as="image" href="media/redline-rider-logo-1x1.png">
 <meta property="og:title" content="REDLINE RIDER">
 <meta property="og:description" content="Ride the line. Feed the eye. Style makes it worse.">
@@ -20,7 +22,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>REDLINE RIDER — ride the line. feed the eye.</title>
-<link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
 <style>
@@ -560,9 +561,9 @@
 
 <script type="importmap">
 { "imports": {
-  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-  "rapier3d": "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.12.0/rapier.es.js"
+  "three": "./vendor/three/three.module.js",
+  "three/addons/": "./vendor/three/addons/",
+  "rapier3d": "./vendor/rapier3d/rapier.es.js"
 } }
 </script>
 <script type="module">
@@ -3390,6 +3391,9 @@ fxCv.width=innerWidth; fxCv.height=innerHeight;
 resetRun('title');
 hideBoot();
 if(!tutorialSeen()) setTimeout(()=>{ if(state==='title'&&!tutorialOpen) openTutorial(false); }, 350);
+// installable / offline PWA — register after load so it never blocks first paint
+if('serviceWorker' in navigator && location.protocol!=='file:')
+  addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 // hide the boot overlay — module is fully initialized past this point
 document.getElementById('boot')?.classList.add('gone');
 
