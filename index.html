@@ -3424,6 +3424,47 @@ window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk, OT,
     return overseerProfile;
   },
   step(dt){ gameT+=dt; if(state==='riding'||state==='title') update(dt); },
+  // Scripted playtest bot — drives the real input path deterministically across
+  // seeds and reports difficulty/fairness metrics + softlock detection. Debug
+  // only. See tests/bot-playtest.md.
+  botPlaytest(opts={}){
+    const runs=opts.runs||10, maxFrames=opts.maxFrames||3600, dt=1/60, base=opts.seed??2000;
+    const results=[];
+    for(let r=0;r<runs;r++){
+      startRun();
+      runSeed=base+r; seedNoise(runSeed);
+      for(const ci of [...chunks.keys()]) dropChunk(ci);
+      game.x=0; game.z=6; game.y=terrainH(0,6); game.prevGY=game.y;
+      physTeleport(game.x,game.y,game.z); manageChunks(game.z,game.speed);
+      let frames=0, lastZ=game.z, softlocks=0, airTapped=false;
+      while(state==='riding' && frames<maxFrames){
+        const look=Math.max(12, game.speed*1.6);
+        let bestX=0, bestScore=-1e9;                 // pick the clearest lane ahead
+        for(const cx of [0,-4,4,-8,8]){
+          const tx=THREE.MathUtils.clamp(cx,-11,11); let s=-Math.abs(tx)*0.1;
+          for(let dz=6; dz<look; dz+=3) if(pitDepthAt(tx, game.z+dz)>2) s-=50;
+          if(Math.abs(tx)>TRACK_SOFT) s-=30;
+          if(s>bestScore){ bestScore=s; bestX=tx; }
+        }
+        keys.ArrowLeft=game.x>bestX+0.4; keys.ArrowRight=game.x<bestX-0.4;
+        if(!game.airborne){ airTapped=false;
+          if(pitDepthAt(game.x, game.z+Math.min(10,game.speed*0.5))>3 && game.jumpCharges>0) doJump();
+        } else if(!airTapped && predictLand()<0.12){ airTap(); airTapped=true; }
+        gameT+=dt; update(dt); frames++;
+        if(frames%120===0){ if(game.z-lastZ<3) softlocks++; lastZ=game.z; }
+      }
+      keys.ArrowLeft=keys.ArrowRight=false;
+      results.push({seed:runSeed, frames, dist:Math.round(game.z-game.dist0),
+        score:Math.floor(game.score), topCombo:game.topCombo,
+        death:state==='riding'?'timeout':lastDeathCause, softlocks});
+    }
+    const med=k=>results.map(x=>x[k]).sort((a,b)=>a-b)[Math.floor(runs/2)];
+    return { agg:{ runs,
+      medianDist:med('dist'), medianFrames:med('frames'),
+      deaths:results.reduce((m,x)=>((m[x.death]=(m[x.death]||0)+1),m),{}),
+      totalSoftlocks:results.reduce((t,x)=>t+x.softlocks,0),
+      quickDeaths:results.filter(x=>x.frames<120).length }, runs:results };
+  },
   freeze(on){ timeScale=on===false?1:0; },
   mood(v){ moodN=v; updateMood(); },
   degrade(){ stepQuality(); return qTier; },
