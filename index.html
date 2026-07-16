@@ -1669,6 +1669,7 @@ function manageChunks(z, speed){
 /* ============================== AUDIO ================================== */
 let AC=null, masterG, masterFilt, windGain, windFilt, muted=false;
 let musicStep=0, nextNoteT=0, layerGains={};
+let droneGain=null;   // Overseer presence — sub-bass that swells with manifestation
 const S16=60/112/4;
 function initAudio(){
   if(AC) return;
@@ -1687,8 +1688,25 @@ function initAudio(){
   for(const k of ['kick','hat','snare','bass','arp']){
     layerGains[k]=AC.createGain(); layerGains[k].gain.value=0; layerGains[k].connect(masterG);
   }
+  // Overseer drone: detuned sub sine + saw through a slow LFO'd lowpass — the
+  // eye's "hum". Always running; gain rides manifestation so you HEAR it wake.
+  droneGain=AC.createGain(); droneGain.gain.value=0;
+  const dFilt=AC.createBiquadFilter(); dFilt.type='lowpass'; dFilt.frequency.value=180; dFilt.Q.value=6;
+  droneGain.connect(dFilt).connect(masterG);
+  const dSub=AC.createOscillator(); dSub.type='sine'; dSub.frequency.value=38;
+  const dSaw=AC.createOscillator(); dSaw.type='sawtooth'; dSaw.frequency.value=41.3;   // beats against the sub
+  dSub.connect(droneGain); dSaw.connect(droneGain);
+  const lfo=AC.createOscillator(); lfo.type='sine'; lfo.frequency.value=0.13;
+  const lfoG=AC.createGain(); lfoG.gain.value=70; lfo.connect(lfoG).connect(dFilt.frequency);
+  dSub.start(); dSaw.start(); lfo.start();
   nextNoteT=AC.currentTime+0.1;
   setInterval(schedule, 30);
+}
+function updateOverseerAudio(){
+  if(!droneGain||!AC) return;
+  const m=state==='riding' ? (overseer?.snapshot?.().manifestation||0) : 0;
+  const target=(liveAttack?0.5:0) + m*0.28;           // swells with the eye, spikes on a strike
+  droneGain.gain.setTargetAtTime(target, AC.currentTime, 0.4);
 }
 function env(g,t,a,peak,dec){ g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(peak,t+a);
   g.gain.exponentialRampToValueAtTime(0.001,t+a+dec); }
@@ -1745,6 +1763,22 @@ const sfx={
   crash(){ if(!AC)return; const t=AC.currentTime;
     noiseHit(masterG,t,0.35,0.8,'lowpass',900);
     blip(masterG,'sine',280,60,t+0.12,0.5,0.5); blip(masterG,'sine',420,90,t+0.3,0.4,0.3); },
+  // Overseer beam charge: two detuned saws sweeping up into a shriek — dread rising
+  beamCharge(){ if(!AC)return; const t=AC.currentTime;
+    for(const det of [1,1.012]){
+      const o=AC.createOscillator(), g=AC.createGain();
+      o.type='sawtooth'; o.frequency.setValueAtTime(180*det,t);
+      o.frequency.exponentialRampToValueAtTime(1700*det,t+0.5);
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.28,t+0.42);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.62);
+      const f=AC.createBiquadFilter(); f.type='bandpass'; f.Q.value=7;
+      f.frequency.setValueAtTime(400,t); f.frequency.exponentialRampToValueAtTime(2200,t+0.5);
+      o.connect(f).connect(g).connect(masterG); o.start(t); o.stop(t+0.7);
+    } },
+  // SEEN: a short dissonant stab when a strike lands on you
+  seen(){ if(!AC)return; const t=AC.currentTime;
+    blip(masterG,'square',520,300,t,0.16,0.4); blip(masterG,'sawtooth',392,196,t,0.2,0.3);
+    noiseHit(masterG,t,0.12,0.5,'highpass',3000); },
 };
 
 /* ============================== HUD ==================================== */
@@ -2709,6 +2743,7 @@ function resolveOverseerHit(a, kind='hit'){
   if(a.strip) a.strip.material.opacity=0.85;
   overseerEvent({type:'attack', result:'hit', attackType:a.type});
   overseerSay(kind==='collapse'?'OPEN':'SEEN',1.2);
+  sfx.seen?.();
   overseerDarkT=Math.max(overseerDarkT,0.9);
   shake=Math.max(shake,0.75);
   crash('overseer');
@@ -2810,6 +2845,7 @@ function updateLiveAttack(dt){
   beamTarget.set(a.x, terrainH(a.x,a.z), a.z);
   if(a.phase==='aim'){
     sunEyeSlitMat.opacity=Math.max(sunEyeSlitMat.opacity, Math.min(1, a.t*1.8));
+    if(!a.charged){ a.charged=true; sfx.beamCharge?.(); }
     if(a.t>0.55){ a.phase='beam'; a.t=0;
       beamMesh.visible=true; flashRed(); shake=Math.max(shake,0.32); sfx.whoosh();
     }
@@ -3333,6 +3369,7 @@ function frame(){
     updateCamera(dt);
     updateMood();
     updateOverseerManifestation(dt);
+    updateOverseerAudio();
     refreshHUD(dt);
     drawFX();
     if(state==='dead') tickDeathScore(now);
