@@ -223,7 +223,15 @@
     box-shadow:0 0 0 6px rgba(255,255,255,.03), inset 0 1px 0 rgba(255,255,255,.07);
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); text-align:left; }
   .lbHead { font:700 11px 'Orbitron',sans-serif; letter-spacing:.26em; color:#ffd76e;
-    text-shadow:0 0 12px rgba(255,215,110,.5); margin-bottom:9px; text-align:center; }
+    text-shadow:0 0 12px rgba(255,215,110,.5); margin-bottom:4px; text-align:center; }
+  .lbTabs { display:flex; gap:0; margin-bottom:8px; border-radius:10px; overflow:hidden;
+    border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.2); }
+  .lbTab { flex:1; padding:6px 4px; font:700 10px 'Orbitron',sans-serif; letter-spacing:.14em;
+    color:#7a72b0; background:transparent; border:none; cursor:pointer;
+    transition:color .25s, background .25s, text-shadow .25s; }
+  .lbTab:hover { color:#cfc8f0; }
+  .lbTab.active { color:#ffd76e; background:rgba(255,215,110,.1);
+    text-shadow:0 0 10px rgba(255,215,110,.4); }
   #lbList { list-style:none; max-height:34vh; overflow-y:auto; scrollbar-width:thin;
     scrollbar-color:rgba(255,255,255,.25) transparent; }
   #lbList::-webkit-scrollbar { width:4px; } #lbList::-webkit-scrollbar-thumb {
@@ -429,7 +437,11 @@ setTimeout(()=>{const b=document.getElementById('boot');
     </section>
     <aside id="sideCol">
       <div id="lbPanel">
-        <div class="lbHead">🏔 LONGEST RUNS · LIVE<span id="lbLive"></span></div>
+        <div class="lbHead" id="lbTitle">🏔 LONGEST RUNS · LIVE<span id="lbLive"></span></div>
+        <div class="lbTabs">
+          <button class="lbTab active" data-board="time">LONGEST RUNS</button>
+          <button class="lbTab" data-board="air">✈ MOST AIRTIME</button>
+        </div>
         <ol id="lbList"><li class="lbNote">loading…</li></ol>
       </div>
     </aside>
@@ -2057,37 +2069,44 @@ function queueUsernameCheck(){
   refreshAccountGate();
   accountCheckTimer=setTimeout(checkUsernameAvailability, 320);
 }
+let activeLbBoard='time';
 function renderLB(top, me){
   lbList.innerHTML='';
   if(!top||!top.length){ lbList.innerHTML='<li class="lbNote">no runs yet — be the first</li>'; return; }
   const mine=(playerName||'').toLowerCase();
   let shown=false;
-  const lbTime=e=>fmtT(e.time)+' · AIR '+fmtT(e.hang||0);
+  const lbFmtTime=e=>fmtT(e.time)+' · AIR '+fmtT(e.hang||0);
+  const lbFmtAir=e=>fmtT(e.hang||0)+' · RUN '+fmtT(e.time);
+  const lbFmt=()=>activeLbBoard==='air'?lbFmtAir:lbFmtTime;
   top.forEach((e,i)=>{
     const li=document.createElement('li');
     let cls=i<3?'p'+(i+1):'';
     if(mine && e.name.toLowerCase()===mine){ cls+=' me'; shown=true; }
     if(cls) li.className=cls.trim();
-    li.innerHTML='<span class="r">'+(i+1)+'</span><span class="n"></span><span class="t">'+lbTime(e)+'</span>';
+    li.innerHTML='<span class="r">'+(i+1)+'</span><span class="n"></span><span class="t">'+lbFmt()(e)+'</span>';
     li.querySelector('.n').textContent=e.name;
     lbList.appendChild(li);
   });
   if(me && me.rank && !shown){                 // pin your rank if you placed below the visible list
     const li=document.createElement('li'); li.className='me youRow';
-    li.innerHTML='<span class="r">'+me.rank+'</span><span class="n"></span><span class="t">'+lbTime(me)+'</span>';
+    li.innerHTML='<span class="r">'+me.rank+'</span><span class="n"></span><span class="t">'+lbFmt()(me)+'</span>';
     li.querySelector('.n').textContent=me.name+' (you)';
     lbList.appendChild(li);
   }
 }
-async function fetchLB(){
+async function fetchLB(board){
+  const b=board||activeLbBoard;
   try{
-    const q=playerName?('?me='+encodeURIComponent(playerName)+'&t='+Date.now()):('?t='+Date.now());
+    let q='?board='+b+'&t='+Date.now();
+    if(playerName) q+='&me='+encodeURIComponent(playerName);
     const r=await fetch(LB_API+q,{cache:'no-store'});
     if(!r.ok) throw 0;
     const d=await r.json();
-    profileMe=d.me||null;
-    renderLB(d.top, d.me); lbHasData=true;
-    renderProfile();
+    if(b===activeLbBoard){
+      profileMe=d.me||null;
+      renderLB(d.top, d.me); lbHasData=true;
+      renderProfile();
+    }
   }catch(e){ if(!lbHasData) lbList.innerHTML='<li class="lbNote">leaderboard offline</li>'; }
 }
 function submitRun(time,score,dist,hang=0){
@@ -2170,6 +2189,23 @@ $('profileSignOut').addEventListener('click',e=>{
 refreshAccountGate();
 if(playerName) checkUsernameAvailability();
 fetchLB();
+// Leaderboard tab switching
+const lbTitle=$('lbTitle');
+document.querySelectorAll('.lbTab').forEach(tab=>{
+  tab.addEventListener('click',e=>{
+    e.stopPropagation();
+    const board=tab.dataset.board;
+    if(board===activeLbBoard) return;
+    activeLbBoard=board;
+    document.querySelectorAll('.lbTab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    lbTitle.innerHTML=board==='air'
+      ? '✈ MOST AIRTIME · LIVE<span id="lbLive"></span>'
+      : '🏔 LONGEST RUNS · LIVE<span id="lbLive"></span>';
+    lbList.innerHTML='<li class="lbNote">loading…</li>';
+    fetchLB(board);
+  });
+});
 // live refresh: poll while the board is on screen (title/score), pause during play
 setInterval(()=>{ if((state==='title'||state==='dead') && !document.hidden) fetchLB(); }, 5000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden && (state==='title'||state==='dead')) fetchLB(); });
