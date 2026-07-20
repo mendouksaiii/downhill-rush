@@ -432,7 +432,7 @@ setTimeout(()=>{const b=document.getElementById('boot');
     <aside id="sideCol">
       <div id="lbPanel">
         <div class="lbHead" id="lbTitle">🏆 LEADERBOARDS · LIVE<span id="lbLive"></span></div>
-        <div class="lbSubHead">🏔 LONGEST RUNS</div>
+        <div class="lbSubHead">🏆 TOP RIDERS</div>
         <ol id="lbListTime" class="lbList"><li class="lbNote">loading…</li></ol>
         <div class="lbSubHead" style="margin-top:14px; border-top:1px solid rgba(255,255,255,.08); padding-top:10px;">✈ MOST AIRTIME</div>
         <ol id="lbListAir" class="lbList"><li class="lbNote">loading…</li></ol>
@@ -2068,7 +2068,7 @@ function renderLB(top, me, type){
   if(!top||!top.length){ listEl.innerHTML='<li class="lbNote">no runs yet — be the first</li>'; return; }
   const mine=(playerName||'').toLowerCase();
   let shown=false;
-  const lbFmtTime=e=>fmtT(e.time)+' · AIR '+fmtT(e.hang||0);
+  const lbFmtTime=e=>(e.pts!=null?(+e.pts).toLocaleString()+' pts':fmtT(e.time))+' · AIR '+fmtT(e.hang||0);
   const lbFmtAir=e=>fmtT(e.hang||0)+' · RUN '+fmtT(e.time);
   const lbFmt=type==='air'?lbFmtAir:lbFmtTime;
   top.forEach((e,i)=>{

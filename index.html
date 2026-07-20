@@ -264,7 +264,7 @@
   </section>
   <aside id="lbPanel" aria-label="Leaderboards">
     <div class="lbHead">🏆 LEADERBOARDS · LIVE<span id="lbLive"></span></div>
-    <div class="lbSubHead">🏔 LONGEST RUNS</div>
+    <div class="lbSubHead">🏔 TOP RIDERS</div>
     <ol id="lbListTime" class="lbList"><li class="lbNote">loading…</li></ol>
     <div class="lbSubHead">✈ MOST AIRTIME</div>
     <ol id="lbListAir" class="lbList"><li class="lbNote">loading…</li></ol>
@@ -303,7 +303,7 @@ document.addEventListener('mousemove', (e) => {
       const cls = i === 0 ? ' class="p1"' : '';
       const statStr = isAir 
         ? `${fmtT(e.hang || 0)} · RUN ${fmtT(e.time)}` 
-        : `${fmtT(e.time)} · AIR ${fmtT(e.hang || 0)}`;
+        : `${e.pts != null ? (+e.pts).toLocaleString() + ' pts' : fmtT(e.time)} · AIR ${fmtT(e.hang || 0)}`;
       return `<li${cls}><span class="r">${i+1}</span><span>${sanitize(e.name)}</span><span class="t">${statStr}</span></li>`;
     }).join('');
   };
