@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "id": "ascent-01-verdant",
+  "order": 1,
+  "name": "VERDANT FIELDS",
+  "lore": "THE EYE WAITS AT THE TOP.",
+  "seed": 7301201,
+  "summitAlt": 420,
+  "altitudePerMeter": 0.24,
+  "assistedSpeed": 30,
+  "parTime": 62,
+  "checkpointAlts": [140, 280],
+  "altitudeBands": [
+    { "from": 0, "to": 140, "zone": "verdant-base", "pressure": 0.25 },
+    { "from": 140, "to": 280, "zone": "verdant-watch", "pressure": 0.55 },
+    { "from": 280, "to": 420, "zone": "verdant-eye", "pressure": 0.85 }
+  ],
+  "gauntlet": [
+    { "at": 80, "type": "sentrySweep", "pattern": "left", "telegraphT": 3.0 },
+    { "at": 112, "type": "beamStrike", "pattern": "center", "telegraphT": 2.8 },
+    { "at": 132, "type": "rockfall", "pattern": "gap-right", "telegraphT": 3.1 },
+    { "at": 184, "type": "sentrySweep", "pattern": "right", "telegraphT": 2.7 },
+    { "at": 218, "type": "pathPunch", "pattern": "left", "telegraphT": 2.6 },
+    { "at": 258, "type": "rockfall", "pattern": "gap-left", "telegraphT": 2.8 },
+    { "at": 316, "type": "sentrySweep", "pattern": "center", "telegraphT": 2.4 },
+    { "at": 346, "type": "beamStrike", "pattern": "right", "telegraphT": 2.4 },
+    { "at": 382, "type": "rockfall", "pattern": "gap-center", "telegraphT": 2.5 }
+  ]
+}

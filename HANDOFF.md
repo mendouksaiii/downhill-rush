@@ -10,6 +10,18 @@
 - Test loop: `npx http-server . -p 5610` (or preview server), then drive deterministically from console: `DR.step(1/60)` in loops; `DR.start()`, `DR.doJump()`, `DR.freeze()`, `DR.game`, `DR.pitsByChunk/wallsByChunk`. Tab-hidden pauses rAF — DR.step bypasses. Syntax check: extract `<script type="module">` → esbuild.
 - Gotchas: `mergeGeometries` needs uniform indexed/non-indexed → use `mergeAll`; TDZ (const used before def) kills the module silently; preview panel reloads on file edit.
 
+## Active claim — 2026-07-20
+- 🔓 RELEASED: Codex ASCENT campaign slice on `play.html` completed and verified. Next writer may claim `play.html` after pulling the ASCENT commit.
+- NOTE: commit `71fe2b1` split the marketing shell into `index.html` and moved the game to `play.html`; older lock notes that call `index.html` the entire game are stale.
+
+## ASCENT campaign slice — 2026-07-20 (Codex) ✅
+- `play.html`: DESCENT/ASCENT mode select, fixed-seed uphill terrain, assisted 30 m/s climb, altitude/band HUD, deterministic scripted gauntlet director, checkpoint resume, summit overlay, permanent SUMMITED record, and debug/bot diagnostics.
+- `maps/ascent-01-verdant.json`: first finite 420 m map, 2 checkpoints, 3 altitude bands, 9 authored attacks. ASCENT disables DESCENT's random ramps/traps/obstacles so map pressure is authored and reproducible.
+- `docs/ASCENT-MAP-SCHEMA.md`: versioned data contract for future maps. `tests/ascent-mode.test.mjs`: schema + engine surface coverage. `sw.js`: cache bumped to `redline-v3` and Verdant map precached.
+- QA: module esbuild green; `node --test tests/*.test.mjs` 34/34; desktop 1440×900 + mobile 375×812 screenshots nonblank/readable; console page errors 0; forced checkpoint death resumed at 140 m; forced summit persisted SUMMITED.
+- Bot: `DR.ascentBotPlaytest({runs:10,maxFrames:6000})` → 10/10 summits, median 420 m / 3490 frames (~58.2 s), `totalSoftlocks=0`, `quickDeaths=0`.
+- Tuning note: the bot has perfect forward knowledge and is a reachability gate, not a human difficulty proxy. Human summit rate still needs telemetry/playtest tuning before release claims.
+
 ## Current task list (user request 2026-07-04, round 2)
 0. 🔒 CLAIMED: other seat (WIP in tree — input-contract tests, KeyA remap) **No self-jumping** (from earlier, interrupted): snapToGround(0.6); auto-launch ONLY off ramps (rampH>0 at takeoff); crest hops glued; cliffs/pits = silent fall (no ring, no combo punish unless player flipped); `g.jumped` flag gates ring/trick scoring. **A = ring tap** on desktop (steering → arrows only), tap stays on mobile; SPACE = jump.
 1. ✅ THIS SEAT **Overseer live attacks**: spawn in player's line of sight at reaction-window minimum (z = player + max(2.0s*v, 35m)); sequence = eye opens → red beam to target point → red flash → pit carved (register in pitsByChunk + rebuild that chunk's terrain mesh + swap trimesh collider) or wall/obstacle spawned (mesh + cuboid collider). Cooldown ≥6s, never during grace. Uses existing directive machinery (planOverseerAttack path stays for far spawns).

@@ -33,7 +33,9 @@ Distance-banded biomes over the existing chunk system. Both DESCENT (by `game.z`
 
 ## M3 — ASCENT campaign (REVISED 2026-07-20 — see ~/brain/projects/redline-overhaul-plan.md Workstream D: finite handcrafted maps, defense-skill gauntlets, assisted climb; spike tests gauntlet feel not stamina)
 
-**Spike (1 session, behind `?ascent=1`):** inverted slope terrain, speed-decay + stamina + stall-death model, gas-from-style charging. Bot metrics: median time-to-350m 60–120 s, stall rate sane. **Feel check with user. Kill or commit here.**
+**Implemented slice (2026-07-20):** mode select, finite uphill engine, assisted climb, deterministic map-driven gauntlets, checkpoint resume, summit persistence, schema, and Verdant Fields map are now in `play.html` / `maps/ascent-01-verdant.json`. The old stamina/stall spike below is superseded by the defense-skill design and should not be implemented.
+
+**Next tuning gate:** human-play the Verdant gauntlet, distribute death causes, and tune telegraphs around a >60% first-checkpoint clear rate before authoring maps 02–07.
 
 If committed (2–3 sessions):
 1. Mode select on title (DESCENT / ASCENT), separate leaderboards + contracts set.

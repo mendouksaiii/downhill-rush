@@ -422,6 +422,33 @@
     background:rgba(9,7,18,.5); }
   #dailyBtn[aria-pressed="true"] { color:var(--rr-red); border-color:rgba(255,48,76,.55);
     box-shadow:0 0 16px rgba(255,48,76,.28); }
+  #modeSelect { margin-top:22px; display:inline-grid; grid-template-columns:1fr 1fr;
+    border:1px solid rgba(244,246,255,.18); background:rgba(9,7,18,.72); }
+  .modeBtn { min-width:138px; padding:11px 16px; border:0; border-right:1px solid rgba(244,246,255,.12);
+    background:transparent; color:var(--rr-ghost); cursor:pointer;
+    font:700 10px 'JetBrains Mono',monospace; letter-spacing:3px; }
+  .modeBtn:last-child { border-right:0; }
+  .modeBtn[aria-pressed="true"] { color:var(--rr-white); background:var(--rr-red);
+    text-shadow:0 1px 0 rgba(0,0,0,.45); }
+  #modeDetail { margin-top:9px; min-height:16px; color:var(--rr-ghost);
+    font:700 10px 'JetBrains Mono',monospace; letter-spacing:2px; }
+  #ascentHud { position:absolute; top:calc(78px + env(safe-area-inset-top)); left:50%;
+    width:min(430px,72vw); transform:translateX(-50%); display:none; }
+  #ascentHud.on { display:block; }
+  #ascentReadout { display:flex; justify-content:space-between; gap:14px; color:var(--rr-white);
+    font:700 10px 'JetBrains Mono',monospace; letter-spacing:2px; text-shadow:0 1px 8px #090712; }
+  #ascentReadout b { color:var(--rr-gold); font-size:13px; }
+  #ascentTrack { position:relative; height:5px; margin-top:7px; background:rgba(244,246,255,.14);
+    border:1px solid rgba(244,246,255,.18); }
+  #ascentFill { height:100%; width:0; background:var(--rr-red); box-shadow:0 0 12px rgba(255,48,76,.65); }
+  #ascentMarks { position:absolute; inset:-3px 0; pointer-events:none; }
+  #ascentMarks i { position:absolute; top:0; width:2px; height:9px; background:var(--rr-gold); }
+  #summit { z-index:31; background:radial-gradient(circle at 50% 35%,rgba(255,215,110,.2),transparent 32%),#f4f6ff;
+    color:#090712; }
+  #summit h2 { font:900 4rem/.9 'Orbitron',sans-serif; letter-spacing:5px; color:#090712; }
+  #summit .summitEye { margin-bottom:18px; color:#ff304c; font:700 12px 'JetBrains Mono',monospace; letter-spacing:5px; }
+  #summitStats { margin:22px 0; color:#4b455f; font:700 12px 'JetBrains Mono',monospace; letter-spacing:3px; }
+  #summit .ghostBtn { color:#f4f6ff; background:#090712; border-color:#090712; }
   #lbPanel { align-self:stretch; margin-top:0; width:auto; min-height:360px; border-radius:0;
     background:linear-gradient(180deg, rgba(9,7,18,.78), rgba(26,16,64,.58));
     border:1px solid rgba(255,48,76,.28); border-left:3px solid rgba(255,48,76,.78);
@@ -510,6 +537,10 @@
     #mechanicStrip { grid-template-columns:1fr; }
     #cList { grid-template-columns:1fr; }
     #score { font-size:36px; }
+    #modeSelect { width:100%; }
+    .modeBtn { min-width:0; }
+    #ascentHud { top:calc(64px + env(safe-area-inset-top)); width:68vw; }
+    #summit h2 { font-size:2.7rem; }
   }
 </style>
 </head>
@@ -555,7 +586,7 @@ setTimeout(()=>{const b=document.getElementById('boot');
 <canvas id="fx"></canvas>
 <div id="vignette"></div>
 <div id="flash"></div>
-<div id="hud">
+  <div id="hud">
   <div id="scoreWrap"><span class="scoreLabel">STYLE</span><div id="score">0</div></div>
   <div id="comboBox"><span class="flame">CHAIN</span><span class="mult">×1.5</span></div>
   <div id="power"><span class="plabel"></span><div class="pbar"><div class="pfill"></div></div></div>
@@ -571,7 +602,11 @@ setTimeout(()=>{const b=document.getElementById('boot');
     <div class="jumpPip"><i></i></div>
   </div>
   <div id="ringWrap"><canvas id="ring" width="150" height="150"></canvas><div id="hint">TAP WHEN RINGS MEET</div></div>
-  <div id="overseerVoice"></div>
+    <div id="overseerVoice"></div>
+    <div id="ascentHud" aria-live="polite">
+      <div id="ascentReadout"><span id="ascentMapName">VERDANT FIELDS</span><b id="ascentAlt">0 / 420 M</b></div>
+      <div id="ascentTrack"><div id="ascentFill"></div><span id="ascentMarks"></span></div>
+    </div>
   <div id="popups"></div>
   <button id="mute">🔊</button>
   <button id="jumpBtn" aria-label="Jump"><span id="jumpBtnN">5</span>JUMP</button>
@@ -624,6 +659,11 @@ setTimeout(()=>{const b=document.getElementById('boot');
       <h1><span class="rl">REDLINE</span><span class="rr">RIDER</span></h1>
       <div class="tag">RIDE THE LINE. FEED THE EYE.</div>
       <p class="heroLine">Clean riding builds speed. Gas turns discipline into risk. Style makes the mountain notice you.</p>
+      <div id="modeSelect" role="group" aria-label="Ride mode">
+        <button id="modeDescent" class="modeBtn" aria-pressed="true">DESCENT</button>
+        <button id="modeAscent" class="modeBtn" aria-pressed="false">ASCENT</button>
+      </div>
+      <div id="modeDetail">ENDLESS / BUILD SPEED / SURVIVE</div>
       <div id="signup">
         <div class="cardHead"><span class="dot"></span>RIDER ID</div>
         <div class="accountField">
@@ -689,6 +729,15 @@ setTimeout(()=>{const b=document.getElementById('boot');
   </div>
   <div class="tapline">TAP BACKDROP TO RIDE AGAIN</div>
 </div>
+<div id="summit" class="overlay hidden">
+  <div class="summitEye">THE EYE WAITS AT THE TOP</div>
+  <h2>SUMMITED</h2>
+  <div id="summitStats">VERDANT FIELDS / 420 M</div>
+  <div class="deathActions">
+    <button id="summitHomeBtn" class="ghostBtn">HOME</button>
+    <button id="summitAgainBtn" class="ghostBtn">CLIMB AGAIN</button>
+  </div>
+</div>
 <div id="tutorial" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
   <div id="tutorialCard">
     <div id="tutorialArt"><img id="tutorialImg" alt=""></div>
@@ -742,6 +791,17 @@ import {
 } from './overseer-core.mjs';
 import { Economy } from './economy.js';
 import { RIDER_GAME, bikeGame } from './skins-data.js';
+
+const ASCENT_MAP_FILES=['./maps/ascent-01-verdant.json'];
+function validAscentMap(m){
+  return m && m.version===1 && typeof m.id==='string' && Number.isFinite(m.seed)
+    && m.summitAlt>0 && m.altitudePerMeter>0 && m.assistedSpeed>0
+    && Array.isArray(m.checkpointAlts) && Array.isArray(m.altitudeBands) && Array.isArray(m.gauntlet);
+}
+const ASCENT_MAPS=(await Promise.all(ASCENT_MAP_FILES.map(async path=>{
+  try{ const r=await fetch(path,{cache:'no-store'}); return r.ok?await r.json():null; }
+  catch(e){ return null; }
+}))).filter(validAscentMap).sort((a,b)=>a.order-b.order);
 
 /* ============================== CONSTANTS ============================== */
 const CHUNK = 60;                 // chunk length (m)
@@ -820,6 +880,8 @@ function noise2(x,y){
 
 /* ============================== TERRAIN ================================ */
 let runSeed = 1;
+let rideMode='descent';
+let ascentMap=ASCENT_MAPS[0]||null;
 const rampsByChunk = new Map();
 const pitsByChunk = new Map();    // rage traps: sudden holes in the track
 const wallsByChunk = new Map();   // rage traps: high-rise ledges with one gap
@@ -843,7 +905,8 @@ function trapH(x,z){
 function pitDepthAt(x,z){ const d=trapH(x,z); return d<0?-d:0; }
 
 function baseH(x,z){
-  let y = -z*0.40;                                   // main downhill grade
+  const grade=rideMode==='ascent' && ascentMap ? ascentMap.altitudePerMeter : -0.40;
+  let y = z*grade;                                    // finite ASCENT flips the same track uphill
   y += noise2(z*0.008+31.7, 7.3)*6;                  // long grade bands
   y += noise2(x*0.02, z*0.02)*2.2;                   // rolling terrain
   y += noise2(x*0.06, z*0.06)*0.65;                  // detail
@@ -1649,15 +1712,17 @@ function clearOfRamps(x,z,ramps){
 function genChunk(ci){
   if(chunks.has(ci)) return;
   const z0=ci*CHUNK, rng=mulberry32(hashSeed(ci,runSeed));
-  const density=Math.min(1, 0.18 + z0/2400);
-  const directive=overseer && state==='riding'
+  const ascent=rideMode==='ascent' && ascentMap;
+  const density=ascent
+    ? THREE.MathUtils.clamp(0.18+(z0*ascentMap.altitudePerMeter/ascentMap.summitAlt)*0.72,0.18,0.9)
+    : Math.min(1, 0.18 + z0/2400);
+  const directive=!ascent && overseer && state==='riding'
     ? overseer.chooseDirective({ci,z0,density,speed:game.speed||START_SPEED})
     : {kind:'calm', archetype:'judge', intensity:0, fairness:1, telegraph:1, params:{trapChanceScale:1}};
-  const plannedAttack=planOverseerAttack(ci,z0,directive,rng);
+  const plannedAttack=ascent?null:planOverseerAttack(ci,z0,directive,rng);
   const ramps=[], obstacles=[];
-
   // --- ramps
-  if(ci===2 || (ci>2 && rng()<0.55)){
+  if(!ascent && (ci===2 || (ci>2 && rng()<0.55))){
     const n=(ci>4 && rng()<0.3)?2:1;
     for(let i=0;i<n;i++){
       const len=8+rng()*4, h=2.1+rng()*1.4+density*0.8;
@@ -1670,7 +1735,7 @@ function genChunk(ci){
 
   // --- rage traps (start after 4 chunks): sudden pits + high-rise walls
   const pits=[], walls=[];
-  if(ci>=4){
+  if(!ascent && ci>=4){
     const prevTrap=(pitsByChunk.get(ci-1)?.length||0)+(wallsByChunk.get(ci-1)?.length||0);
     const trapScale=directive.params?.trapChanceScale ?? 1;
     const trapChance=prevTrap?0.08:THREE.MathUtils.clamp((0.32+density*0.28)*trapScale*OT.trapAggressionMul,0.12,0.78);
@@ -1696,7 +1761,8 @@ function genChunk(ci){
   pitsByChunk.set(ci,pits); wallsByChunk.set(ci,walls);
 
   // --- obstacles (start after 2 chunks of clean run)
-  if(ci>=2){
+  const hazardsOpen=!ascent && ci>=2;
+  if(hazardsOpen){
     const pat=rng();
     const add=(type,x,z,s)=>{
       if(!clearOfRamps(x,z,ramps)) return;
@@ -1913,7 +1979,9 @@ function dropChunk(ci){
 
 function manageChunks(z, speed){
   const ahead=isMobile ? Math.max(300, speed*3.8+110) : Math.max(360, speed*4.5+120);
-  const lo=Math.floor((z-70)/CHUNK), hi=Math.floor((z+ahead)/CHUNK);
+  const lo=Math.floor((z-70)/CHUNK);
+  const summitHi=rideMode==='ascent' && ascentMap ? Math.ceil(ascentZForAltitude(ascentMap.summitAlt)/CHUNK)+1 : Infinity;
+  const hi=Math.min(Math.floor((z+ahead)/CHUNK),summitHi);
   for(let ci=Math.max(0,lo); ci<=hi; ci++) genChunk(ci);
   for(const ci of [...chunks.keys()]) if(ci<lo || ci>hi+2) dropChunk(ci);
 }
@@ -2453,14 +2521,19 @@ $('tutorialBtn').addEventListener('click',e=>{ e.stopPropagation(); openTutorial
 $('shopBtn').addEventListener('click',async e=>{ e.stopPropagation(); await Economy.flush(); location.href='market.html'; });
 $('shopBtn').addEventListener('pointerdown',e=>e.stopPropagation());
 $('dailyBtn').addEventListener('click',e=>{ e.stopPropagation();
+  if(rideMode==='ascent') return;
   dailyMode=!dailyMode;
   const b=$('dailyBtn');
   b.textContent='DAILY DESCENT: '+(dailyMode?'ON':'OFF');
   b.setAttribute('aria-pressed', dailyMode?'true':'false');
 });
+$('modeDescent').addEventListener('click',e=>{ e.stopPropagation(); setRideMode('descent'); });
+$('modeAscent').addEventListener('click',e=>{ e.stopPropagation(); setRideMode('ascent'); });
 $('againBtn').addEventListener('click',e=>{ e.stopPropagation(); beginRide(); });
 $('homeBtn').addEventListener('click',e=>{ e.stopPropagation(); goHome(); });
-for(const id of ['tutorial','tutorialCard','tutPrev','tutSkip','tutNext','againBtn','homeBtn','tutorialBtn','dailyBtn']){
+$('summitAgainBtn').addEventListener('click',e=>{ e.stopPropagation(); beginRide(); });
+$('summitHomeBtn').addEventListener('click',e=>{ e.stopPropagation(); goHome(); });
+for(const id of ['tutorial','tutorialCard','tutPrev','tutSkip','tutNext','againBtn','homeBtn','summitAgainBtn','summitHomeBtn','tutorialBtn','dailyBtn','modeDescent','modeAscent']){
   $(id).addEventListener('pointerdown',e=>e.stopPropagation());
 }
 tutPrev.addEventListener('click',e=>{ e.stopPropagation(); prevTutorial(); });
@@ -2490,7 +2563,7 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden && (state
 window.LB={ renderLB, fetchLB, setName(n){ playerName=n; nameInput.value=n; refreshAccountGate(); } };
 
 /* ============================== GAME STATE ============================= */
-let state='title';        // title | riding | crashed | dead
+let state='title';        // title | riding | crashed | dead | summited
 let paused=false;
 let bestScore=0;
 let bestDist=(()=>{ try{ return +localStorage.getItem('dr_best_dist')||0; }catch(e){ return 0; } })();
@@ -2545,6 +2618,145 @@ fetch('/overseer-tuning.json').then(r=>r.ok?r.json():null).then(t=>{
 let dailyMode=false;
 function dailySeed(){ return hashSeed(utcDay(),31)>>>0; }
 
+/* ============================== ASCENT CAMPAIGN ======================= */
+const ASCENT_PROGRESS_KEY='dr_ascent_progress_v1';
+let ascentGauntletIndex=0, ascentCheckpointIndex=0, lastAscentHudAlt=-1;
+let ascentProgress=(function(){
+  try{
+    const p=JSON.parse(localStorage.getItem(ASCENT_PROGRESS_KEY)||'null');
+    if(p && Array.isArray(p.summited) && p.checkpoints) return p;
+  }catch(e){}
+  return {summited:[], checkpoints:{}};
+})();
+function saveAscentProgress(){
+  try{ localStorage.setItem(ASCENT_PROGRESS_KEY,JSON.stringify(ascentProgress)); }catch(e){}
+}
+function ascentAltitude(z=game.z){
+  return rideMode==='ascent' && ascentMap ? Math.max(0,(z-6)*ascentMap.altitudePerMeter) : 0;
+}
+function ascentZForAltitude(alt){
+  return 6+alt/Math.max(0.01,ascentMap?.altitudePerMeter||0.24);
+}
+function patternLane(pattern){
+  if(pattern==='left') return 5.5;
+  if(pattern==='right') return -5.5;
+  return 0;
+}
+function patternGap(pattern){
+  if(pattern==='gap-left') return 5.5;
+  if(pattern==='gap-right') return -5.5;
+  return 0;
+}
+function renderModeSelect(){
+  const ascent=rideMode==='ascent';
+  $('modeDescent').setAttribute('aria-pressed',ascent?'false':'true');
+  $('modeAscent').setAttribute('aria-pressed',ascent?'true':'false');
+  $('modeAscent').disabled=!ascentMap;
+  $('dailyBtn').disabled=ascent;
+  $('dailyBtn').style.opacity=ascent?'.35':'1';
+  $('modeDetail').textContent=ascent
+    ? (ascentMap?`${ascentMap.name} / ${ascentMap.summitAlt} M / ${ascentProgress.summited.includes(ascentMap.id)?'SUMMITED':'UNSUMMITED'}`:'MAP DATA UNAVAILABLE')
+    : 'ENDLESS / BUILD SPEED / SURVIVE';
+  $('contracts').style.display=ascent?'none':'block';
+  document.querySelector('#heroCopy .eyebrow').textContent=ascent
+    ? 'FINITE MOUNTAIN / DEFEND THE CLIMB / REACH THE EYE'
+    : 'NEON DOWNHILL SURVIVAL / WATCHED BY THE OVERSEER';
+  document.querySelector('#heroCopy .heroLine').textContent=ascent
+    ? 'Climb speed is handled. Read the tell, defend the line, and reach the thing trying to kill you.'
+    : 'Clean riding builds speed. Gas turns discipline into risk. Style makes the mountain notice you.';
+  document.querySelector('#titleTop .signal').textContent=ascent?'ASCENT CAMPAIGN PROTOCOL':'ADAPTIVE DESCENT PROTOCOL';
+  $('startBtn').textContent=ascent?'BEGIN ASCENT':'PLAY NOW';
+  $('ascentHud').classList.toggle('on',ascent && state==='riding');
+}
+function setRideMode(mode){
+  if(mode==='ascent' && !ascentMap) return;
+  rideMode=mode==='ascent'?'ascent':'descent';
+  if(rideMode==='ascent') dailyMode=false;
+  $('dailyBtn').textContent='DAILY DESCENT: OFF';
+  $('dailyBtn').setAttribute('aria-pressed','false');
+  renderModeSelect();
+  if(state==='title') resetRun('title');
+}
+function renderAscentHUD(force=false){
+  const hud=$('ascentHud');
+  const on=rideMode==='ascent' && state==='riding' && ascentMap;
+  hud.classList.toggle('on',!!on);
+  if(!on) return;
+  const alt=Math.min(ascentMap.summitAlt,Math.floor(ascentAltitude()));
+  if(force || alt!==lastAscentHudAlt){
+    lastAscentHudAlt=alt;
+    $('ascentMapName').textContent=ascentMap.name;
+    $('ascentAlt').textContent=alt+' / '+ascentMap.summitAlt+' M';
+    $('ascentFill').style.width=(100*alt/ascentMap.summitAlt).toFixed(2)+'%';
+  }
+}
+function renderAscentMarks(){
+  const marks=$('ascentMarks'); marks.textContent='';
+  if(!ascentMap) return;
+  for(const at of ascentMap.checkpointAlts){
+    const mark=document.createElement('i');
+    mark.style.left=(100*at/ascentMap.summitAlt)+'%'; marks.appendChild(mark);
+  }
+}
+function startAscentGauntletEvent(event,index){
+  if(!ascentMap) return false;
+  const z=ascentZForAltitude(event.at), ci=Math.floor(z/CHUNK), rec=chunks.get(ci);
+  if(!rec) return false;
+  if(event.type==='sentrySweep'){
+    const attack={ci,type:'redEyeSweep',z,x:patternLane(event.pattern),width:6.2,
+      intensity:0.55+index*0.04,armed:true,resolved:false,hit:false,t:0,scripted:true};
+    addOverseerAttackVisual(rec.group,attack);
+    overseerSay('WEAVE',1.2);
+    return true;
+  }
+  if(liveAttack) return false;
+  const eventRng=mulberry32(hashSeed(index+1,ascentMap.seed));
+  const isWall=event.type==='rockfall';
+  const len=event.type==='pathPunch'?9:7;
+  const z0=THREE.MathUtils.clamp(z-len/2,ci*CHUNK+5,(ci+1)*CHUNK-5-len);
+  const x=patternLane(event.pattern);
+  liveAttack={type:isWall?'wall':'pit',x,z:z0+len/2,z0,len,w:event.type==='pathPunch'?8.2:6.4,ci,
+    phase:'aim',t:0,scripted:true,aimT:Math.max(1.7,event.telegraphT-0.4),beamT:0.4,settleT:1.0,
+    depth:9+eventRng()*2,wall:isWall?{z0:z-1.3,len:2.6,h:2.8+eventRng(),gapX:patternGap(event.pattern),gapW:5.4}:null};
+  overseerSay(isWall?'ROCKFALL':(event.type==='pathPunch'?'PATH DENIED':'MOVE'),1.25);
+  return true;
+}
+function completeAscent(){
+  if(state!=='riding' || rideMode!=='ascent' || !ascentMap) return;
+  state='summited'; timeScale=1;
+  if(!ascentProgress.summited.includes(ascentMap.id)) ascentProgress.summited.push(ascentMap.id);
+  ascentProgress.checkpoints[ascentMap.id]=0;
+  saveAscentProgress();
+  $('summitStats').textContent=ascentMap.name+' / '+ascentMap.summitAlt+' M / '+fmtT(game.runT);
+  $('summit').classList.remove('hidden');
+  $('ascentHud').classList.remove('on');
+  flashEl.style.background='#f4f6ff'; flashEl.style.opacity=1;
+  requestAnimationFrame(()=>{ flashEl.style.transition='opacity .8s ease-out'; flashEl.style.opacity=0; });
+  overseerSay('SEEN',1.4); sfx.perfect?.();
+}
+function updateAscentCampaign(){
+  if(rideMode!=='ascent' || !ascentMap || state!=='riding') return;
+  const alt=ascentAltitude();
+  let band=ascentMap.altitudeBands[0]||null;
+  for(const candidate of ascentMap.altitudeBands) if(alt>=candidate.from && alt<candidate.to){ band=candidate; break; }
+  game.ascentBand=band?.zone||''; game.ascentPressure=band?.pressure||0;
+  while(ascentCheckpointIndex<ascentMap.checkpointAlts.length && alt>=ascentMap.checkpointAlts[ascentCheckpointIndex]){
+    const at=ascentMap.checkpointAlts[ascentCheckpointIndex++];
+    if((ascentProgress.checkpoints[ascentMap.id]||0)<at){
+      ascentProgress.checkpoints[ascentMap.id]=at; saveAscentProgress();
+      game.gas=1; game.jumpCharges=JUMP_CHARGE_MAX; game.score+=500;
+      popup('GATE LOCKED / '+at+' M','perfect',-52); overseerSay('REMEMBERED',1.1); sfx.perfect?.();
+    }
+  }
+  const event=ascentMap.gauntlet[ascentGauntletIndex];
+  if(event){
+    const leadAlt=event.telegraphT*ascentMap.assistedSpeed*ascentMap.altitudePerMeter;
+    if(alt>=event.at-leadAlt && startAscentGauntletEvent(event,ascentGauntletIndex)) ascentGauntletIndex++;
+  }
+  if(alt>=ascentMap.summitAlt) completeAscent();
+}
+function ascentBotPlaytest(opts={}){ return window.DR?.botPlaytest({...opts,mode:'ascent'}); }
+
 /* ============================== CONTRACTS (missions) ================== */
 // Three per-run objectives, seeded by the UTC day so every player gets the
 // same "descent contracts" — the daily hook. Progress persists across runs
@@ -2596,7 +2808,7 @@ function renderContracts(){
   });
 }
 function checkMissions(){
-  if(state!=='riding') return;
+  if(state!=='riding' || rideMode==='ascent') return;
   let any=false;
   missionSet.ids.forEach((id,i)=>{
     if(missionSet.done[i]) return;
@@ -2620,19 +2832,29 @@ function checkMissions(){
 function missionBump(stat,n=1){ game[stat]=(game[stat]||0)+n; checkMissions(); }
 
 function resetRun(startState){
-  runSeed=dailyMode?dailySeed():(Math.random()*1e9)|0;
+  const ascent=rideMode==='ascent' && ascentMap;
+  const startAlt=ascent && startState==='riding' ? Math.max(0,ascentProgress.checkpoints[ascentMap.id]||0) : 0;
+  const startZ=ascent?ascentZForAltitude(startAlt):6;
+  runSeed=ascent?(ascentMap.seed>>>0):(dailyMode?dailySeed():(Math.random()*1e9)|0);
   seedNoise(runSeed);
   overseer=createOverseerRuntime({seed:runSeed, profile:overseerProfile});
   lastDeathCause='unknown';
   overseerManifestLevel=0;
   overseerAttacks=[];
   liveAttack=null; liveAttackCooldownUntil=6;
+  if(ascent){
+    ascentGauntletIndex=ascentMap.gauntlet.findIndex(e=>e.at>startAlt+1);
+    if(ascentGauntletIndex<0) ascentGauntletIndex=ascentMap.gauntlet.length;
+    ascentCheckpointIndex=ascentMap.checkpointAlts.findIndex(at=>at>startAlt);
+    if(ascentCheckpointIndex<0) ascentCheckpointIndex=ascentMap.checkpointAlts.length;
+  } else { ascentGauntletIndex=0; ascentCheckpointIndex=0; }
+  lastAscentHudAlt=-1;
   beamMesh.visible=false; impactRing.visible=false; beamMat.opacity=0; impactMat.opacity=0;
   for(const ci of [...chunks.keys()]) dropChunk(ci);
   for(const p of pieces){ scene.remove(p.mesh); p.mesh.geometry.dispose?.(); }
   pieces=[];
   Object.assign(game,{
-    x:0, z:6, y:0, vy:0, speed:START_SPEED,
+    x:0, z:startZ, y:0, vy:0, speed:ascent?ascentMap.assistedSpeed:START_SPEED,
     airborne:false, airTime:0, totalAirPredict:0,
     prevGY:0, prevGvy:0,
     lastAirTap:-99, faults:0, pendingLand:null,
@@ -2659,6 +2881,7 @@ function resetRun(startState){
   bikeTilt.visible=true;
   camera.position.set(0, game.y+5, game.z-9);
   deathEl.classList.add('hidden');
+  $('summit').classList.add('hidden');
   titleEl.classList.toggle('hidden', startState!=='title');
   tutorialOpen=false;
   tutorialStartAfter=false;
@@ -2668,6 +2891,9 @@ function resetRun(startState){
   updateComboHUD();
   updatePowerHUD();
   renderContracts();
+  renderModeSelect();
+  renderAscentMarks();
+  renderAscentHUD(true);
 }
 
 function mult(){ return Math.min(1+0.5*game.combo, 6); }
@@ -2732,6 +2958,7 @@ function updatePieces(dt){
   }
 }
 function deathLineForCause(cause){
+  if(rideMode==='ascent') return 'THE EYE SAW '+Math.floor(ascentAltitude())+' M. THE LAST GATE REMEMBERS.';
   if(cause==='overseer') return 'THE EYE REMEMBERS the line you fed it.';
   if(cause==='pit') return 'The mountain opened because the line got greedy.';
   if(cause==='offtrack') return 'Clean lines only. The edge does not forgive.';
@@ -2746,8 +2973,12 @@ function showDeath(){
   deathT0=performance.now(); deathFinal=Math.floor(game.score);
   // distance-to-best: near-miss framing pulls one-more-run harder than any bonus
   {
-    const dist=Math.floor(game.z-game.dist0), el=$('dGap');
-    if(bestDist>0 && dist<bestDist){
+    const dist=Math.floor(game.z-game.dist0), alt=Math.floor(ascentAltitude()), el=$('dGap');
+    if(rideMode==='ascent'){
+      const gate=ascentProgress.checkpoints[ascentMap.id]||0;
+      el.textContent=gate>0?'GATE '+gate+' M LOCKED. RETRY FROM THE MARK.':'THE BASE STILL KNOWS YOUR NAME.';
+      el.className=gate>0?'beat':'near';
+    } else if(bestDist>0 && dist<bestDist){
       const gap=bestDist-dist;
       el.textContent=(gap<=40?'SO CLOSE — ':'')+gap+' m SHORT of your best. THE EYE IS DISAPPOINTED.';
       el.className='near';
@@ -2755,22 +2986,23 @@ function showDeath(){
       el.textContent='NEW FARTHEST DESCENT — '+dist+' m. THE MOUNTAIN WILL REMEMBER.';
       el.className='beat';
     } else { el.className='hidden'; }
-    if(dist>bestDist){ bestDist=dist; try{ localStorage.setItem('dr_best_dist',bestDist); }catch(e){} }
+    if(rideMode!=='ascent' && dist>bestDist){ bestDist=dist; try{ localStorage.setItem('dr_best_dist',bestDist); }catch(e){} }
   }
   $('dScore').textContent='0';
   $('dBest').textContent=bestScore;
-  $('dDist').textContent=Math.floor(game.z-game.dist0)+' m';
+  $('dDist').textContent=rideMode==='ascent'?Math.floor(ascentAltitude())+' m ALT':Math.floor(game.z-game.dist0)+' m';
   $('dCombo').textContent=game.topCombo;
   $('dTime').textContent=fmtT(game.runT);
   $('dHang').textContent=fmtT(game.hangT);
   $('dLine').textContent=deathLineForCause(lastDeathCause);
-  const coinsEarned=Economy.awardRun({dist:game.z-game.dist0, combo:game.topCombo});
+  const runDistance=rideMode==='ascent'?ascentAltitude():game.z-game.dist0;
+  const coinsEarned=Economy.awardRun({dist:runDistance, combo:game.topCombo});
   $('dCoins').textContent='+'+coinsEarned.toLocaleString()+' ◈';
   $('dRank').classList.add('hidden');
   if(overseer){
     const summary=overseer.finishRun({
       score:game.score,
-      distance:game.z-game.dist0,
+      distance:runDistance,
       runT:game.runT,
       hangT:game.hangT,
       deathCause:lastDeathCause
@@ -2782,16 +3014,16 @@ function showDeath(){
   try{
     const ev=overseer?.snapshot?.()||{};
     navigator.sendBeacon?.('/api/overseer', JSON.stringify({
-      score:Math.floor(game.score), dist:Math.floor(game.z-game.dist0),
+      score:Math.floor(game.score), dist:Math.floor(runDistance),
       runT:+game.runT.toFixed(1), hang:+game.hangT.toFixed(1), combo:game.topCombo,
       perfects:ev.events?.perfects||0, stumbles:game.stumbleN||0,
-      deathCause:lastDeathCause, quickDeath:game.runT<10&&(game.z-game.dist0)<180,
+      deathCause:lastDeathCause, quickDeath:game.runT<10&&runDistance<180,
       archetype:ev.archetype||'unknown', pressure:ev.pressure||0, tilt:ev.tilt||0, mercy:ev.mercy||0,
       attacksHit:ev.events?.attacksHit||0, attacksDodged:ev.events?.attacksDodged||0,
       attacksCountered:ev.events?.attacksCountered||0,
     }));
   }catch(e){}
-  submitRun(game.runT, game.score, game.z-game.dist0, game.hangT);
+  if(rideMode!=='ascent') submitRun(game.runT, game.score, game.z-game.dist0, game.hangT);
   deathEl.classList.remove('hidden');
   canRestartAt=performance.now()+400;
   ringWrap.style.display='none';
@@ -3291,14 +3523,15 @@ function spawnLiveWall(w, rec){
 
 function executeLiveSpawn(a){
   const rec=chunks.get(a.ci); if(!rec) return;
+  const rng=a.scripted?mulberry32(hashSeed(a.ci,runSeed)):Math.random;
   if(a.type==='pit'){
     const list=pitsByChunk.get(a.ci)||[];
-    list.push({x:a.x, z0:a.z0, len:a.len, w:a.w, depth:9+Math.random()*3});
+    list.push({x:a.x, z0:a.z0, len:a.len, w:a.w, depth:a.depth||9+rng()*3});
     pitsByChunk.set(a.ci,list);
     rebuildChunkTerrain(a.ci);
   } else {
-    const w={z0:a.z-1.3, len:2.6, h:2.6+Math.random()*1.4,
-      gapX:THREE.MathUtils.clamp(a.x+(Math.random()<0.5?-6:6),-8,8), gapW:5};
+    const w=a.wall||{z0:a.z-1.3, len:2.6, h:2.6+rng()*1.4,
+      gapX:THREE.MathUtils.clamp(a.x+(rng()<0.5?-6:6),-8,8), gapW:5};
     const list=wallsByChunk.get(a.ci)||[]; list.push(w); wallsByChunk.set(a.ci,list);
     spawnLiveWall(w, rec);
   }
@@ -3311,7 +3544,7 @@ function executeLiveSpawn(a){
 
 function updateLiveAttack(dt){
   if(!liveAttack){
-    if(state==='riding' && phys && gameT>liveAttackCooldownUntil) tryStartLiveAttack(dt);
+    if(rideMode!=='ascent' && state==='riding' && phys && gameT>liveAttackCooldownUntil) tryStartLiveAttack(dt);
     return;
   }
   const a=liveAttack; a.t+=dt;
@@ -3319,7 +3552,7 @@ function updateLiveAttack(dt){
   if(a.phase==='aim'){
     sunEyeSlitMat.opacity=Math.max(sunEyeSlitMat.opacity, Math.min(1, a.t*1.8));
     if(!a.charged){ a.charged=true; sfx.beamCharge?.(); }
-    if(a.t>0.55){ a.phase='beam'; a.t=0;
+    if(a.t>(a.aimT||0.55)){ a.phase='beam'; a.t=0;
       beamMesh.visible=true; flashRed(); shake=Math.max(shake,0.32); sfx.whoosh();
     }
   } else if(a.phase==='beam'){
@@ -3331,15 +3564,15 @@ function updateLiveAttack(dt){
     beamMesh.scale.set(1,L,1);
     beamMat.opacity=0.8*Math.sin(Math.min(1,a.t/0.4)*Math.PI);
     sunEyeSlitMat.opacity=1;
-    if(a.t>=0.4){ a.phase='settle'; a.t=0; executeLiveSpawn(a); }
+    if(a.t>=(a.beamT||0.4)){ a.phase='settle'; a.t=0; executeLiveSpawn(a); }
   } else if(a.phase==='settle'){
     beamMat.opacity=Math.max(0, 0.7-a.t*3);
     impactMat.opacity=Math.max(0, 1.1-a.t*0.9);
     impactRing.scale.setScalar(1+a.t*1.6);
-    if(a.t>1.3){
+    if(a.t>(a.settleT||1.3)){
       beamMesh.visible=false; impactRing.visible=false;
       liveAttack=null;
-      liveAttackCooldownUntil=gameT+(8+Math.random()*4)*OT.attackCooldownMul;
+      liveAttackCooldownUntil=gameT+(8+(a.scripted?2:Math.random()*4))*OT.attackCooldownMul;
     }
   }
 }
@@ -3457,9 +3690,18 @@ function update(dt){
   const god=state==='title';
   // speed: passive ramp grows with a clean streak; hold to pedal for more
   g.cleanT+=dt;
-  const targetSpeed=god?16:MAX_SPEED;
+  const climbing=!god && rideMode==='ascent' && ascentMap;
+  const targetSpeed=god?16:(climbing?ascentMap.assistedSpeed:MAX_SPEED);
   
-  if (g.airborne) {
+  if(climbing){
+    if(g.airborne){
+      const aDrag=DRAG_C*g.speed*g.speed;
+      g.speed=Math.max(ascentMap.assistedSpeed*0.72,g.speed-aDrag*dt);
+    } else {
+      const assist=THREE.MathUtils.clamp((targetSpeed-g.speed)*2.4,-5.5,8.5);
+      g.speed=THREE.MathUtils.clamp(g.speed+assist*dt,targetSpeed*0.72,targetSpeed*1.18);
+    }
+  } else if (g.airborne) {
     const a_drag = DRAG_C * g.speed * g.speed;
     g.speed = Math.max(0, g.speed - a_drag * dt);
   } else {
@@ -3520,7 +3762,11 @@ function update(dt){
     const dx=g.steer*steerSpd*dt, dz=g.speed*dt;
     let dy;
     if(g.airborne){ g.vy-=G*dt; dy=g.vy*dt; }
-    else dy=-Math.max(1.5,g.speed*0.9)*dt;      // downhill-following bias
+    else if(climbing){
+      // Follow the authored uphill grade. The descent-only downward bias drives
+      // a kinematic capsule into positive slopes and makes them read as walls.
+      dy=terrainH(g.x,g.z+dz)-g.y+0.04;
+    } else dy=-Math.max(1.5,g.speed*0.9)*dt;      // downhill-following bias
     playerBody.setTranslation({x:g.x,y:g.y,z:g.z},true);
     charCtl.computeColliderMovement(playerCol,{x:dx,y:dy,z:dz});
     const m=charCtl.computedMovement();
@@ -3643,6 +3889,8 @@ function update(dt){
     // tricks only from dedicated inputs — ←→ in the air is pure steering
     g.trickFlip+=readFlip()*FLIP_RATE*dt;
   }
+  if(!god && rideMode==='ascent') updateAscentCampaign();
+  if(state!=='riding' && state!=='title') return;
   if(!god) updateOverseerAttacks(dt);
   if(!god) updateLiveAttack(dt);
   if(!god) checkMissions();   // live contracts (combo / distance / hang)
@@ -3825,6 +4073,7 @@ function refreshHUD(dt){
   }
   if(game.power) pFill.style.width=Math.max(0,game.power.t/(game.power.maxT||POWER_DUR)*100)+'%';
   speedFill.style.background=sp<0.45?'#2effa4':(sp<0.75?'#ffd76e':'#ff2e56');
+  renderAscentHUD();
   if(AC){
     windFilt.frequency.value=300+game.speed*24;
     windGain.gain.value=Math.min(0.34, game.speed*0.004+(game.airborne?0.06:0));
@@ -3935,6 +4184,10 @@ window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk, OT,
   get overseer(){ return overseer; },
   get overseerProfile(){ return overseerProfile; },
   get overseerAttacks(){ return overseerAttacks; },
+  get ascent(){ return {mode:rideMode,map:ascentMap,altitude:ascentAltitude(),progress:ascentProgress,
+    gauntletIndex:ascentGauntletIndex,checkpointIndex:ascentCheckpointIndex}; },
+  setMode(mode){ setRideMode(mode); return rideMode; },
+  resetAscentProgress(){ ascentProgress={summited:[],checkpoints:{}}; saveAscentProgress(); return ascentProgress; },
   resetOverseerProfile(){ overseerProfile=createDefaultOverseerProfile(); saveOverseerProfile(); return overseerProfile; },
   overseerEvent,
   finishOverseerRun(cause='test'){
@@ -3949,11 +4202,15 @@ window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk, OT,
   // only. See tests/bot-playtest.md.
   botPlaytest(opts={}){
     const runs=opts.runs||10, maxFrames=opts.maxFrames||3600, dt=1/60, base=opts.seed??2000;
+    if(opts.mode==='ascent' && ascentMap){ rideMode='ascent'; dailyMode=false; }
+    else if(opts.mode==='descent') rideMode='descent';
     const results=[];
     for(let r=0;r<runs;r++){
+      if(rideMode==='ascent' && ascentMap && !opts.resume) ascentProgress.checkpoints[ascentMap.id]=0;
       if(!nameInput.value) nameInput.value='BOT';   // bypass account+tutorial gates
       beginRide();
-      runSeed=base+r; seedNoise(runSeed);
+      if(rideMode!=='ascent') runSeed=base+r;
+      seedNoise(runSeed);
       for(const ci of [...chunks.keys()]) dropChunk(ci);
       game.x=0; game.z=6; game.y=terrainH(0,6); game.prevGY=game.y;
       physTeleport(game.x,game.y,game.z); manageChunks(game.z,game.speed);
@@ -3964,10 +4221,27 @@ window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk, OT,
         for(const cx of [0,-4,4,-8,8]){
           const tx=THREE.MathUtils.clamp(cx,-11,11); let s=-Math.abs(tx)*0.1;
           for(let dz=6; dz<look; dz+=3) if(pitDepthAt(tx, game.z+dz)>2) s-=50;
+          for(let c=Math.floor(game.z/CHUNK);c<=Math.floor((game.z+look)/CHUNK);c++){
+            const chunk=chunks.get(c);
+            for(const o of chunk?.obstacles||[]){
+              if(o.z>game.z && o.z<game.z+look && Math.abs(tx-o.x)<o.r+0.9) s-=45;
+            }
+            for(const w of wallsByChunk.get(c)||[]){
+              if(w.z0>game.z && w.z0<game.z+look && Math.abs(tx-w.gapX)>w.gapW/2-0.5) s-=60;
+            }
+          }
+          if(liveAttack && liveAttack.z>game.z && liveAttack.z<game.z+look){
+            if(liveAttack.type==='wall') s-=Math.abs(tx-liveAttack.wall?.gapX)>2?-70:0;
+            else if(Math.abs(tx-liveAttack.x)<liveAttack.w/2+1.6) s-=55;
+          }
+          for(const a of overseerAttacks){
+            if(!a.resolved && a.z>game.z && a.z<game.z+look && Math.abs(tx-a.x)<a.width/2+0.5) s-=45;
+          }
           if(Math.abs(tx)>TRACK_SOFT) s-=30;
           if(s>bestScore){ bestScore=s; bestX=tx; }
         }
-        keys.ArrowLeft=game.x>bestX+0.4; keys.ArrowRight=game.x<bestX-0.4;
+        // World +X is screen-left, matching readSteer(): correct toward bestX.
+        keys.ArrowLeft=game.x<bestX-0.4; keys.ArrowRight=game.x>bestX+0.4;
         if(!game.airborne){ airTapped=false;
           if(pitDepthAt(game.x, game.z+Math.min(10,game.speed*0.5))>3 && game.jumpCharges>0) doJump();
         } else if(!airTapped && predictLand()<0.12){ airTap(); airTapped=true; }
@@ -3975,17 +4249,20 @@ window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk, OT,
         if(frames%120===0){ if(game.z-lastZ<3) softlocks++; lastZ=game.z; }
       }
       keys.ArrowLeft=keys.ArrowRight=false;
-      results.push({seed:runSeed, frames, dist:Math.round(game.z-game.dist0),
-        score:Math.floor(game.score), topCombo:game.topCombo,
-        death:state==='riding'?'timeout':lastDeathCause, softlocks});
+      const progress=rideMode==='ascent'?Math.round(ascentAltitude()):Math.round(game.z-game.dist0);
+      results.push({seed:runSeed, frames, dist:progress,
+        score:Math.floor(game.score), topCombo:game.topCombo, endX:+game.x.toFixed(2),
+        death:state==='riding'?'timeout':(state==='summited'?'summit':lastDeathCause), softlocks});
     }
     const med=k=>results.map(x=>x[k]).sort((a,b)=>a-b)[Math.floor(runs/2)];
     return { agg:{ runs,
       medianDist:med('dist'), medianFrames:med('frames'),
       deaths:results.reduce((m,x)=>((m[x.death]=(m[x.death]||0)+1),m),{}),
+      summits:results.filter(x=>x.death==='summit').length,
       totalSoftlocks:results.reduce((t,x)=>t+x.softlocks,0),
       quickDeaths:results.filter(x=>x.frames<120).length }, runs:results };
   },
+  ascentBotPlaytest,
   freeze(on){ timeScale=on===false?1:0; },
   mood(v){ moodN=v; updateMood(); },
   degrade(){ stepQuality(); return qTier; },
