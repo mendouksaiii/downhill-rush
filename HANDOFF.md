@@ -36,6 +36,11 @@ Whoever holds index.html next, add these (infra is live once merged; snippets ar
 3. ✅ **Rider quality/physics parity with bike**: knee/elbow pads, neck, backpack, bigger visor; head counter-pitch to look ahead, speed-based body lean; keep pose contract (torso/armL/R/legL/R/riderG names + crouch/extend code).
 4. ✅ **Graphics pass (road + arena)**: night tint on terrainMat.color via moodN (terrain currently stays sunset-warm at night); track edge wear lines + tire stripes in vertex colors; instanced neon crystals + boulders on valley edges.
 
+## Production layer (2026-07-05, this seat)
+- REDLINE RIDER rebrand committed (landing hero was other seat's; meta/OG/favicon/debug-gating/microcopy this seat's). DR gated to localhost|?debug=1 — do NOT rely on window.DR in production.
+- Evolution job on Groq free tier (llama-3.3-70b, json_object + clamps). GROQ_API_KEY repo secret is set but the stored key tested EXPIRED — user must mint a fresh one at console.groq.com and re-run `gh secret set GROQ_API_KEY`.
+- Three.js game skills live in ~/.codex/skills/threejs-* (qa-release checklist used for this pass); finding-unknowns skill now exists there too.
+
 ## Done this session (chronological)
 - Live attacks: liveAttack state machine (aim 0.55s → beam 0.4s → settle 1.3s), spawns at max(2s*v,35m) ahead; pit = pitsByChunk push + rebuildChunkTerrain(ci) (tMesh/tCol tracked on chunk rec, trimesh swapped); wall = spawnLiveWall slabs+colliders into target chunk; mercy+OT.mercyBias lower rate, OT.attackCooldownMul scales 8-12s cooldown; grace-aware; DR.liveAttackDebug(type) for tests. VERIFIED: carve -11m live, wall crash at exact slab z, pit death.
 - Eye shader iris (one ShaderMaterial plane, no textures): fibers/veins/pupil dilation by aggression, pupil locks to live-attack target, uFlash charge; DR.eyeDebug(m) forces manifestation. Live attack forces eye open (m>=0.62).
