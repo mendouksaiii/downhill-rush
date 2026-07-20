@@ -52,21 +52,22 @@ Today the terrain is one continuous mood. Zones mean **distance-banded biomes**:
 
 ## 3. Feature: ASCENT mode (uphill)
 
-**The pitch:** the descent is infinite; the climb is not. ASCENT is the first *finishable* thing in REDLINE RIDER — ride **up** the mountain through all seven zones to touch the Sun Eye. Lore-perfect: "The Eye waits at the top."
+> **REVISED 2026-07-20 (user decision — supersedes the earlier momentum-management draft).**
+> Master spec now lives in `~/brain/projects/redline-overhaul-plan.md` (Workstream D).
 
-**Core loop (design decisions, tunable):**
-- **Momentum is the resource.** Gravity works against you; speed constantly decays. Hold-to-pedal (existing input) becomes stamina-limited; downhill-earned habits invert.
-- **Flow feeds climb:** clean riding (existing clean-streak accel), perfect landings, and tricks off bumps **charge the gas tank**; gas burns for climb bursts. The style system finally has a survival purpose.
-- **Stall = death.** Drop below a floor speed on a grade and the run ends ("THE MOUNTAIN SHRUGGED"). Replaces off-track as primary fail mode.
-- **Zone gates as checkpoints:** each of the 7 zones is a fixed altitude band (finite! e.g. 350 m of climb each, ~2.5 km summit). Reaching a gate = checkpoint + zone splash (parchment card). Runs restart at highest gate reached that day.
-- **Overseer inverts:** in descent it edits terrain ahead; in ASCENT it *pushes down* — gravity-shift zones, path punches, rockfalls from above (concept art's "adaptations" list maps 1:1). Aggression scales with altitude; The Sun Eye zone is a near-constant strike phase.
-- **Summit:** touching the Eye ends the run with a canonical cutscene beat (eye fills the sky, SEEN, whiteout, name etched into a permanent SUMMITED list). Summit list is the prestige leaderboard; time-to-summit is the competitive stat.
+**The pitch:** ASCENT is the **campaign**. Finite by definition — each map is a mountain with a base and a summit, and reaching the top is the win. "The Eye waits at the top."
 
-**Reuses:** chunk/terrain gen (negative slope + zone banding), Rapier movement, jump/trick/landing systems, gas system, Overseer live attacks, contracts (ASCENT-specific contract set), deterministic seeds (daily ASCENT; duel-able later — a *time-to-gate race* is a cleaner wager format than distance).
+**Core design (user-decided):**
+- **Multiple handcrafted maps.** Campaign = ordered set of mountains, each themed on one of the seven lore zones (Verdant Fields first … The Sun Eye final). A map is *data*, not engine code: curated seed + altitude bands + a scripted trap/attack gauntlet table + par time.
+- **The skill is defense, not acceleration.** Climb speed is largely handled for the player; the test is **fending off what the Overseer throws down**: dodge rockfalls, jump beam-strikes, weave sentry-orb sweeps, read path-punch fake-outs, time counters. Gauntlet-runner, not stamina sim. Style/tricks still charge gas for burst-dodges.
+- **Checkpoints at zone gates** within a map; summit = map cleared → next map unlocks; permanent SUMMITED list; time-to-summit is the competitive stat.
+- **Overseer inverts:** descent edits terrain ahead; ASCENT attacks from above, escalating with altitude. The Sun Eye map is a near-constant strike phase.
 
-**New build:** uphill speed model (decay + stamina + stall), zone banding (shared with §1 zones work — do zones once, both modes benefit), checkpoint persistence, summit sequence, mode select on title.
+**Reuses:** chunk/terrain gen (inverted slope + zone banding), Rapier movement, jump/dodge/landing systems, gas, Overseer live-attack machinery (retargeted downhill), deterministic seeds.
 
-**Risk:** uphill endless-runner feel is unproven — grinding upward can feel slow/frustrating. Mitigation: prototype the speed model behind `?ascent=1` before any content work; bot-playtest gate (median time-to-gate-1 between 60–120s, stall-death rate < 40% for the bot's competence level).
+**New build:** assisted uphill locomotion, gauntlet scheduler reading map data (`docs/ASCENT-MAP-SCHEMA.md` to be committed first), map files (`maps/ascent-*.json`), checkpoint/summit flow, mode select.
+
+**Risk:** attack-density tuning — a gauntlet that's readable at descent speeds may be unfair uphill. Mitigation: telegraph times authored per attack in map data; bot-playtest gate per map (0 softlocks, gate-1 clear rate high, death causes distributed).
 
 ## 4. Feature: Token system — implementation slice (Phase 0–1)
 

@@ -31,7 +31,7 @@ Distance-banded biomes over the existing chunk system. Both DESCENT (by `game.z`
 4. Death screen: keep mechanics, add zone-of-death to epitaph ("SEEN — Observer Ridge, 1,204 m").
 5. Verify: mobile + desktop screenshots, conversion path title→run unchanged in click count.
 
-## M3 — ASCENT spike → mode (gate before content)
+## M3 — ASCENT campaign (REVISED 2026-07-20 — see ~/brain/projects/redline-overhaul-plan.md Workstream D: finite handcrafted maps, defense-skill gauntlets, assisted climb; spike tests gauntlet feel not stamina)
 
 **Spike (1 session, behind `?ascent=1`):** inverted slope terrain, speed-decay + stamina + stall-death model, gas-from-style charging. Bot metrics: median time-to-350m 60–120 s, stall rate sane. **Feel check with user. Kill or commit here.**
 
