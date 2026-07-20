@@ -5,6 +5,8 @@ const URL = process.env.KV_REST_API_URL;
 const TOKEN = process.env.KV_REST_API_TOKEN;
 const KEY = 'dr:lb';
 const META_KEY = `${KEY}:meta`;
+const AIR_KEY = 'dr:lb:air';
+const AIR_META_KEY = `${AIR_KEY}:meta`;
 const CAP = 100;   // keep the top this many
 const SHOW = 25;   // return this many for display
 
@@ -54,10 +56,10 @@ function parseZ(flat, metas = []) {
   return out;
 }
 
-async function hydrateTop(flat) {
+async function hydrateTop(flat, metaKey = META_KEY) {
   const names = [];
   if (Array.isArray(flat)) for (let i = 0; i < flat.length; i += 2) names.push(flat[i]);
-  const metas = names.length ? await redis(names.map((name) => ['HGET', META_KEY, name])) : [];
+  const metas = names.length ? await redis(names.map((name) => ['HGET', metaKey, name])) : [];
   return parseZ(flat, metas);
 }
 
@@ -68,18 +70,22 @@ module.exports = async (req, res) => {
 
   try {
     if (req.method === 'GET') {
+      const board = String((req.query && req.query.board) || '').trim();
+      const isAir = board === 'air';
+      const k = isAir ? AIR_KEY : KEY;
+      const mk = isAir ? AIR_META_KEY : META_KEY;
       const me = String((req.query && req.query.me) || '').trim().slice(0, 14).toLowerCase();
       const cmds = [
-        ['ZCARD', KEY],
-        ['ZRANGE', KEY, '0', String(SHOW - 1), 'REV', 'WITHSCORES'],
+        ['ZCARD', k],
+        ['ZRANGE', k, '0', String(SHOW - 1), 'REV', 'WITHSCORES'],
       ];
-      if (me) { cmds.push(['ZREVRANK', KEY, me], ['ZSCORE', KEY, me]); }
+      if (me) { cmds.push(['ZREVRANK', k, me], ['ZSCORE', k, me]); }
       const r = await redis(cmds);
-      const top = await hydrateTop(r[1]);
-      const mineMeta = (me && r[2] != null) ? (await redis([['HGET', META_KEY, me]]))[0] : null;
+      const top = await hydrateTop(r[1], mk);
+      const mineMeta = (me && r[2] != null) ? (await redis([['HGET', mk, me]]))[0] : null;
       const mine = (me && r[2] != null)
         ? { rank: r[2] + 1, ...entryFromMeta(me, r[3], mineMeta) } : null;
-      res.status(200).json({ top, count: r[0] || 0, me: mine });
+      res.status(200).json({ board: isAir ? 'air' : 'time', top, count: r[0] || 0, me: mine });
       return;
     }
 
@@ -126,6 +132,11 @@ module.exports = async (req, res) => {
       else if (email) {
         const existing = safeMeta((await redis([['HGET', META_KEY, member]]))[0]) || {};
         await redis([['HSET', META_KEY, member, JSON.stringify({ ...existing, email })]]);
+      }
+      // Airtime board — same entry, ranked by hang time alone
+      if (hang >= 1) {
+        const airChanged = (await redis([['ZADD', AIR_KEY, 'GT', 'CH', String(hang), member]]))[0];
+        if (airChanged) await redis([['HSET', AIR_META_KEY, member, JSON.stringify(entry)]]);
       }
       const r = await redis([
         ['ZREMRANGEBYRANK', KEY, '0', String(-(CAP + 1))],   // r[0] = # trimmed

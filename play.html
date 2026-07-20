@@ -223,26 +223,28 @@
     box-shadow:0 0 0 6px rgba(255,255,255,.03), inset 0 1px 0 rgba(255,255,255,.07);
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); text-align:left; }
   .lbHead { font:700 11px 'Orbitron',sans-serif; letter-spacing:.26em; color:#ffd76e;
-    text-shadow:0 0 12px rgba(255,215,110,.5); margin-bottom:9px; text-align:center; }
-  #lbList { list-style:none; max-height:34vh; overflow-y:auto; scrollbar-width:thin;
+    text-shadow:0 0 12px rgba(255,215,110,.5); margin-bottom:12px; text-align:center; }
+  .lbSubHead { font:700 9px 'Orbitron',sans-serif; letter-spacing:.20em; color:#ffd76e;
+    text-shadow:0 0 10px rgba(255,215,110,.4); margin-bottom:6px; opacity:0.85; }
+  .lbList { list-style:none; max-height:18vh; overflow-y:auto; scrollbar-width:thin;
     scrollbar-color:rgba(255,255,255,.25) transparent; }
-  #lbList::-webkit-scrollbar { width:4px; } #lbList::-webkit-scrollbar-thumb {
+  .lbList::-webkit-scrollbar { width:4px; } .lbList::-webkit-scrollbar-thumb {
     background:rgba(255,255,255,.22); border-radius:2px; }
-  #lbList li { display:grid; grid-template-columns:30px 1fr auto; gap:8px; padding:3px 2px;
+  .lbList li { display:grid; grid-template-columns:30px 1fr auto; gap:8px; padding:3px 2px;
     font-size:15px; letter-spacing:1px; color:#cfc8f0; border-top:1px solid rgba(255,255,255,.06); }
-  #lbList li:first-child { border-top:none; }
-  #lbList li .r { font-weight:700; color:#9a92c9; font-variant-numeric:tabular-nums; }
-  #lbList li.p1 { color:#ffd76e; } #lbList li.p1 .r { color:#ffd76e; }
-  #lbList li.p2 { color:#e6ecff; } #lbList li.p2 .r { color:#e6ecff; }
-  #lbList li.p3 { color:#ff9d6e; } #lbList li.p3 .r { color:#ff9d6e; }
-  #lbList li .t { font-weight:700; font-variant-numeric:tabular-nums; }
-  #lbList li.me { color:#00e5ff; background:rgba(0,229,255,.1); border-radius:6px;
+  .lbList li:first-child { border-top:none; }
+  .lbList li .r { font-weight:700; color:#9a92c9; font-variant-numeric:tabular-nums; }
+  .lbList li.p1 { color:#ffd76e; } .lbList li.p1 .r { color:#ffd76e; }
+  .lbList li.p2 { color:#e6ecff; } .lbList li.p2 .r { color:#e6ecff; }
+  .lbList li.p3 { color:#ff9d6e; } .lbList li.p3 .r { color:#ff9d6e; }
+  .lbList li .t { font-weight:700; font-variant-numeric:tabular-nums; }
+  .lbList li.me { color:#00e5ff; background:rgba(0,229,255,.1); border-radius:6px;
     box-shadow:inset 0 0 0 1px rgba(0,229,255,.4); }
-  #lbList li.me .r { color:#00e5ff; }
-  #lbList li.youRow { margin-top:5px; border-top:1px dashed rgba(0,229,255,.4);
+  .lbList li.me .r { color:#00e5ff; }
+  .lbList li.youRow { margin-top:5px; border-top:1px dashed rgba(0,229,255,.4);
     padding-top:6px; color:#00e5ff; }
-  #lbList li.youRow .r { color:#00e5ff; }
-  #lbList li.lbNote { display:block; text-align:center; color:#7a72b0; border:none; }
+  .lbList li.youRow .r { color:#00e5ff; }
+  .lbList li.lbNote { display:block; text-align:center; color:#7a72b0; border:none; }
   #lbLive { display:inline-block; width:7px; height:7px; border-radius:50%; background:#2eff8a;
     margin-left:8px; box-shadow:0 0 8px #2eff8a; animation:lbpulse 1.6s infinite; vertical-align:middle; }
   @keyframes lbpulse { 0%,100%{opacity:1} 50%{opacity:.25} }
@@ -429,8 +431,11 @@ setTimeout(()=>{const b=document.getElementById('boot');
     </section>
     <aside id="sideCol">
       <div id="lbPanel">
-        <div class="lbHead">🏔 LONGEST RUNS · LIVE<span id="lbLive"></span></div>
-        <ol id="lbList"><li class="lbNote">loading…</li></ol>
+        <div class="lbHead" id="lbTitle">🏆 LEADERBOARDS · LIVE<span id="lbLive"></span></div>
+        <div class="lbSubHead">🏔 LONGEST RUNS</div>
+        <ol id="lbListTime" class="lbList"><li class="lbNote">loading…</li></ol>
+        <div class="lbSubHead" style="margin-top:14px; border-top:1px solid rgba(255,255,255,.08); padding-top:10px;">✈ MOST AIRTIME</div>
+        <ol id="lbListAir" class="lbList"><li class="lbNote">loading…</li></ol>
       </div>
     </aside>
   </div>
@@ -1952,7 +1957,7 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkBui
 setInterval(maybeApplyUpdate, 4000);   // applies a pending update once back on the title screen
 const nameInput=$('nameInput'), emailInput=$('emailInput'), nameStatus=$('nameStatus'),
   accountHint=$('accountHint'), startBtn=$('startBtn'), profileBtn=$('profileBtn'),
-  lbList=$('lbList'), profilePanel=$('profilePanel');
+  lbListTime=$('lbListTime'), lbListAir=$('lbListAir'), profilePanel=$('profilePanel');
 const emailHint=accountHint;
 nameInput.value=playerName;
 emailInput.value=playerEmail;
@@ -2057,38 +2062,52 @@ function queueUsernameCheck(){
   refreshAccountGate();
   accountCheckTimer=setTimeout(checkUsernameAvailability, 320);
 }
-function renderLB(top, me){
-  lbList.innerHTML='';
-  if(!top||!top.length){ lbList.innerHTML='<li class="lbNote">no runs yet — be the first</li>'; return; }
+function renderLB(top, me, type){
+  const listEl = type === 'air' ? lbListAir : lbListTime;
+  listEl.innerHTML='';
+  if(!top||!top.length){ listEl.innerHTML='<li class="lbNote">no runs yet — be the first</li>'; return; }
   const mine=(playerName||'').toLowerCase();
   let shown=false;
-  const lbTime=e=>fmtT(e.time)+' · AIR '+fmtT(e.hang||0);
+  const lbFmtTime=e=>fmtT(e.time)+' · AIR '+fmtT(e.hang||0);
+  const lbFmtAir=e=>fmtT(e.hang||0)+' · RUN '+fmtT(e.time);
+  const lbFmt=type==='air'?lbFmtAir:lbFmtTime;
   top.forEach((e,i)=>{
     const li=document.createElement('li');
     let cls=i<3?'p'+(i+1):'';
     if(mine && e.name.toLowerCase()===mine){ cls+=' me'; shown=true; }
     if(cls) li.className=cls.trim();
-    li.innerHTML='<span class="r">'+(i+1)+'</span><span class="n"></span><span class="t">'+lbTime(e)+'</span>';
+    li.innerHTML='<span class="r">'+(i+1)+'</span><span class="n"></span><span class="t">'+lbFmt(e)+'</span>';
     li.querySelector('.n').textContent=e.name;
-    lbList.appendChild(li);
+    listEl.appendChild(li);
   });
   if(me && me.rank && !shown){                 // pin your rank if you placed below the visible list
     const li=document.createElement('li'); li.className='me youRow';
-    li.innerHTML='<span class="r">'+me.rank+'</span><span class="n"></span><span class="t">'+lbTime(me)+'</span>';
+    li.innerHTML='<span class="r">'+me.rank+'</span><span class="n"></span><span class="t">'+lbFmt(me)+'</span>';
     li.querySelector('.n').textContent=me.name+' (you)';
-    lbList.appendChild(li);
+    listEl.appendChild(li);
   }
 }
 async function fetchLB(){
   try{
-    const q=playerName?('?me='+encodeURIComponent(playerName)+'&t='+Date.now()):('?t='+Date.now());
-    const r=await fetch(LB_API+q,{cache:'no-store'});
-    if(!r.ok) throw 0;
-    const d=await r.json();
-    profileMe=d.me||null;
-    renderLB(d.top, d.me); lbHasData=true;
+    const q=playerName?('&me='+encodeURIComponent(playerName)):'';
+    const t=Date.now();
+    const [rTime, rAir] = await Promise.all([
+      fetch(LB_API+'?board=time&t='+t+q,{cache:'no-store'}),
+      fetch(LB_API+'?board=air&t='+t+q,{cache:'no-store'})
+    ]);
+    if(!rTime.ok || !rAir.ok) throw 0;
+    const [dTime, dAir] = await Promise.all([rTime.json(), rAir.json()]);
+    profileMe=dTime.me||null;
+    renderLB(dTime.top, dTime.me, 'time');
+    renderLB(dAir.top, dAir.me, 'air');
+    lbHasData=true;
     renderProfile();
-  }catch(e){ if(!lbHasData) lbList.innerHTML='<li class="lbNote">leaderboard offline</li>'; }
+  }catch(e){
+    if(!lbHasData){
+      lbListTime.innerHTML='<li class="lbNote">leaderboard offline</li>';
+      lbListAir.innerHTML='<li class="lbNote">leaderboard offline</li>';
+    }
+  }
 }
 function submitRun(time,score,dist,hang=0){
   if(!playerName || time<2) return;
@@ -2098,7 +2117,7 @@ function submitRun(time,score,dist,hang=0){
     .then(d=>{
       if(!d||!d.top) return;
       lbHasData=true;
-      renderLB(d.top, d.rank?{rank:d.rank, name:playerName, time:+time.toFixed(1), hang:+hang.toFixed(1)}:null);
+      fetchLB();
       if(d.rank && state==='dead'){
         const el=$('dRank'); el.textContent='WORLD RANK #'+d.rank; el.classList.remove('hidden');
       }
