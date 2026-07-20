@@ -9,6 +9,34 @@
   "altitudePerMeter": 0.24,
   "assistedSpeed": 30,
   "parTime": 62,
+  "terrain": { "trackHalfWidth": 11, "ridgeSteepness": 0.052 },
+  "visual": {
+    "path": "#b6a078",
+    "ground": "#7b684f",
+    "rim": "#9b4838",
+    "rock": "#44372f",
+    "route": "#d43e2d"
+  },
+  "course": {
+    "ramps": [
+      { "at": 28, "x": 0, "len": 10, "w": 6.4, "h": 2.4 },
+      { "at": 92, "x": -2.8, "len": 11, "w": 5.8, "h": 3.0 },
+      { "at": 166, "x": 3.2, "len": 10, "w": 5.8, "h": 2.8 },
+      { "at": 306, "x": 0, "len": 10, "w": 6.2, "h": 3.0 }
+    ],
+    "pits": [
+      { "at": 68, "x": -5.4, "w": 4.0, "len": 5.6, "depth": 8.2 },
+      { "at": 214, "x": -2.8, "w": 5.8, "len": 6.0, "depth": 8.8 },
+      { "at": 306, "x": -5.2, "w": 4.0, "len": 5.8, "depth": 9.0 }
+    ],
+    "obstacles": [
+      { "at": 46, "type": "rock", "x": -3.8, "s": 1.1 },
+      { "at": 122, "type": "log", "x": 3.9, "s": 1.0, "rot": 0.2 },
+      { "at": 148, "type": "rock", "x": 4.4, "s": 1.25 },
+      { "at": 194, "type": "rock", "x": 3.8, "s": 1.15 },
+      { "at": 306, "type": "rock", "x": 4.6, "s": 1.2 }
+    ]
+  },
   "checkpointAlts": [140, 280],
   "altitudeBands": [
     { "from": 0, "to": 140, "zone": "verdant-base", "pressure": 0.25 },

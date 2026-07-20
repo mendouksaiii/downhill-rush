@@ -19,6 +19,24 @@ ASCENT maps are data-only finite mountains consumed by `play.html`. Gameplay ran
 | `checkpointAlts` | number[] | Strictly increasing, inside `(0, summitAlt)`, at least 12 seconds apart at target pace. |
 | `altitudeBands` | object[] | Ordered `{ from, to, zone, pressure }` bands covering `0..summitAlt`. |
 | `gauntlet` | object[] | Ordered attacks. See below. |
+| `terrain` | object | Optional mountain profile. `{ trackHalfWidth, ridgeSteepness }` raises the visible mountain shoulders outside the rideable lane. |
+| `visual` | object | Optional hex-color palette for `{ path, ground, rim, rock, route }`. ASCENT uses a bright mountain profile; `route` is the central red line. |
+| `course` | object | Optional deterministic course pieces. `{ ramps, pits, obstacles }`; every item is anchored by `at` altitude, not a random world position. |
+
+## Course pieces
+
+```json
+"course": {
+  "ramps": [{ "at": 92, "x": -2.8, "len": 11, "w": 5.8, "h": 3.0 }],
+  "pits": [{ "at": 214, "x": -2.8, "w": 5.8, "len": 6, "depth": 8.8 }],
+  "obstacles": [{ "at": 194, "type": "rock", "x": 3.8, "s": 1.15 }]
+}
+```
+
+- `ramps`: `at`, lane `x`, length `len`, width `w`, and lip height `h` are required by the authoring convention. Ramps are jump-launching solid geometry.
+- `pits`: `at`, lane `x`, width `w`, length `len`, and depth `depth`. Keep a readable run-up or adjacent alternate lane.
+- `obstacles`: `at`, `type` (`rock`, `log`, or `tree`), lane `x`, and scale `s`; optional `rot` is radians.
+- Keep authored pieces clear of checkpoint recovery space and telegraphed gauntlet spawns. ASCENT never rolls random course geometry.
 
 ## Gauntlet event
 

@@ -33,6 +33,22 @@ test('gauntlet events use supported, telegraphed patterns in altitude order', ()
   }
 });
 
+test('Verdant course has authored, reachable terrain decisions', () => {
+  assert.ok(map.course);
+  assert.ok(map.course.ramps.length >= 3);
+  assert.ok(map.course.pits.length >= 2);
+  assert.ok(map.course.obstacles.length >= 4);
+  for (const [kind, pieces] of Object.entries(map.course)) {
+    for (const piece of pieces) {
+      assert.ok(piece.at > 0 && piece.at < map.summitAlt, `${kind} altitude is in bounds`);
+      assert.ok(Math.abs(piece.x || 0) <= 8, `${kind} remains within the playable lane`);
+    }
+  }
+  assert.ok(map.course.ramps.every(r => r.len > 0 && r.w > 0 && r.h > 0));
+  assert.ok(map.course.pits.every(p => p.len > 0 && p.w > 0 && p.depth > 0));
+  assert.ok(map.course.obstacles.every(o => ['rock', 'log', 'tree'].includes(o.type) && o.s > 0));
+});
+
 test('play shell exposes ASCENT mode, HUD, checkpoints, summit, and bot entry', () => {
   for (const id of ['modeAscent', 'ascentHud', 'ascentAlt', 'summit', 'summitAgainBtn'])
     assert.match(html, new RegExp(`id="${id}"`));

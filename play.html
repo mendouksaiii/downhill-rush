@@ -796,7 +796,8 @@ const ASCENT_MAP_FILES=['./maps/ascent-01-verdant.json'];
 function validAscentMap(m){
   return m && m.version===1 && typeof m.id==='string' && Number.isFinite(m.seed)
     && m.summitAlt>0 && m.altitudePerMeter>0 && m.assistedSpeed>0
-    && Array.isArray(m.checkpointAlts) && Array.isArray(m.altitudeBands) && Array.isArray(m.gauntlet);
+    && Array.isArray(m.checkpointAlts) && Array.isArray(m.altitudeBands) && Array.isArray(m.gauntlet)
+    && (!m.course || ['ramps','pits','obstacles'].every(k=>Array.isArray(m.course[k]||[])));
 }
 const ASCENT_MAPS=(await Promise.all(ASCENT_MAP_FILES.map(async path=>{
   try{ const r=await fetch(path,{cache:'no-store'}); return r.ok?await r.json():null; }
@@ -905,13 +906,17 @@ function trapH(x,z){
 function pitDepthAt(x,z){ const d=trapH(x,z); return d<0?-d:0; }
 
 function baseH(x,z){
-  const grade=rideMode==='ascent' && ascentMap ? ascentMap.altitudePerMeter : -0.40;
+  const ascent=rideMode==='ascent' && ascentMap;
+  const grade=ascent ? ascentMap.altitudePerMeter : -0.40;
   let y = z*grade;                                    // finite ASCENT flips the same track uphill
   y += noise2(z*0.008+31.7, 7.3)*6;                  // long grade bands
   y += noise2(x*0.02, z*0.02)*2.2;                   // rolling terrain
   y += noise2(x*0.06, z*0.06)*0.65;                  // detail
   const ax=Math.abs(x);
-  if(ax>16){ const t=ax-16; y += t*t*0.022*(1+0.4*noise2(z*0.03,44.2)); }  // valley walls
+  if(ascent){
+    const terrain=ascentMap.terrain||{}, shoulder=terrain.trackHalfWidth||11;
+    if(ax>shoulder){ const t=ax-shoulder; y+=t*t*(terrain.ridgeSteepness||0.052)*(1+0.28*noise2(z*0.03,44.2)); }
+  } else if(ax>16){ const t=ax-16; y += t*t*0.022*(1+0.4*noise2(z*0.03,44.2)); }
   return y + trapH(x,z);
 }
 function rampH(x,z){
@@ -1010,8 +1015,8 @@ if(!isMobile){
   sc.left=-70; sc.right=70; sc.top=70; sc.bottom=-70; sc.near=1; sc.far=500;
   sunLight.shadow.bias=-0.0004; sunLight.shadow.normalBias=0.6;
 }
-scene.add(new THREE.HemisphereLight(0x5a4d9e, 0x1a1040, 0.85));
-scene.add(new THREE.AmbientLight(0x35296b, 0.7));
+const hemiLight=new THREE.HemisphereLight(0x5a4d9e, 0x1a1040, 0.85); scene.add(hemiLight);
+const ambientLight=new THREE.AmbientLight(0x35296b, 0.7); scene.add(ambientLight);
 
 // Sky dome — palette-lerped via uniforms for the day/night cycle
 const skyU={
@@ -1151,8 +1156,27 @@ const MOOD={
         haze:new THREE.Color(0x3a1440), sun:new THREE.Color(0xdfe8ff), light:new THREE.Color(0x8fa8ff),
         glow:new THREE.Color(0xbcc9ff), sunY:135, sunS:0.45, lightI:1.15 },
 };
+const ASCENT_MOOD={
+  top:new THREE.Color(0x8eb9c7), mid:new THREE.Color(0xe8d6ad), bot:new THREE.Color(0xc6a578),
+  haze:new THREE.Color(0xd9c292), sun:new THREE.Color(0xff593b), light:new THREE.Color(0xffefc8),
+  glow:new THREE.Color(0xff6a42), sunY:74, sunS:1.18, lightI:2.75
+};
 let moodN=0, moodSunY=55;
 function updateMood(){
+  if(rideMode==='ascent' && ascentMap){
+    const A=ASCENT_MOOD;
+    skyU.uTop.value.copy(A.top); skyU.uMid.value.copy(A.mid); skyU.uBot.value.copy(A.bot); skyU.uHaze.value.copy(A.haze);
+    scene.fog.color.copy(A.haze); sunMesh.material.color.copy(A.sun); sunMesh.scale.setScalar(A.sunS);
+    sunLight.color.copy(A.light); sunLight.intensity=A.lightI;
+    hemiLight.color.set(0xffe2ad); hemiLight.groundColor.set(0x6a4937); hemiLight.intensity=1.3;
+    ambientLight.color.set(0xffd9ad); ambientLight.intensity=1.05; terrainMat.emissive.set(0x21160f);
+    ridgeFarMat.color.copy(A.haze).lerp(A.top,0.25); ridgeNearMat.color.copy(A.haze).lerp(new THREE.Color(0x675346),0.42);
+    cloudMat.color.copy(A.top).lerp(A.mid,0.3); sunGlowMat.color.copy(A.glow); sunGlowMat.opacity=0.44;
+    terrainMat.color.setRGB(1,1,1); moodSunY=A.sunY;
+    rockMat.color.set(0x3f342d); logMat.color.set(0x4b3026); rampMat.color.set(0x7b4a3d);
+    treeMat.color.set(0x29231d); postMat.color.set(0x8a241e); postMat.emissive.set(0xff4a32);
+    return;
+  }
   const p=(game.z/1100)%2, q=p<=1?p:2-p;
   const n=THREE.MathUtils.smoothstep(q,0.3,0.95);
   moodN+=(n-moodN)*0.02;                     // slow drift, eases back on restart too
@@ -1166,6 +1190,8 @@ function updateMood(){
   sunMesh.scale.setScalar(D.sunS+(N.sunS-D.sunS)*m);
   sunLight.color.lerpColors(D.light,N.light,m);
   sunLight.intensity=D.lightI+(N.lightI-D.lightI)*m;
+  hemiLight.color.set(0x5a4d9e); hemiLight.groundColor.set(0x1a1040); hemiLight.intensity=0.85;
+  ambientLight.color.set(0x35296b); ambientLight.intensity=0.7; terrainMat.emissive.set(0x000000);
   starMat.opacity=m*0.9;
   ridgeFarMat.color.copy(skyU.uHaze.value).lerp(skyU.uTop.value,0.3);
   ridgeNearMat.color.copy(skyU.uHaze.value).lerp(skyU.uTop.value,0.52);
@@ -1173,6 +1199,8 @@ function updateMood(){
   sunGlowMat.color.lerpColors(D.glow,N.glow,m);
   sunGlowMat.opacity=0.5-m*0.22;
   terrainMat.color.setRGB(1,1,1).lerp(NIGHT_TINT, m*0.55);   // terrain cools down at night
+  rockMat.color.set(0x241b3f); logMat.color.set(0x2c2038); rampMat.color.set(0x6c63ad);
+  treeMat.color.set(0x17112b); postMat.color.set(0x073036); postMat.emissive.set(0x00e5ff);
   moodSunY=D.sunY+(N.sunY-D.sunY)*m;
 }
 
@@ -1578,6 +1606,15 @@ function resetTrail(x,y,z){
   for(let i=0;i<T_N;i++){ tHist[i*3]=x; tHist[i*3+1]=y+0.45; tHist[i*3+2]=z-0.75; }
   trailMat.opacity=0;
 }
+function setTrailPalette(){
+  const ascent=rideMode==='ascent' && ascentMap;
+  const color=ascent?new THREE.Color(0xff3d2e):new THREE.Color(0x0dd9ff);
+  for(let i=0;i<T_N*2;i++){
+    const f=Math.pow(1-Math.floor(i/2)/(T_N-1),1.7), o=i*3;
+    tCol[o]=color.r*f; tCol[o+1]=color.g*f; tCol[o+2]=color.b*f;
+  }
+  tGeo.attributes.color.needsUpdate=true;
+}
 function updateTrail(g){
   tHead=(tHead+1)%T_N;
   tHist[tHead*3]=g.x; tHist[tHead*3+1]=g.y+0.45; tHist[tHead*3+2]=g.z-0.75;
@@ -1597,7 +1634,7 @@ function updateTrail(g){
     tPos[o]=px-sx; tPos[o+1]=py; tPos[o+2]=pz-sz;
   }
   tGeo.attributes.position.needsUpdate=true;
-  trailMat.opacity=THREE.MathUtils.clamp((g.speed-26)/45,0,1)*0.8;
+  trailMat.opacity=rideMode==='ascent'&&ascentMap ? 0.52 : THREE.MathUtils.clamp((g.speed-26)/45,0,1)*0.8;
 }
 
 /* ============================== CHUNKS ================================= */
@@ -1642,8 +1679,10 @@ function buildTerrainMesh(ci){
   geo.translate(0,0,z0+CHUNK/2);
   const pos=geo.attributes.position;
   const colors=new Float32Array(pos.count*3);
-  const cPath=new THREE.Color(0x575091), cGround=new THREE.Color(0x3d3466),
-        cRim=new THREE.Color(0xb03a8a), cRock=new THREE.Color(0x1d1636), tmp=new THREE.Color();
+  const ascent=rideMode==='ascent' && ascentMap, visual=ascentMap?.visual||{};
+  const cPath=new THREE.Color(ascent?(visual.path||0xb39a71):0x575091), cGround=new THREE.Color(ascent?(visual.ground||0x79664e):0x3d3466),
+        cRim=new THREE.Color(ascent?(visual.rim||0x9b4838):0xb03a8a), cRock=new THREE.Color(ascent?(visual.rock||0x44372f):0x1d1636),
+        cLine=new THREE.Color(ascent?(visual.route||0xd43e2d):0x575091), tmp=new THREE.Color();
   for(let i=0;i<pos.count;i++){
     const x=pos.getX(i), z=pos.getZ(i);
     const y0=baseH(x,z);
@@ -1657,6 +1696,7 @@ function buildTerrainMesh(ci){
     const sunFace=Math.max(0,-hz)*0.5;                                 // slopes facing the low sun catch warmth
     tmp.r=Math.min(1,tmp.r*(1+sunFace*0.5)); tmp.g=Math.min(1,tmp.g*(1+sunFace*0.18));
     const v=1+noise2(x*0.11+9.1,z*0.11)*0.07;
+    if(ascent && Math.abs(x)<0.18) tmp.lerp(cLine,0.82);                  // the red route reads through the mountain
     if(Math.abs(ax-9)<0.8) tmp.multiplyScalar(0.8);                    // worn edge lines mark the track boundary
     if(Math.abs(ax-0.6)<0.28) tmp.multiplyScalar(0.88);                // tire ruts down the racing line
     const glint=(noise2(x*3.1,z*3.1)>0.9)?1.65:1;                      // rare snow sparkles that catch the bloom
@@ -1709,6 +1749,15 @@ function clearOfRamps(x,z,ramps){
   return true;
 }
 
+function ascentCourseItems(type,ci){
+  const items=ascentMap?.course?.[type]||[], out=[];
+  for(const item of items){
+    const z=ascentZForAltitude(item.at);
+    if(Math.floor(z/CHUNK)===ci) out.push({...item,z});
+  }
+  return out;
+}
+
 function genChunk(ci){
   if(chunks.has(ci)) return;
   const z0=ci*CHUNK, rng=mulberry32(hashSeed(ci,runSeed));
@@ -1722,7 +1771,9 @@ function genChunk(ci){
   const plannedAttack=ascent?null:planOverseerAttack(ci,z0,directive,rng);
   const ramps=[], obstacles=[];
   // --- ramps
-  if(!ascent && (ci===2 || (ci>2 && rng()<0.55))){
+  if(ascent){
+    for(const r of ascentCourseItems('ramps',ci)) ramps.push({x:r.x||0, z0:r.z-(r.len||10)/2, len:r.len||10, w:r.w||5.8, h:r.h||2.6});
+  } else if(ci===2 || (ci>2 && rng()<0.55)){
     const n=(ci>4 && rng()<0.3)?2:1;
     for(let i=0;i<n;i++){
       const len=8+rng()*4, h=2.1+rng()*1.4+density*0.8;
@@ -1735,7 +1786,9 @@ function genChunk(ci){
 
   // --- rage traps (start after 4 chunks): sudden pits + high-rise walls
   const pits=[], walls=[];
-  if(!ascent && ci>=4){
+  if(ascent){
+    for(const p of ascentCourseItems('pits',ci)) pits.push({x:p.x||0, w:p.w||6, z0:p.z-(p.len||6)/2, len:p.len||6, depth:p.depth||8.5});
+  } else if(ci>=4){
     const prevTrap=(pitsByChunk.get(ci-1)?.length||0)+(wallsByChunk.get(ci-1)?.length||0);
     const trapScale=directive.params?.trapChanceScale ?? 1;
     const trapChance=prevTrap?0.08:THREE.MathUtils.clamp((0.32+density*0.28)*trapScale*OT.trapAggressionMul,0.12,0.78);
@@ -1761,28 +1814,29 @@ function genChunk(ci){
   pitsByChunk.set(ci,pits); wallsByChunk.set(ci,walls);
 
   // --- obstacles (start after 2 chunks of clean run)
-  const hazardsOpen=!ascent && ci>=2;
+  const hazardsOpen=ascent || ci>=2;
   if(hazardsOpen){
-    const pat=rng();
-    const add=(type,x,z,s)=>{
+    const add=(type,x,z,s,rot=rng()*Math.PI*2)=>{
       if(!clearOfRamps(x,z,ramps)) return;
       if(pitDepthAt(x,z)>0.4) return;                              // not inside pits
       if(walls.some(w=>z>w.z0-2.5 && z<w.z0+w.len+2.5)) return;    // not on wall bands
       const def={ rock:{r:0.95*s, h:1.7*s}, tree:{r:0.85*s, h:4.2*s}, log:{r:1.7*s, h:1.05} }[type];
-      obstacles.push({type,x,z,s,rot:rng()*Math.PI*2, r:def.r, h:def.h, passed:false});
+      obstacles.push({type,x,z,s,rot,r:def.r, h:def.h, passed:false});
     };
-    if(pat<0.4){                                    // scatter
+    if(ascent){
+      for(const o of ascentCourseItems('obstacles',ci)) add(o.type||'rock',o.x||0,o.z,o.s||1,o.rot||0);
+    } else if(rng()<0.4){                           // scatter
       const n=Math.round(4+9*density);
       for(let i=0;i<n;i++){
         const t=rng(); add(t<0.5?'rock':(t<0.8?'tree':'log'), rng()*18-9, z0+4+rng()*(CHUNK-8), 0.8+rng()*0.9);
       }
-    } else if(pat<0.65){                            // slalom rocks
+    } else if(rng()<0.65){                          // slalom rocks
       let z=z0+6, side=rng()<0.5?1:-1;
       while(z<z0+CHUNK-6){
         add('rock', side*(2.5+rng()*3), z, 1.0+rng()*0.7);
         side*=-1; z+=11-density*4+rng()*4;
       }
-    } else if(pat<0.85){                            // tree corridor
+    } else if(rng()<0.85){                          // tree corridor
       const half=3.6-density*1.2;
       for(let z=z0+4; z<z0+CHUNK-4; z+=6.5){
         const wob=noise2(z*0.05, ci*3.3)*2.5;
@@ -2674,6 +2728,7 @@ function setRideMode(mode){
   if(rideMode==='ascent') dailyMode=false;
   $('dailyBtn').textContent='DAILY DESCENT: OFF';
   $('dailyBtn').setAttribute('aria-pressed','false');
+  setTrailPalette();
   renderModeSelect();
   if(state==='title') resetRun('title');
 }
@@ -2875,6 +2930,7 @@ function resetRun(startState){
   game.y=terrainH(game.x,game.z); game.prevGY=game.y;
   physTeleport(game.x, game.y, game.z);
   resetTrail(game.x, game.y, game.z);
+  setTrailPalette();
   bikeRoot.position.set(game.x,game.y,game.z);
   bikeTilt.rotation.set(0,0,0);
   bikeTilt.scale.set(1,1,1);
