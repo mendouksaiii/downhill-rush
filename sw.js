@@ -1,12 +1,28 @@
 // REDLINE RIDER service worker — offline-capable PWA.
-// Cache-first for the vendored engine + assets (immutable, big), network-first
-// for the game HTML and the leaderboard/overseer APIs (always want fresh).
-const CACHE = 'redline-v2';
+//
+// Caching policy, by mutability:
+//   IMMUTABLE (cache-first)  — vendored engine, media, fonts. Version-pinned,
+//                              huge, and the whole point of the offline story.
+//   OURS      (network-first) — every file we actually ship changes to: the
+//                              HTML documents AND our ES modules (economy.js,
+//                              skins-data.js, overseer-core.mjs) and tuning
+//                              JSON. These are module imports, not navigations,
+//                              so they do NOT hit the document branch — caching
+//                              them first-wins would freeze player economy /
+//                              skin-catalog fixes forever, and would pair fresh
+//                              HTML with stale modules (a version mismatch that
+//                              is worse than either alone).
+//   LIVE      (network only)  — /api/*.
+//
+// Bump CACHE on any change to this policy or the precache list.
+const CACHE = 'redline-v3';
 const PRECACHE = [
   './',
   './index.html',
   './play.html',
+  './market.html',
   './economy.js',
+  './skins-data.js',
   './manifest.webmanifest',
   './overseer-tuning.json',
   './overseer-core.mjs',
@@ -27,6 +43,13 @@ const PRECACHE = [
   './vendor/rapier3d/rapier.es.js',
 ];
 
+// Immutable by construction — safe to serve from cache indefinitely.
+const isImmutable = (url) =>
+  url.pathname.startsWith('/vendor/') ||
+  url.pathname.startsWith('/media/') ||
+  url.hostname.includes('gstatic') ||
+  url.hostname.includes('fonts.googleapis');
+
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
 });
@@ -40,29 +63,33 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
-  if (req.method !== 'GET') return;
+  if (req.method !== 'GET') return;      // HEAD passes through — the build-tag check needs it live
   const url = new URL(req.url);
 
-  // Never cache the APIs — leaderboard + overseer telemetry must be live.
+  // Never cache the APIs — leaderboard + accounts + telemetry must be live.
   if (url.pathname.startsWith('/api/')) {
     e.respondWith(fetch(req).catch(() => new Response('{}', { headers: { 'content-type': 'application/json' } })));
     return;
   }
 
-  // Network-first for the document (pick up new deploys); fall back to cache offline.
-  if (req.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('index.html')) {
-    e.respondWith(fetch(req).then((r) => {
-      const clone = r.clone(); caches.open(CACHE).then((c) => c.put(req, clone));
+  // Cache-first ONLY for immutable assets.
+  if (isImmutable(url)) {
+    e.respondWith(caches.match(req).then((m) => m || fetch(req).then((r) => {
+      if (r.ok) { const clone = r.clone(); caches.open(CACHE).then((c) => c.put(req, clone)); }
       return r;
-    }).catch(() => caches.match(req).then((m) => m || caches.match('./index.html'))));
+    })));
     return;
   }
 
-  // Cache-first for everything else (vendored engine, media, fonts).
-  e.respondWith(caches.match(req).then((m) => m || fetch(req).then((r) => {
-    if (r.ok && (url.origin === location.origin || url.hostname.includes('gstatic'))) {
-      const clone = r.clone(); caches.open(CACHE).then((c) => c.put(req, clone));
-    }
-    return r;
-  })));
+  // Everything else of ours (documents AND module imports AND tuning json):
+  // network-first so a deploy always wins, cache only as the offline fallback.
+  e.respondWith(
+    fetch(req).then((r) => {
+      if (r.ok && url.origin === location.origin) {
+        const clone = r.clone(); caches.open(CACHE).then((c) => c.put(req, clone));
+      }
+      return r;
+    }).catch(() => caches.match(req).then((m) =>
+      m || (req.mode === 'navigate' ? caches.match('./index.html') : undefined)))
+  );
 });
