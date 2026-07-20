@@ -3951,7 +3951,8 @@ window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk, OT,
     const runs=opts.runs||10, maxFrames=opts.maxFrames||3600, dt=1/60, base=opts.seed??2000;
     const results=[];
     for(let r=0;r<runs;r++){
-      startRun();
+      if(!nameInput.value) nameInput.value='BOT';   // bypass account+tutorial gates
+      beginRide();
       runSeed=base+r; seedNoise(runSeed);
       for(const ci of [...chunks.keys()]) dropChunk(ci);
       game.x=0; game.z=6; game.y=terrainH(0,6); game.prevGY=game.y;
@@ -3988,7 +3989,9 @@ window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk, OT,
   freeze(on){ timeScale=on===false?1:0; },
   mood(v){ moodN=v; updateMood(); },
   degrade(){ stepQuality(); return qTier; },
-  start(){ startRun(); },
+  start(){ // debug/bot entry: bypass the account + tutorial gates humans go through
+    if(!nameInput.value) nameInput.value='BOT';
+    beginRide(); },
   openTutorial,
   goHome,
   snapCam(){
