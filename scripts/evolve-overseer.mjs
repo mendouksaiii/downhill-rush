@@ -10,7 +10,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 
-const GAME_URL = process.env.GAME_URL || 'https://downhill-rush-steel.vercel.app';
+const GAME_URL = process.env.GAME_URL || 'https://redline-rider.vercel.app';
 const API_KEY = process.env.GROQ_API_KEY;
 const MODEL = process.env.EVOLVE_MODEL || 'llama-3.3-70b-versatile';
 const TUNING_PATH = new URL('../overseer-tuning.json', import.meta.url);
@@ -89,7 +89,7 @@ async function main() {
   const stats = aggregate(runs);
   console.log('aggregate:', JSON.stringify(stats));
 
-  const prompt = `You are an external game-balance auditor for Downhill Rush's Overseer AI
+  const prompt = `You are an external game-balance auditor for Redline Rider's Overseer AI
 (an adaptive rage director that spawns traps and attacks). Do not defend the
 current policy — treat it as someone else's design.
 

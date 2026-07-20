@@ -1,10 +1,12 @@
 // REDLINE RIDER service worker — offline-capable PWA.
 // Cache-first for the vendored engine + assets (immutable, big), network-first
 // for the game HTML and the leaderboard/overseer APIs (always want fresh).
-const CACHE = 'redline-v1';
+const CACHE = 'redline-v2';
 const PRECACHE = [
   './',
   './index.html',
+  './play.html',
+  './economy.js',
   './manifest.webmanifest',
   './overseer-tuning.json',
   './overseer-core.mjs',

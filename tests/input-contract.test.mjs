@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const html = readFileSync(new URL('../play.html', import.meta.url), 'utf8');
+const landing = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const leaderboardApi = readFileSync(new URL('../api/leaderboard.js', import.meta.url), 'utf8');
 
 function functionBody(name) {
@@ -238,6 +239,7 @@ test('new players get an image-backed tutorial carousel', () => {
 });
 
 test('Redline Rider landing and HUD use the brand system', () => {
+  // game side (play.html): boot splash, STYLE/CHAIN HUD, death lines — from PR #11
   const hideBoot = functionBody('hideBoot');
   const showDeath = functionBody('showDeath');
   const deathLine = functionBody('deathLineForCause');
@@ -251,12 +253,26 @@ test('Redline Rider landing and HUD use the brand system', () => {
   assert.match(html, /id="mechanicStrip"/);
   assert.match(html, /id="scoreWrap"/);
   assert.match(html, /class="scoreLabel">STYLE/);
+  assert.match(html, /class="flame">CHAIN/);
   assert.match(html, /RIDE THE LINE\. FEED THE EYE\./);
   assert.match(html, /Clean riding builds speed/);
   assert.match(hideBoot, /boot\.classList\.add\('gone'\)/);
   assert.match(html, /hideBoot\(\)/);
   assert.match(deathLine, /THE EYE REMEMBERS/);
   assert.match(showDeath, /\$\('dLine'\)\.textContent=deathLineForCause\(lastDeathCause\)/);
+  assert.match(html, /LINE LOCKED/);
+
+  // landing side (index.html): official landing at the root, game at /play.html
+  assert.match(landing, /<title>REDLINE RIDER/);
+  assert.match(landing, /media\/redline-rider-logo-1x1\.png/);
+  assert.match(landing, /media\/redline-rider-banner-1500x500\.png/);
+  assert.match(landing, /id="titleShell"/);
+  assert.match(landing, /id="heroCopy"/);
+  assert.match(landing, /id="mechanicStrip"/);
+  assert.match(landing, /RIDE THE LINE\. FEED THE EYE\./);
+  assert.match(landing, /Clean riding builds speed/);
+  assert.match(landing, /href="play\.html"/);
+
 });
 
 test('Kaisei rider render sticks to the source sheet while staying procedural', () => {
@@ -335,4 +351,45 @@ test('bike speed has no passive timer, pickup, shield, edge, or soft-collider sl
   assert.doesNotMatch(update, /g\.speed=Math\.max\(9,g\.speed\*Math\.pow\(0\.04,dt\)\)/);
   assert.doesNotMatch(updateHud, /SLOW/);
   assert.match(applyPower, /RED FLARE/);
+});
+
+test('account gate requires new players to claim email plus available username', () => {
+  const start = functionBody('startRun');
+  const refresh = functionBody('refreshAccountGate');
+  const check = functionBody('checkUsernameAvailability');
+
+  assert.match(html, /const EMAIL_KEY='dr_email'/);
+  assert.match(html, /id="emailInput"/);
+  assert.match(html, /id="profileBtn"/);
+  assert.match(html, /id="accountHint"/);
+  assert.match(html, /function validEmail\(v\)/);
+  assert.match(refresh, /const isReturning=!!playerName/);
+  assert.match(refresh, /startBtn\.disabled=!canStart/);
+  assert.match(refresh, /nameStatus\.textContent='taken'/);
+  assert.match(check, /fetch\(LB_API\+'\?me='/);
+  assert.match(start, /if\(!canStartRun\) return/);
+  assert.match(start, /localStorage\.setItem\(EMAIL_KEY,playerEmail\)/);
+});
+
+test('returning local players can ride without adding email', () => {
+  const refresh = functionBody('refreshAccountGate');
+
+  assert.match(refresh, /const isReturning=!!playerName/);
+  assert.match(refresh, /isReturning \|\| validEmail\(emailInput\.value\)/);
+  assert.match(refresh, /emailHint\.textContent=isReturning/);
+  assert.match(html, /profileBtn\.hidden=!playerName/);
+  assert.match(refresh, /profileBtn\.classList\.toggle\('hidden',!playerName\)/);
+});
+
+test('leaderboard metadata stores optional email without exposing it on the public board', () => {
+  const submit = functionBody('submitRun');
+  const entry = leaderboardApi.slice(
+    leaderboardApi.indexOf('function entryFromMeta'),
+    leaderboardApi.indexOf('// Upstash returns')
+  );
+
+  assert.match(submit, /email:playerEmail/);
+  assert.match(leaderboardApi, /const email = /);
+  assert.match(leaderboardApi, /email,/);
+  assert.doesNotMatch(entry, /email/);
 });

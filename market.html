@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#1a1040">
-<title>DOWNHILL RUSH — Marketplace (preview)</title>
+<title>REDLINE RIDER — Marketplace</title>
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" rx="24" fill="%230a0710"/><circle cx="62" cy="48" r="29" fill="none" stroke="%23e8202e" stroke-width="14"/><path d="M62 28C66.5 38 66.5 58 62 68 57.5 58 57.5 38 62 28Z" fill="%23e8202e"/><polygon points="2,88 118,38 118,47 16,113" fill="%23fff"/><line x1="48" y1="82" x2="57" y2="78" stroke="%230a0710" stroke-width="5"/><line x1="71" y1="71" x2="79" y2="67.5" stroke="%230a0710" stroke-width="4"/><line x1="92" y1="61" x2="99" y2="58" stroke="%230a0710" stroke-width="3.4"/></svg>'>
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
 <style>
@@ -93,7 +94,7 @@
   </div>
   <div id="actionWrap"><button id="action">EQUIP</button></div>
   <div id="rail"></div>
-  <div id="note">UI PREVIEW · COIN BALANCE IS PLACEHOLDER · NOT IN GAME YET</div>
+  <div id="note">COINS EARNED BY RIDING · PROGRESS SAVED ON THIS DEVICE</div>
 </div>
 
 <script type="importmap">
@@ -106,6 +107,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { TIER, mat, BIKES, buildBike, RIDERS } from './skins-data.js';
+import { Economy } from './economy.js';
 
 const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 const canvas=document.getElementById('stage');
@@ -172,19 +174,13 @@ const spin=new THREE.Group(); spin.position.y=.53; scene.add(spin);
 let model=null, anim=null, ringPulse=0;
 
 /* ============================ SHOP STATE (demo) =========================== */
-const state={
-  coins:15000, coinsShown:15000,
-  owned:{ riders:new Set(['rookie']), bikes:new Set(['sunset']) },
-  equipped:{ riders:'rookie', bikes:'sunset' },
-  tab:'riders', sel:0,
-};
+const state={ coinsShown:Economy.coins, tab:'riders', sel:0 };
 const SORTED={
   riders:[...RIDERS].sort((a,b)=>a.price-b.price),
   bikes:[...BIKES].sort((a,b)=>a.price-b.price),
 };
 const catalog=()=>state.tab==='riders'?SORTED.riders:SORTED.bikes;
 const selSkin=()=>catalog()[state.sel];
-const ownedSet=()=>state.owned[state.tab];
 
 /* ============================ 3D SWAP ===================================== */
 function showSkin(skin){
@@ -206,8 +202,8 @@ const $=id=>document.getElementById(id);
 const rail=$('rail'), actionBtn=$('action');
 function fmtC(n){ return '◈ '+Math.round(n).toLocaleString(); }
 function cardState(skin){
-  if(state.equipped[state.tab]===skin.id) return 'equipped';
-  if(ownedSet().has(skin.id)) return 'owned';
+  if(Economy.equipped()[state.tab]===skin.id) return 'equipped';
+  if(Economy.owns(state.tab, skin.id)) return 'owned';
   return 'locked';
 }
 function buildRail(){
@@ -236,8 +232,8 @@ function refreshInfo(){
   if(st==='equipped'){ actionBtn.textContent='EQUIPPED ✓'; actionBtn.classList.add('equipped'); }
   else if(st==='owned'){ actionBtn.textContent='EQUIP'; actionBtn.classList.add('own'); }
   else if(skin.price===0){ actionBtn.textContent='GET · FREE'; }
-  else if(state.coins>=skin.price){ actionBtn.textContent='BUY · '+fmtC(skin.price); }
-  else { actionBtn.textContent='NEED '+fmtC(skin.price-state.coins)+' MORE'; actionBtn.classList.add('poor'); }
+  else if(Economy.coins>=skin.price){ actionBtn.textContent='BUY · '+fmtC(skin.price); }
+  else { actionBtn.textContent='NEED '+fmtC(skin.price-Economy.coins)+' MORE'; actionBtn.classList.add('poor'); }
   rail.querySelectorAll('.card').forEach(c=>c.classList.toggle('sel',+c.dataset.i===state.sel));
 }
 function select(i){
@@ -250,14 +246,11 @@ actionBtn.addEventListener('click',()=>{
   const skin=selSkin(), st=cardState(skin);
   if(st==='equipped') return;
   if(st==='owned'){
-    state.equipped[state.tab]=skin.id;
+    Economy.equip(state.tab, skin.id);
     buildRail(); refreshInfo(); ringPulse=1;
     return;
   }
-  if(state.coins>=skin.price){
-    state.coins-=skin.price;
-    ownedSet().add(skin.id);
-    state.equipped[state.tab]=skin.id;      // auto-equip on purchase
+  if(Economy.buy(state.tab, skin.id, skin.price)){   // funds check + deduct + own + auto-equip
     const f=$('flash'); f.style.transition='none'; f.style.opacity=.25;
     requestAnimationFrame(()=>{ f.style.transition='opacity .4s ease-out'; f.style.opacity=0; });
     ringPulse=1.6;
@@ -271,7 +264,7 @@ $('tabRiders').addEventListener('click',()=>setTab('riders'));
 $('tabBikes').addEventListener('click',()=>setTab('bikes'));
 function setTab(t){
   if(state.tab===t) return;
-  state.tab=t; state.sel=Math.max(0,catalog().findIndex(s=>s.id===state.equipped[t]));
+  state.tab=t; state.sel=Math.max(0,catalog().findIndex(s=>s.id===Economy.equipped()[t]));
   $('tabRiders').classList.toggle('on',t==='riders');
   $('tabBikes').classList.toggle('on',t==='bikes');
   buildRail(); showSkin(selSkin()); refreshInfo();
@@ -292,7 +285,14 @@ rail.addEventListener('scroll',()=>{
   },110);
 });
 addEventListener('wheel',e=>{ rail.scrollLeft+=e.deltaY; },{passive:true});
-$('back').addEventListener('click',()=>{ location.href='/'; });
+// flush the purchase/equip to the server BEFORE returning to the game, so the
+// game's boot signIn reads the up-to-date account (not a stale one that would
+// clobber a just-bought skin back to rookie)
+$('back').addEventListener('click',async e=>{ e.preventDefault();
+  const b=$('back'); b.style.pointerEvents='none';
+  try{ await Economy.flush(); }catch(err){}
+  location.href='play.html';
+});
 
 /* ============================ LOOP ======================================== */
 let last=performance.now();
@@ -309,8 +309,8 @@ function frame(){
   const rp=1+ringPulse*.25;
   tierRing.scale.set(rp,rp,rp); glowRing.scale.set(rp,rp,rp);
   // coin counter eases toward the real balance
-  state.coinsShown+=(state.coins-state.coinsShown)*Math.min(1,dt*7);
-  if(Math.abs(state.coins-state.coinsShown)<1) state.coinsShown=state.coins;
+  state.coinsShown+=(Economy.coins-state.coinsShown)*Math.min(1,dt*7);
+  if(Math.abs(Economy.coins-state.coinsShown)<1) state.coinsShown=Economy.coins;
   $('coins').textContent=fmtC(state.coinsShown);
   if(composer) composer.render(); else renderer.render(scene,camera);
   requestAnimationFrame(frame);
@@ -325,7 +325,10 @@ addEventListener('resize',()=>{
   renderer.setSize(innerWidth,innerHeight);
   if(composer) composer.setSize(innerWidth,innerHeight);
 });
-window.MARKET={ state, select, setTab };
+window.MARKET={ state, select, setTab, refresh(){ buildRail(); refreshInfo(); } };
+window.Economy=Economy;
 </script>
+<!-- Vercel Web Analytics (harmless 404 until enabled on the Vercel project) -->
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

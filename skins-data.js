@@ -1,4 +1,4 @@
-// Shared skin catalog + model builders for Downhill Rush.
+// Shared skin catalog + model builders for Redline Rider.
 // Used by skins.html (showroom), market.html (shop preview), and later the game itself.
 // Style matches the in-game bike/rider: real MTB frame from painted tubes, torus
 // wheels with neon rims, capsule limbs, two-tone vertical gradients baked into
@@ -47,6 +47,8 @@ function boxGeo(w,h,d,x,y,z,rx=0){ const g=new THREE.BoxGeometry(w,h,d);
 export const BIKES=[
  { id:'sunset', name:'SUNSET DRIFTER', tier:'common', price:400, glow:0xff7847,
    flavor:'Chases the horizon it came from.',
+   // in-game paint override: the classic launch look every player knows
+   game:{bot:0x8f1560, top:0xff6a3d, rim:0x00e5ff},
    frame:{color:0xff7847, rough:.55}, accent:{color:0xff2e88, rough:.5},
    wheels:{color:0x2a1020, emissive:0xff7847, ei:1.2},
    extras(g,M){ const badge=new THREE.Mesh(new THREE.CircleGeometry(.09,12),
@@ -111,6 +113,45 @@ export const BIKES=[
      const at=(x,y,z,s)=>{ const gem=new THREE.Mesh(new THREE.OctahedronGeometry(s),gemMat);
        gem.position.set(x,y,z); gem.rotation.y=.5; g.add(gem); };
      at(0,1.14,-.05,.09); at(0,.7,.28,.07); at(0,.66,-.28,.07); at(0,1.26,.68,.06); } },
+
+ { id:'tidebreaker', name:'TIDEBREAKER', tier:'common', price:500, glow:0x2ee6ff,
+   flavor:'Rides the break, never the wake.',
+   frame:{color:0x0a5a7a, rough:.5}, accent:{color:0x2ee6ff, rough:.4},
+   wheels:{color:0x06202e, emissive:0x2ee6ff, ei:1.3},
+   extras(g,M){ for(let i=0;i<3;i++){ const w=new THREE.Mesh(new THREE.ConeGeometry(.06,.18,4),
+     mat(0x2ee6ff,{e:0x2ee6ff,ei:.7})); w.position.set(0,.72+i*.02,-.08-i*.26); w.rotation.z=.5; g.add(w);} } },
+
+ { id:'gridrunner', name:'GRIDRUNNER', tier:'rare', price:1400, glow:0x00e5ff,
+   flavor:'Straight lines. Neon dreams.',
+   frame:{color:0x1a1040, rough:.35, metal:.2}, accent:{color:0xff2ecb, rough:.4},
+   wheels:{color:0x0a0620, emissive:0x00e5ff, ei:1.5},
+   extras(g,M){ const line=(x,y,z,len,rz,c)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(.018,len,.018),
+     mat(c,{e:c,ei:1.3})); b.position.set(x,y,z); b.rotation.z=rz; g.add(b); };
+     line(0,.66,.26,.8,-.7,0x00e5ff); line(0,.9,-.02,.5,.7,0xff2ecb); line(0,.6,-.2,.5,-.6,0x00e5ff); } },
+
+ { id:'obsidian', name:'OBSIDIAN', tier:'epic', price:4200, glow:0xff5a2a,
+   flavor:'Cooled lava. Still dangerous.',
+   frame:{color:0x0c0c12, rough:.22, metal:.4}, accent:{color:0x5a1a0a, rough:.3, emissive:0xff5a2a, ei:.4},
+   wheels:{color:0x1a0806, emissive:0xff5a2a, ei:1.4},
+   extras(g,M){ for(let i=0;i<4;i++){ const s=new THREE.Mesh(new THREE.TetrahedronGeometry(.07+(i%2)*.02),
+     mat(0xff5a2a,{e:0xff5a2a,ei:1})); s.position.set(0,.66+i*.02,.24-i*.28); s.rotation.set(.5,i,.3); g.add(s);} } },
+
+ { id:'aurora', name:'AURORA', tier:'legendary', price:11000, glow:0x4dffa8, physical:true,
+   flavor:'Borrowed from the night sky.',
+   frame:{color:0x123a2e, rough:.15, metal:.7, envI:1.6, emissive:0x184436, ei:.2},
+   accent:{color:0x7a4dff, rough:.2, metal:.6, envI:1.5},
+   wheels:{color:0x0a2018, metal:.6, rough:.2, emissive:0x4dffa8, ei:1.0}, discWheels:true,
+   extras(g,M){ const band=(c,x,rz)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(.02,.7,.05),
+     mat(c,{e:c,ei:.9})); b.position.set(x,.86,0); b.rotation.z=rz; g.add(b); };
+     band(0x4dffa8,-.02,-.5); band(0x7a4dff,.02,-.42); } },
+
+ { id:'phantom', name:'PHANTOM', tier:'legendary', price:15000, glow:0xc9b3ff,
+   flavor:'You will swear it was never there.',
+   frame:{color:0x2a2440, rough:.2, metal:.5, envI:1.4, emissive:0x1a1630, ei:.15},
+   accent:{color:0xc9b3ff, rough:.25, metal:.4}, discWheels:true,
+   wheels:{color:0x14101f, metal:.5, rough:.2, emissive:0xc9b3ff, ei:1.2},
+   extras(g,M){ for(let i=0;i<4;i++){ const w=new THREE.Mesh(new THREE.SphereGeometry(.03+(i%2)*.015,6,5),
+     mat(0xc9b3ff,{e:0xc9b3ff,ei:1})); w.position.set(i%2?.06:-.06,.7+i*.1,-.1+i*.05); g.add(w);} } },
 ];
 export function buildBike(skin){
   const g=new THREE.Group();
@@ -341,7 +382,7 @@ export const RIDERS=[
      return t=>{ cape.forEach((c,i)=>{ c.rotation.x=.1+Math.sin(t*2.2+i*.8)*.08; }); };
    } },
 
- { id:'ronin', name:'RONIN', tier:'epic', price:5000, glow:0xff2e6e,
+ { id:'ronin', name:'RONIN', tier:'legendary', price:15000, glow:0xff2e6e,
    flavor:'One blade. No master.',
    build(g){ const R=riderRig(g,{skin:0xd9a878, top:0xc4356e, pants:0x1a1a20, shoes:0x111114,
      eyes:0xdd2233, shirt:0x17151b});
@@ -452,4 +493,119 @@ export const RIDERS=[
        lens.material.emissiveIntensity=.5+Math.sin(t*2.4)*.35;
      };
    } },
+
+ { id:'miji', name:'MIJI', tier:'epic', price:5000, glow:0xff2a2a,
+   flavor:'The storm wears a hood.',
+   build(g){ const R=riderRig(g,{skin:0x3a2a24, top:0x121016, pants:0x0e0d12, shoes:0x0a0a0e,
+     eyes:0xff2a2a});
+     R.hairCap(0x141018,1.0);
+     for(let i=0;i<4;i++){ const s=new THREE.Mesh(new THREE.ConeGeometry(.05,.16,4),mat(0x141018,{r:.8}));
+       s.position.set(-.12+i*.08,R.headY+.24,.02); s.rotation.z=(i-1.5)*.35; g.add(s); }
+     const hood=new THREE.Mesh(new THREE.IcosahedronGeometry(.32,0),mat(0x121016,{r:.85}));
+     hood.scale.set(1,1.12,1); hood.position.set(0,R.headY+.06,-.08); g.add(hood);       // hood over head
+     R.box(.5,.28,.34, 0,1.58,-.04, mat(0x121016,{r:.85}));                               // hood cowl on shoulders
+     R.box(.24,.14,.06, 0,R.headY-.12,.19, mat(0x0e0d12));                                // face mask
+     const bolt=R.box(.03,.5,.03, .22,1.5,.16, mat(0xff2a2a,{e:0xff2a2a,ei:1.5}),0,0,.3); // red lightning bolt
+     R.box(.1,.1,.04, .2,1.3,.16, mat(0xd41a1a,{e:0xd41a1a,ei:.6}));                       // red X mark
+     R.box(.06,.16,.04, 0,1.42,.17, mat(0xd41a1a,{e:0xff2a2a,ei:.7}));                     // red kanji/pendant
+     return t=>{ bolt.material.emissiveIntensity=1+Math.sin(t*9)*.7; };                   // flickering lightning
+   } },
+
+ { id:'maggi', name:'MAGGI', tier:'epic', price:3500, glow:0xffd76e,
+   flavor:"Straight A's, straight lines.",
+   build(g){ const R=riderRig(g,{skin:0x5a3a24, top:0x16151b, pants:0x14131a, shoes:0x0e0d12,
+     eyes:0x3a2620, legTop:0x5a3a24, legBot:0x14131a});                                   // thigh-high black boots
+     R.hairCap(0x140f14,1.0);
+     for(const s of [-1,1]){ const bun=new THREE.Mesh(new THREE.SphereGeometry(.13,8,7),mat(0x140f14,{r:.75}));
+       bun.position.set(s*.16,R.headY+.2,-.02); g.add(bun); }                             // twin space buns
+     R.box(.34,.045,.04, 0,R.headY+.02,.19, mat(0x222222,{m:.5,r:.3}));                    // glasses frame
+     for(const s of [-1,1]) R.box(.13,.1,.02, s*.09,R.headY+.02,.2, mat(0xcfe8ff,{r:.1,m:.3})); // lenses
+     R.skirt(0xf2ede6,.42);                                                               // white pleated skirt
+     R.box(.16,.05,.05, 0,1.62,.16, mat(0x14141a));                                        // turtleneck collar
+     R.box(.08,.14,.04, 0,1.45,.17, mat(0xffd76e,{m:.8,r:.3,envI:1.4}));                   // gold necklace
+     for(const s of [-1,1]) R.box(.06,.06,.06, s*.24,1.28,.02, mat(0xffd76e,{m:.8,r:.3})); // gold watch/cuff
+   } },
+
+ { id:'lexxi', name:'LEXXI', tier:'epic', price:4500, glow:0xff2a3a,
+   flavor:'Soft eyes. Sharp everything else.',
+   build(g){ const R=riderRig(g,{skin:0x5a3a28, top:0x121016, pants:0x0e0d12, shoes:0x141018,
+     eyes:0x7a4a3a});
+     const hijab=new THREE.Mesh(new THREE.IcosahedronGeometry(.3,1),mat(0x121016,{r:.7}));
+     hijab.scale.set(1,1.06,1); hijab.position.set(0,R.headY+.05,-.04); g.add(hijab);     // hijab cap
+     R.box(.42,.4,.16, 0,1.58,-.1, mat(0x121016,{r:.7}));                                  // hijab drape
+     R.box(.22,.13,.06, 0,R.headY-.12,.18, mat(0x0e0d12));                                 // face mask
+     R.box(.06,.14,.04, 0,1.42,.17, mat(0xd41a1a,{e:0xff2a3a,ei:.7}));                     // red dagger pendant
+     R.box(.5,.06,.32, 0,1.06,0, mat(0x1a0e10,{e:0xd41a1a,ei:.3}));                        // red-patterned belt
+     R.box(.28,.3,.18, .3,1.2,-.05, mat(0x141018,{r:.6}));                                 // crossbody bag
+     R.box(.04,.28,.02, .18,1.14,.14, mat(0xd41a1a,{e:0xd41a1a,ei:.5}));                   // red waist chain
+     for(const s of [-1,1]) R.box(.18,.07,.33, s*.13,.06,.06, mat(0xd41a1a));              // red sneaker accents
+   } },
+
+ { id:'froggy', name:'FROGGY', tier:'legendary', price:13000, glow:0x62c72e,
+   flavor:'Hops the leaderboard. Literally.',
+   build(g){ const R=riderRig(g,{skin:0x5cc23a, top:0x5cc23a, pants:0x5cc23a, shoes:0x4aa82e,
+     eyes:0x111111, headScale:1.5});
+     const belly=new THREE.Mesh(new THREE.SphereGeometry(.2,8,7),mat(0xf2e8c2,{r:.7}));
+     belly.scale.set(.9,1.2,.4); belly.position.set(0,1.25,.16); g.add(belly);            // cream belly
+     for(const s of [-1,1]){ const eye=new THREE.Mesh(new THREE.SphereGeometry(.11,8,7),mat(0xffffff,{r:.3}));
+       eye.position.set(s*.13,R.headY+.16,.04); g.add(eye);                               // big frog eyes on top
+       const pup=new THREE.Mesh(new THREE.SphereGeometry(.05,7,6),mat(0x111111));
+       pup.position.set(s*.15,R.headY+.15,.13); g.add(pup); }
+     R.box(.34,.4,.2, 0,1.3,-.2, mat(0xd42a2a,{r:.5}));                                     // red backpack
+     for(const s of [-1,1]) R.box(.06,.5,.06, s*.14,1.35,.08, mat(0xd42a2a,{r:.5}));       // straps
+   } },
+
+ { id:'gem', name:'GEM', tier:'rare', price:2000, glow:0xffbf6e,
+   flavor:'Rare by name. Rarer by run.',
+   build(g){ const R=riderRig(g,{skin:0x6e4428, top:0x16141c, pants:0x14121a, shoes:0x1a1620,
+     eyes:0x3a2620, legTop:0x6e4428, legBot:0x14121a});
+     R.hairCap(0x120f16,1.0);
+     R.hairBack(0x120f16,1.15,.44);                                                        // long braids down back
+     const braids=[];
+     for(const s of [-1,1]){
+       braids.push(R.box(.1,.9,.1, s*.24,1.3,.16, mat(0x120f16,{r:.75})));                 // braids over shoulders
+       const tip=new THREE.Mesh(new THREE.ConeGeometry(.05,.12,5),mat(0x120f16,{r:.75}));
+       tip.position.set(s*.24,.82,.18); tip.rotation.x=Math.PI; g.add(tip); }
+     R.skirt(0x16141c,.4);                                                                 // black skirt (built fit)
+     R.box(.3,.04,.16, 0,1.5,.14, mat(0x0e0c12));                                          // lace cami neckline
+     R.box(.08,.16,.04, 0,1.44,.17, mat(0xffd76e,{m:.8,r:.3,envI:1.4}));                    // gold layered necklace
+     for(const s of [-1,1]){ const hoop=new THREE.Mesh(new THREE.TorusGeometry(.045,.012,6,10),
+       mat(0xffd76e,{m:.85,r:.25,envI:1.5})); hoop.position.set(s*.22,R.headY-.06,.02); g.add(hoop); } // gold hoops
+     return t=>{ braids.forEach((b,i)=>{ b.rotation.x=Math.sin(t*1.6+i*2)*.1; }); };       // braid sway
+   } },
 ];
+
+/* ===================== IN-GAME SKIN WIRING (v1: palettes) ================== */
+// The game renders one shared rider rig (Kaisei's build in index.html) and one
+// bike frame; equipping a skin recolors them. These palettes mirror each rider's
+// riderRig() colors above — full per-skin models in-game are the next step.
+// keys: skin tone, top (jacket), pants, shoes, eyes, hair, shirt (chest inset).
+export const RIDER_GAME={
+  rookie:     {skin:0x1c1c26, top:0x14141e, pants:0x111119, shoes:0x0b0b10, eyes:0x00e5ff, hair:0x0f0f16, shirt:0x0f0f16},
+  berna:      {skin:0xead0b2, top:0x6b6f52, pants:0x3a3d4a, shoes:0x23262e, eyes:0x35d6ff, hair:0x5a3d28, shirt:0x8a8f9c},
+  cherry:     {skin:0xe8b88a, top:0x1b1b22, pants:0xe8b88a, shoes:0xf2f2f2, eyes:0x3a2620, hair:0x15121a, shirt:0xc2233a},
+  princess:   {skin:0xb5773f, top:0xf7c6d8, pants:0x1c2440, shoes:0x1c1a18, eyes:0x3a2620, hair:0x14121c, shirt:0xffffff},
+  begone:     {skin:0x6e4a2f, top:0x9c1f2e, pants:0x1e1e24, shoes:0x16130f, eyes:0x5d766d, hair:0x8db8ee, shirt:0xf2f2f2},
+  titan:      {skin:0xd9a878, top:0x9a7448, pants:0x4c4a3a, shoes:0x2e2018, eyes:0x5ce8d8, hair:0x2e2118, shirt:0xe8dcc2},
+  bella:      {skin:0xf2cba8, top:0xb3a48c, pants:0xf2ede6, shoes:0xf2ede6, eyes:0xd8a03c, hair:0xc25b45, shirt:0xf6f3ec},
+  stephyberry:{skin:0xf6d7c2, top:0x1d1a20, pants:0xf2e2d8, shoes:0xffffff, eyes:0x8fa3c8, hair:0xf3e2e4, shirt:0xf2e2d8},
+  dave:       {skin:0x7a4a2c, top:0x1d2a4a, pants:0x1d2a4a, shoes:0x0d0d0f, eyes:0x2a2018, hair:0x0f0d0d, shirt:0xf2f2f2},
+  dylan:      {skin:0x6e4426, top:0x17171c, pants:0x121215, shoes:0x0c0c0f, eyes:0x111111, hair:0x121010, shirt:0x1f1f24},
+  ik:         {skin:0xe0b58c, top:0x6e6a5e, pants:0xa89878, shoes:0x4a3524, eyes:0x4a5a68, hair:0xd8b96e, shirt:0xb89a52},
+  ronin:      {skin:0xd9a878, top:0xc4356e, pants:0x1a1a20, shoes:0x111114, eyes:0xdd2233, hair:0x17141c, shirt:0x17151b},
+  raiden:     {skin:0xc98d5e, top:0x6a3fae, pants:0x3a2a5e, shoes:0x241a3e, eyes:0xff5d8f, hair:0xcfc4bc, shirt:0x5a3399},
+  spike:      {skin:0xd9a878, top:0x1b1b20, pants:0x17171c, shoes:0x101014, eyes:0x3a2620, hair:0x14121a, shirt:0x232329},
+  himars:     {skin:0xffffff, top:0x16161c, pants:0x16161c, shoes:0xe8901a, eyes:0x111111, hair:0x3b6fd4, shirt:0x1a3a8a},
+  mendo:      {skin:0x5e3a22, top:0xf2eef8, pants:0x8a5fd4, shoes:0xf2eef8, eyes:0x2a2018, hair:0x181410, shirt:0xe8dcc2},
+  miji:       {skin:0x3a2a24, top:0x121016, pants:0x0e0d12, shoes:0x0a0a0e, eyes:0xff2a2a, hair:0x141018, shirt:0xd41a1a},
+  maggi:      {skin:0x5a3a24, top:0x16151b, pants:0x14131a, shoes:0x0e0d12, eyes:0x3a2620, hair:0x140f14, shirt:0xffd76e},
+  lexxi:      {skin:0x5a3a28, top:0x121016, pants:0x0e0d12, shoes:0x141018, eyes:0x7a4a3a, hair:0x121016, shirt:0xd41a1a},
+  froggy:     {skin:0x5cc23a, top:0x5cc23a, pants:0x5cc23a, shoes:0x4aa82e, eyes:0x111111, hair:0x5cc23a, shirt:0xf2e8c2},
+  gem:        {skin:0x6e4428, top:0x16141c, pants:0x14121a, shoes:0x1a1620, eyes:0x3a2620, hair:0x120f16, shirt:0xffd76e},
+};
+// In-game bike paint: two-tone frame gradient + neon rim glow, straight from the
+// showroom definition (or its explicit `game` override).
+export function bikeGame(id){
+  const s=BIKES.find(b=>b.id===id)||BIKES[0];
+  return s.game||{bot:s.frame.color, top:s.accent.color, rim:s.glow};
+}

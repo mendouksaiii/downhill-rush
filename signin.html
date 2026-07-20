@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1a1040">
+<title>REDLINE RIDER — Sign In (mockup)</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; min-height:100%; font-family:'Rajdhani',sans-serif; color:#fff;
+    background:linear-gradient(180deg,#1a1040 0%, #3a1a5a 40%, #ff2e88 78%, #ff7847 100%);
+    display:flex; flex-direction:column; align-items:center; user-select:none; overflow-x:hidden; }
+  #title { margin-top:26px; text-align:center; }
+  #title h1 { font-size:clamp(30px,7vw,52px); font-weight:700; letter-spacing:5px; line-height:.95;
+    background:linear-gradient(180deg,#ffd76e,#ff7847,#ff2e88);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 22px rgba(255,46,136,.5)); }
+  #title .sub { font-size:12px; letter-spacing:3px; color:#e6dcff; margin-top:4px; opacity:.7; }
+
+  .card { width:min(400px,90vw); margin:26px 0; padding:26px 24px 22px;
+    background:rgba(14,8,36,.62); border:1px solid rgba(255,255,255,.14); border-radius:20px;
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow:0 20px 60px rgba(0,0,0,.35); }
+  .eyebrow { font-size:12px; letter-spacing:4px; font-weight:700; color:#00e5ff; text-align:center;
+    text-shadow:0 0 12px rgba(0,229,255,.6); }
+  .head { font-size:clamp(24px,6vw,32px); font-weight:700; letter-spacing:2px; text-align:center; margin-top:4px; }
+  .head .u { color:#ffd76e; text-shadow:0 0 16px rgba(255,215,110,.6); }
+  .note { font-size:14px; letter-spacing:1px; color:#b8b0dd; text-align:center; margin-top:6px; }
+
+  .field { margin-top:16px; }
+  .field label { font-size:12px; letter-spacing:2px; color:#9a92c9; font-weight:700; }
+  .field .row { position:relative; margin-top:5px; }
+  input { width:100%; padding:13px 14px; font:700 16px 'Rajdhani',sans-serif; letter-spacing:1px;
+    color:#fff; background:rgba(10,6,28,.7); border:1.5px solid rgba(255,255,255,.16); border-radius:12px;
+    outline:none; transition:border-color .15s, box-shadow .15s; }
+  input:focus { border-color:#00e5ff; box-shadow:0 0 16px rgba(0,229,255,.3); }
+  input::placeholder { color:#6a628f; }
+  .status { position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:13px;
+    font-weight:700; letter-spacing:1px; }
+  .status.ok { color:#2eff8a; } .status.bad { color:#ff5d7a; } .status.wait { color:#9a92c9; }
+  .hint { font-size:12px; letter-spacing:1px; margin-top:5px; min-height:15px; }
+  .hint.ok { color:#2eff8a; } .hint.bad { color:#ff5d7a; } .hint.dim { color:#7a72b0; }
+
+  button.play { width:100%; margin-top:20px; padding:14px 0; font:700 19px 'Rajdhani',sans-serif;
+    letter-spacing:4px; color:#04222a; background:linear-gradient(135deg,#00e5ff,#39f7c1); border:none;
+    border-radius:13px; cursor:pointer; box-shadow:0 0 24px rgba(0,229,255,.45); transition:transform .08s, opacity .15s; }
+  button.play:active { transform:scale(.97); }
+  button.play:disabled { opacity:.35; cursor:not-allowed; box-shadow:none; filter:grayscale(.4); }
+  button.ghost { width:100%; margin-top:10px; padding:11px 0; font:700 14px 'Rajdhani',sans-serif;
+    letter-spacing:3px; color:#b8b0dd; background:transparent; border:1px solid rgba(255,255,255,.18);
+    border-radius:12px; cursor:pointer; }
+  .foot { font-size:12px; letter-spacing:1px; color:#8f88bd; text-align:center; margin-top:14px; }
+
+  /* returning-player profile card */
+  .profile { margin-top:16px; display:grid; grid-template-columns:auto 1fr; gap:6px 14px;
+    padding:14px 16px; background:rgba(0,229,255,.06); border:1px solid rgba(0,229,255,.22); border-radius:14px; }
+  .profile .k { color:#9a92c9; font-size:13px; letter-spacing:1px; text-align:right; }
+  .profile .v { color:#fff; font-weight:700; letter-spacing:1px; font-variant-numeric:tabular-nums; }
+  .badge { display:inline-block; font-size:11px; font-weight:700; letter-spacing:1px; color:#04222a;
+    background:#39f7c1; border-radius:8px; padding:2px 8px; }
+
+  #demobar { position:fixed; bottom:0; left:0; right:0; display:flex; gap:8px; justify-content:center;
+    padding:10px calc(10px + env(safe-area-inset-bottom)); background:rgba(10,6,28,.8); }
+  #demobar span { font-size:11px; letter-spacing:2px; color:#7a72b0; align-self:center; margin-right:4px; }
+  #demobar button { padding:7px 14px; font:700 12px 'Rajdhani'; letter-spacing:2px; color:#cfc8f0;
+    background:rgba(30,20,60,.9); border:1px solid rgba(255,255,255,.15); border-radius:9px; cursor:pointer; }
+  #demobar button.on { color:#04222a; background:#ffd76e; border-color:#ffd76e; }
+  #flash { position:fixed; inset:0; background:#00e5ff; opacity:0; pointer-events:none; transition:opacity .4s; }
+  .avatar { width:74px; height:74px; border-radius:50%; margin:8px auto 0; display:flex;
+    align-items:center; justify-content:center; font-size:32px; font-weight:700; color:#04222a;
+    background:linear-gradient(135deg,#00e5ff,#39f7c1); box-shadow:0 0 26px rgba(0,229,255,.5); }
+  .emailrow { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:6px;
+    font-size:14px; color:#b8b0dd; letter-spacing:1px; }
+  .emailrow .edit { color:#00e5ff; cursor:pointer; font-size:12px; font-weight:700; }
+  .stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:18px; }
+  .stat { background:rgba(0,229,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px 14px; }
+  .stat .l { font-size:11px; letter-spacing:2px; color:#9a92c9; font-weight:700; }
+  .stat .v { font-size:23px; font-weight:700; color:#fff; margin-top:3px; font-variant-numeric:tabular-nums; }
+  .stat .v.gold { color:#ffd76e; text-shadow:0 0 12px rgba(255,215,110,.5); }
+  .equip { margin-top:16px; }
+  .equip .r2 { display:flex; align-items:center; justify-content:space-between; padding:10px 0;
+    border-top:1px solid rgba(255,255,255,.07); }
+  .equip .lab { font-size:12px; letter-spacing:2px; color:#9a92c9; font-weight:700; }
+  .equip .val { font-size:15px; font-weight:700; color:#fff; }
+  .chip { font-size:10px; font-weight:700; letter-spacing:1px; border-radius:7px; padding:2px 7px; margin-left:8px; }
+</style>
+</head>
+<body>
+<div id="flash"></div>
+<div id="title"><h1>REDLINE RIDER</h1><div class="sub">SIGN-IN FLOW · MOCKUP · NOT IN GAME YET</div></div>
+<div id="app"></div>
+
+<div id="demobar">
+  <span>DEMO AS:</span>
+  <button id="dNew" class="on">NEW PLAYER</button>
+  <button id="dReturn">RETURNING (no email)</button>
+  <button id="dFull">RETURNING (has email)</button>
+  <button id="dProfile">PROFILE PAGE</button>
+</div>
+
+<script>
+const API='/api/leaderboard';
+const app=document.getElementById('app');
+const emailRe=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const nameOk=n=>/^[\w\- ]{2,14}$/.test(n);
+
+// demo state — in the real game this comes from localStorage (dr_name / dr_email)
+let demo='new';
+let account={ name:'', email:'' };
+
+function setDemo(mode){
+  demo=mode;
+  document.getElementById('dNew').classList.toggle('on',mode==='new');
+  document.getElementById('dReturn').classList.toggle('on',mode==='return');
+  document.getElementById('dFull').classList.toggle('on',mode==='full');
+  document.getElementById('dProfile').classList.toggle('on',mode==='profile');
+  if(mode==='new') account={name:'',email:''};
+  if(mode==='return') account={name:'Mendo',email:''};        // existing username, no email yet
+  if(mode==='full') account={name:'Mendo',email:'mendo@redlinerider.gg'};
+  render();
+}
+
+// ---- live checks against the real leaderboard (graceful if offline) ----
+async function usernameTaken(name){
+  try{ const r=await fetch(API+'?me='+encodeURIComponent(name)+'&t='+Date.now(),{cache:'no-store'});
+    if(!r.ok) return null; const d=await r.json(); return !!d.me; }
+  catch(e){ return null; }   // null = couldn't verify (offline)
+}
+async function loadProfile(name){
+  try{ const r=await fetch(API+'?me='+encodeURIComponent(name)+'&t='+Date.now(),{cache:'no-store'});
+    if(!r.ok) return null; const d=await r.json(); return d.me; }
+  catch(e){ return null; }
+}
+
+function fmtT(t){ return t>=60 ? Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0') : (+t).toFixed(1)+'s'; }
+function play(){ const f=document.getElementById('flash'); f.style.opacity=.3;
+  setTimeout(()=>{ f.style.opacity=0; alert('▶ starting run as "'+account.name+'"'+(account.email?'\n📧 '+account.email:'')); },120); }
+
+/* ============================ NEW PLAYER ============================ */
+function renderNew(){
+  app.innerHTML=`<div class="card">
+    <div class="eyebrow">CREATE YOUR PROFILE</div>
+    <div class="head">Pick a name.<br>Ride forever.</div>
+    <div class="field">
+      <label>EMAIL</label>
+      <div class="row"><input id="email" type="email" placeholder="your@email.com" autocomplete="email"></div>
+      <div class="hint dim" id="emailHint">so you can keep your profile &amp; scores</div>
+    </div>
+    <div class="field">
+      <label>USERNAME</label>
+      <div class="row"><input id="uname" maxlength="14" placeholder="choose a username" autocomplete="off" spellcheck="false">
+        <span class="status" id="uStatus"></span></div>
+      <div class="hint dim" id="uHint">2–14 characters · letters, numbers, - _</div>
+    </div>
+    <button class="play" id="playBtn" disabled>PLAY</button>
+    <div class="foot">no password — just an email &amp; a name</div>
+  </div>`;
+  const email=document.getElementById('email'), uname=document.getElementById('uname'),
+    uStatus=document.getElementById('uStatus'), uHint=document.getElementById('uHint'),
+    emailHint=document.getElementById('emailHint'), playBtn=document.getElementById('playBtn');
+  let uAvail=false, checkT=null;
+  function refresh(){
+    const eOk=emailRe.test(email.value.trim());
+    emailHint.className='hint '+(email.value?(eOk?'ok':'bad'):'dim');
+    emailHint.textContent=email.value? (eOk?'looks good':'enter a valid email') : 'so you can keep your profile & scores';
+    playBtn.disabled=!(eOk && uAvail);
+  }
+  email.addEventListener('input',refresh);
+  uname.addEventListener('input',()=>{
+    const n=uname.value.trim(); uAvail=false; refresh();
+    if(!nameOk(n)){ uStatus.textContent=''; uHint.className='hint bad'; uHint.textContent='2–14 chars · letters, numbers, - _'; return; }
+    uStatus.textContent='…'; uStatus.className='status wait';
+    uHint.className='hint dim'; uHint.textContent='checking availability…';
+    clearTimeout(checkT);
+    checkT=setTimeout(async()=>{
+      const taken=await usernameTaken(n);
+      if(taken===null){ uStatus.textContent=''; uHint.className='hint dim'; uHint.textContent="can't verify now — you can still play"; uAvail=true; refresh(); return; }
+      if(taken){ uStatus.textContent='✗ taken'; uStatus.className='status bad'; uHint.className='hint bad'; uHint.textContent='that name belongs to another rider'; uAvail=false; }
+      else { uStatus.textContent='✓ available'; uStatus.className='status ok'; uHint.className='hint ok'; uHint.textContent='this name is yours'; uAvail=true; }
+      refresh();
+    },350);
+  });
+  playBtn.addEventListener('click',()=>{ account={name:uname.value.trim(),email:email.value.trim()}; play(); });
+}
+
+/* ============================ RETURNING PLAYER ============================ */
+async function renderReturn(){
+  app.innerHTML=`<div class="card">
+    <div class="eyebrow">WELCOME BACK</div>
+    <div class="head"><span class="u">${account.name}</span></div>
+    <div class="note" id="rNote">loading your profile…</div>
+    <div id="profileWrap"></div>
+    <div id="emailWrap"></div>
+    <button class="play" id="playBtn">PLAY</button>
+    <div class="foot">your account &amp; scores are safe — nothing was reset</div>
+  </div>`;
+  document.getElementById('playBtn').addEventListener('click',play);
+  // profile stats from the live leaderboard
+  const me=await loadProfile(account.name);
+  const note=document.getElementById('rNote'), pw=document.getElementById('profileWrap');
+  if(me){ note.textContent='here’s where you stand';
+    pw.innerHTML=`<div class="profile">
+      <div class="k">WORLD RANK</div><div class="v">#${me.rank}</div>
+      <div class="k">BEST TIME</div><div class="v">${fmtT(me.time)}</div>
+      <div class="k">USERNAME</div><div class="v">${account.name}</div>
+    </div>`;
+  } else { note.textContent='we remember your username'; }
+  // email slot
+  const ew=document.getElementById('emailWrap');
+  if(account.email){
+    ew.innerHTML=`<div class="field"><label>EMAIL <span class="badge">SAVED</span></label>
+      <div class="row"><input id="email" type="email" value="${account.email}"></div>
+      <div class="hint ok">profile secured</div></div>`;
+  } else {
+    ew.innerHTML=`<div class="field"><label>ADD EMAIL <span style="color:#7a72b0">(optional)</span></label>
+      <div class="row"><input id="email" type="email" placeholder="your@email.com" autocomplete="email"></div>
+      <div class="hint dim" id="eh">add it once to unlock your profile page — you can play without it</div></div>
+      <button class="ghost" id="saveEmail">SAVE EMAIL</button>`;
+    document.getElementById('saveEmail').addEventListener('click',()=>{
+      const v=document.getElementById('email').value.trim();
+      if(!emailRe.test(v)){ document.getElementById('eh').className='hint bad'; document.getElementById('eh').textContent='enter a valid email'; return; }
+      account.email=v; renderReturn();
+    });
+  }
+}
+
+/* ============================ PROFILE PAGE ============================ */
+function renderProfile(){
+  app.innerHTML=`<div class="card">
+    <div class="eyebrow">YOUR PROFILE</div>
+    <div class="avatar">M</div>
+    <div class="head" style="margin-top:8px"><span class="u">Mendo</span></div>
+    <div class="emailrow"><span>mendo@redlinerider.gg</span><span class="edit">edit</span></div>
+    <div class="stats">
+      <div class="stat"><div class="l">WORLD RANK</div><div class="v gold">#17</div></div>
+      <div class="stat"><div class="l">BEST TIME</div><div class="v">42.6s</div></div>
+      <div class="stat"><div class="l">BEST DISTANCE</div><div class="v">812 m</div></div>
+      <div class="stat"><div class="l">TOP COMBO</div><div class="v">8&times;</div></div>
+    </div>
+    <div class="equip">
+      <div class="r2"><span class="lab">RIDER</span><span class="val">Rookie<span class="chip" style="background:rgba(125,224,138,.2);color:#7de08a">STARTER</span></span></div>
+      <div class="r2"><span class="lab">BIKE</span><span class="val">Sunset Drifter<span class="chip" style="background:rgba(154,146,201,.2);color:#b8b0dd">COMMON</span></span></div>
+      <div class="r2"><span class="lab">COINS</span><span class="val" style="color:#ffd76e">&#9672; 15,000</span></div>
+    </div>
+    <button class="play" id="playBtn">PLAY</button>
+    <button class="ghost" id="signout">SIGN OUT</button>
+  </div>`;
+  document.getElementById('playBtn').addEventListener('click',play);
+}
+
+function render(){ if(demo==='new') renderNew(); else if(demo==='profile') renderProfile(); else renderReturn(); }
+document.getElementById('dNew').onclick=()=>setDemo('new');
+document.getElementById('dReturn').onclick=()=>setDemo('return');
+document.getElementById('dFull').onclick=()=>setDemo('full');
+document.getElementById('dProfile').onclick=()=>setDemo('profile');
+setDemo(new URLSearchParams(location.search).get('demo')||'new');
+</script>
+</body>
+</html>
