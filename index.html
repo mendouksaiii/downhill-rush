@@ -129,7 +129,7 @@
     </div>
   </section>
   <aside id="lbPanel" aria-label="Longest runs">
-    <div class="lbHead">LONGEST RUNS · LIVE<span id="lbLive"></span></div>
+    <div class="lbHead">TOP RIDERS · LIVE<span id="lbLive"></span></div>
     <ol id="lbList"><li class="lbNote">loading...</li></ol>
   </aside>
 </div>
@@ -147,7 +147,7 @@
     const d=await (await fetch('/api/leaderboard')).json();
     if(!d.top||!d.top.length){ list.innerHTML='<li class="lbNote">no runs yet — be first</li>'; return; }
     list.innerHTML=d.top.slice(0,10).map((e,i)=>
-      `<li${i===0?' class="p1"':''}><span class="r">${i+1}</span><span>${e.name.replace(/[<>&]/g,'')}</span><span class="t">${e.time}s</span></li>`).join('');
+      `<li${i===0?' class="p1"':''}><span class="r">${i+1}</span><span>${e.name.replace(/[<>&]/g,'')}</span><span class="t">${(+e.pts||0).toLocaleString()} pts</span></li>`).join('');
   }catch(e){ list.innerHTML='<li class="lbNote">leaderboard offline</li>'; }
 })();
 </script>

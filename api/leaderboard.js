@@ -21,8 +21,14 @@ async function redis(commands) {
   return out.map((x) => x.result);
 }
 
+// POINTS ranking: distance is the backbone, airtime (hang) and skill (in-game
+// style score) feed it.  pts = dist + hang*15 + score/5
+// Legacy pre-stats entries (only a time on record) rank at time*20 — the old
+// era's average pace — so they stay comparable without fabricating stats.
 function rankValue(e) {
-  return (+e.time || 0) + (+e.hang || 0) * 0.25;
+  const dist = +e.dist || 0, hang = +e.hang || 0, score = +e.score || 0;
+  if (!dist && !score && !hang) return Math.round((+e.time || 0) * 20);
+  return Math.round(dist + hang * 15 + score / 5);
 }
 
 function safeMeta(raw) {
@@ -37,6 +43,7 @@ function entryFromMeta(name, rankScore, rawMeta) {
     // members are stored lowercased (one identity per player regardless of how
     // they typed it); the meta keeps the display casing
     name: (meta && meta.name) || name,
+    pts: Math.round(+rankScore || 0),   // the zset score IS the points total
     time: +(+((meta && meta.time) || fallbackTime)).toFixed(1),
     score: Math.floor(+((meta && meta.score) || 0)),
     dist: Math.floor(+((meta && meta.dist) || 0)),
@@ -102,6 +109,11 @@ module.exports = async (req, res) => {
       //  - a long run must cover proportional ground (speed floor is 16 m/s;
       //    a wedged/faked 9-minute "run" with no distance fails this)
       if (hang > time + 1 || dist > time * 90 || (time > 90 && dist < time * 8)) {
+        res.status(400).json({ error: 'implausible entry' }); return;
+      }
+      // skill points now feed the ranking, so cap them against distance too
+      // (observed legit ratio is ~1-2 pts/m; 10x + slack is generous)
+      if (score > dist * 10 + 2000) {
         res.status(400).json({ error: 'implausible entry' }); return;
       }
       const entry = {
