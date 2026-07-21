@@ -15,7 +15,7 @@
 //   LIVE      (network only)  — /api/*.
 //
 // Bump CACHE on any change to this policy or the precache list.
-const CACHE = 'redline-v3';
+const CACHE = 'redline-v4';
 const PRECACHE = [
   './',
   './index.html',
@@ -26,6 +26,7 @@ const PRECACHE = [
   './manifest.webmanifest',
   './overseer-tuning.json',
   './overseer-core.mjs',
+  './maps/ascent-01-verdant.json',
   './media/redline-rider-logo-1x1.png',
   './media/redline-rider-banner-1500x500.png',
   './vendor/three/three.module.js',
