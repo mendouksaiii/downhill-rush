@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="description" content="REDLINE RIDER — endless downhill arcade survival. Ride clean, build speed, get stylish… and the mountain starts to notice you. The better you play, the harder it hunts.">
-<link rel="icon" type="image/png" href="media/redline-rider-logo-1x1.png">
-<link rel="apple-touch-icon" href="media/redline-rider-logo-1x1.png">
+<link rel="icon" type="image/png" href="media/redline-rider-rr.png">
+<link rel="apple-touch-icon" href="media/redline-rider-rr.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preload" as="image" href="media/redline-rider-logo-1x1.png">
@@ -542,6 +542,111 @@
     #ascentHud { top:calc(64px + env(safe-area-inset-top)); width:68vw; }
     #summit h2 { font-size:2.7rem; }
   }
+
+  /* ============================================================= *
+   *  GAME MAIN-MENU RESTYLE — console menu over the live mountain  *
+   *  (dark theme kept; overrides the website-style title layout)   *
+   * ============================================================= */
+  #title { padding:70px clamp(16px,3vw,40px) 22px; justify-content:center; }
+  /* darken + settle the world so the menu reads as UI on top of it */
+  #title::before { filter:saturate(.85) brightness(.62) contrast(1.05); }
+  #title::after { opacity:.10; }
+
+  /* top strip: logo lockup + build tag */
+  .miniLogo { width:36px; height:36px; border-radius:9px; box-shadow:0 0 16px rgba(255,48,76,.4); }
+  #titleTop { pointer-events:none; }
+  #titleTop .miniBrand span { letter-spacing:4px; font-family:'Orbitron',sans-serif; font-weight:800; font-size:12px; }
+  #titleTop .signal { display:none; }   /* declutter — collides with the leaderboard header */
+
+  /* the shell becomes two HUD panels that fill the frame */
+  #titleShell { width:min(1180px,100%); align-items:stretch; gap:22px;
+    grid-template-columns:minmax(0,1.05fr) minmax(300px,.62fr); }
+
+  /* ---- LEFT: the menu panel ---- */
+  #heroCopy { max-width:none; padding:26px 28px 24px; position:relative; overflow:hidden;
+    display:flex; flex-direction:column;
+    background:linear-gradient(180deg, rgba(9,7,18,.9), rgba(16,9,30,.94));
+    border:1px solid rgba(255,48,76,.2); border-left:3px solid var(--rr-red);
+    box-shadow:0 40px 90px -34px #000, inset 0 1px 0 rgba(255,255,255,.05); }
+  #heroCopy::after { content:''; position:absolute; top:10px; right:10px; width:24px; height:24px;
+    border-top:2px solid rgba(255,48,76,.55); border-right:2px solid rgba(255,48,76,.55); pointer-events:none; }
+  #heroCopy .eyebrow { font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:3px; color:var(--rr-cyan);
+    text-shadow:0 0 12px rgba(0,229,255,.4); }
+  #brandMark { width:74px; height:74px; margin:16px 0 0; border-radius:16px; filter:none;
+    box-shadow:0 12px 30px -10px #000, 0 0 0 1px rgba(255,48,76,.28); }
+  #title h1 { margin-top:12px; font-family:'Orbitron',sans-serif; font-size:clamp(2.4rem,5.6vw,4.2rem);
+    letter-spacing:4px; line-height:.82; color:var(--rr-red); text-shadow:0 0 28px rgba(255,48,76,.5); }
+  #title h1 .rr { font-size:.3em; letter-spacing:14px; color:var(--rr-white); text-shadow:none; margin-top:8px; }
+  #title .tag { margin-top:12px; font-family:'Orbitron',sans-serif; font-size:.82rem; letter-spacing:4px; color:var(--rr-white); }
+  #title .heroLine { margin-top:8px; font-size:.9rem; line-height:1.4; color:var(--rr-ghost); max-width:none; opacity:.85; }
+
+  /* RIDER ID — compact sign-in strip */
+  #signup { margin-top:20px; display:grid; grid-template-columns:1fr; gap:8px; }
+  #signup .cardHead { font-family:'Orbitron',sans-serif; font-size:9px; letter-spacing:3px; color:var(--rr-ghost);
+    display:flex; align-items:center; gap:8px; }
+  #signup .cardHead .dot { width:6px; height:6px; border-radius:50%; background:var(--rr-red); box-shadow:0 0 8px var(--rr-red); }
+  #signup .accountField label { font-family:'Orbitron',sans-serif; font-size:8px; letter-spacing:2px; color:var(--rr-ghost); }
+  #nameInput, #emailInput { width:100%; border-radius:6px; background:rgba(5,4,9,.7);
+    border:1px solid rgba(255,48,76,.3); color:var(--rr-white); padding:11px 12px; letter-spacing:1px; }
+  #nameInput:focus, #emailInput:focus { border-color:var(--rr-red); box-shadow:0 0 16px rgba(255,48,76,.3); }
+  #accountHint, #nameStatus { font-size:11px; letter-spacing:1px; }
+
+  /* the MENU: PLAY primary + stacked options */
+  #startBtn { order:0; width:100%; margin-top:4px; border-radius:6px; padding:15px; font-family:'Orbitron',sans-serif;
+    font-weight:800; font-size:15px; letter-spacing:4px; color:#fff;
+    background:linear-gradient(135deg, var(--rr-red), #9b0e25);
+    box-shadow:0 0 30px rgba(255,48,76,.45), inset 0 1px 0 rgba(255,255,255,.25);
+    transition:transform .25s var(--rr-ease,cubic-bezier(.32,.72,0,1)), box-shadow .25s ease; }
+  #startBtn:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 0 44px rgba(255,48,76,.7), inset 0 1px 0 rgba(255,255,255,.25); }
+  .titleBtns { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+  .titleBtns .ghostBtn { position:relative; width:100%; text-align:left; border-radius:6px; padding:13px 16px 13px 20px;
+    font-family:'Orbitron',sans-serif; font-weight:700; font-size:11px; letter-spacing:2.5px;
+    color:var(--rr-white); background:rgba(9,7,18,.6); border:1px solid rgba(244,246,255,.12);
+    transition:background .25s ease, border-color .25s ease, padding .25s ease; overflow:hidden; }
+  .titleBtns .ghostBtn::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--rr-red);
+    transform:scaleY(0); transform-origin:bottom; transition:transform .25s ease; }
+  .titleBtns .ghostBtn::after { content:'▸'; position:absolute; right:16px; top:50%; transform:translateY(-50%);
+    color:var(--rr-red); opacity:0; transition:opacity .25s ease, right .25s ease; }
+  .titleBtns .ghostBtn:hover { background:rgba(20,10,26,.85); border-color:rgba(255,48,76,.4); padding-left:24px; }
+  .titleBtns .ghostBtn:hover::before { transform:scaleY(1); }
+  .titleBtns .ghostBtn:hover::after { opacity:1; right:14px; }
+  #dailyBtn[aria-pressed="true"] { color:var(--rr-red); border-color:rgba(255,48,76,.55); background:rgba(30,7,14,.7); }
+  #profileBtn { width:100%; margin-top:8px; border-radius:6px; text-align:left; padding:12px 18px;
+    font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:2.5px; color:var(--rr-cyan);
+    background:rgba(9,7,18,.55); border:1px solid rgba(0,229,255,.3); }
+
+  /* ---- RIGHT: leaderboard HUD panel ---- */
+  #lbPanel { align-self:stretch; padding:22px 22px 16px; min-height:0; border-radius:0;
+    background:linear-gradient(180deg, rgba(9,7,18,.86), rgba(16,9,30,.92));
+    border:1px solid rgba(255,48,76,.18); border-left:3px solid rgba(255,48,76,.7); position:relative; overflow:hidden; }
+  #lbPanel::after { content:''; position:absolute; bottom:10px; left:10px; width:22px; height:22px;
+    border-bottom:2px solid rgba(255,48,76,.5); border-left:2px solid rgba(255,48,76,.5); pointer-events:none; }
+  .lbHead, #lbTitle { font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:3px; color:var(--rr-red); }
+  .lbSubHead { font-family:'Orbitron',sans-serif; font-size:9px; letter-spacing:3px; color:var(--rr-ghost); }
+
+  /* ---- CONTRACTS: HUD objective strip ---- */
+  #contracts { width:min(1180px,100%); margin:18px auto 0; border-radius:0;
+    border:1px solid rgba(255,48,76,.2); border-left:3px solid rgba(255,215,110,.6);
+    background:linear-gradient(180deg, rgba(24,14,8,.55), rgba(9,7,18,.8)); }
+  #contracts .cHead { font-family:'Orbitron',sans-serif; letter-spacing:3px; }
+
+  /* ---- CONTROLS: slim tip bar, not a marketing feature grid ---- */
+  #mechanicStrip { width:min(1180px,100%); margin:16px auto 0; grid-template-columns:repeat(4,1fr);
+    border:1px solid rgba(244,246,255,.1); background:transparent; gap:1px; }
+  #mechanicStrip .mItem { min-height:0; padding:12px 14px; background:rgba(9,7,18,.62); }
+  #mechanicStrip b { font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:3px; }
+  #mechanicStrip strong { font-family:'Orbitron',sans-serif; font-size:13px; letter-spacing:1px; }
+  #mechanicStrip span { font-size:12px; }
+
+  /* footer: keep control legend, drop the website domain line */
+  #homeFoot .ver { display:none; }
+  #homeFoot .ctl { font-family:'Rajdhani',sans-serif; letter-spacing:1px; }
+
+  @media (max-width: 920px){
+    #titleShell { grid-template-columns:1fr; }
+    #heroCopy::after, #lbPanel::after { display:none; }
+    #brandMark { width:64px; height:64px; }
+  }
 </style>
 </head>
 <body>
@@ -627,17 +732,7 @@ setTimeout(()=>{const b=document.getElementById('boot');
 <div id="title" class="overlay">
   <div id="titleTop">
     <div class="miniBrand">
-      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="100" cy="100" r="92" fill="none" stroke="rgba(0, 229, 255, 0.12)" stroke-width="1.5" stroke-dasharray="8 4" />
-        <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(255, 48, 76, 0.22)" stroke-width="1" />
-        <path d="M 12 180 L 180 62 L 188 68 L 20 186 Z" fill="rgba(9, 7, 18, 0.95)" />
-        <circle cx="110" cy="74" r="34" fill="#FF304C" filter="url(#redGlow)" />
-        <path d="M 110 50 Q 116 74 110 98 Q 104 74 110 50 Z" fill="#090712" />
-        <line x1="8" y1="182" x2="192" y2="54" stroke="#F4F6FF" stroke-width="5.5" stroke-linecap="square" />
-        <line x1="28" y1="182" x2="192" y2="67" stroke="#00E5FF" stroke-width="1.5" opacity="0.8" />
-        <circle cx="70" cy="138" r="18" fill="none" stroke="#00E5FF" stroke-width="2.5" filter="url(#cyanGlow)" />
-        <circle cx="70" cy="138" r="8" fill="none" stroke="#00E5FF" stroke-width="1" opacity="0.6" stroke-dasharray="2 2" />
-      </svg>
+      <img class="miniLogo" src="media/redline-rider-rr.png" alt="" onerror="this.onerror=null;this.src='media/redline-rider-logo-1x1.png'">
       <span>REDLINE RIDER</span>
     </div>
     <div class="signal">ADAPTIVE DESCENT PROTOCOL</div>
@@ -645,17 +740,7 @@ setTimeout(()=>{const b=document.getElementById('boot');
   <div id="titleShell">
     <section id="heroCopy" aria-label="Redline Rider">
       <div class="eyebrow">NEON DOWNHILL SURVIVAL / WATCHED BY THE OVERSEER</div>
-      <svg id="brandMark" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="100" cy="100" r="92" fill="none" stroke="rgba(0, 229, 255, 0.12)" stroke-width="1.5" stroke-dasharray="8 4" />
-        <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(255, 48, 76, 0.22)" stroke-width="1" />
-        <path d="M 12 180 L 180 62 L 188 68 L 20 186 Z" fill="rgba(9, 7, 18, 0.95)" />
-        <circle cx="110" cy="74" r="34" fill="#FF304C" filter="url(#redGlow)" />
-        <path d="M 110 50 Q 116 74 110 98 Q 104 74 110 50 Z" fill="#090712" />
-        <line x1="8" y1="182" x2="192" y2="54" stroke="#F4F6FF" stroke-width="5.5" stroke-linecap="square" />
-        <line x1="28" y1="182" x2="192" y2="67" stroke="#00E5FF" stroke-width="1.5" opacity="0.8" />
-        <circle cx="70" cy="138" r="18" fill="none" stroke="#00E5FF" stroke-width="2.5" filter="url(#cyanGlow)" />
-        <circle cx="70" cy="138" r="8" fill="none" stroke="#00E5FF" stroke-width="1" opacity="0.6" stroke-dasharray="2 2" />
-      </svg>
+      <img id="brandMark" src="media/redline-rider-rr.png" alt="Redline Rider" onerror="this.onerror=null;this.src='media/redline-rider-logo-1x1.png'">
       <h1><span class="rl">REDLINE</span><span class="rr">RIDER</span></h1>
       <div class="tag">RIDE THE LINE. FEED THE EYE.</div>
       <p class="heroLine">Clean riding builds speed. Gas turns discipline into risk. Style makes the mountain notice you.</p>
