@@ -647,6 +647,18 @@
     #heroCopy::after, #lbPanel::after { display:none; }
     #brandMark { width:64px; height:64px; }
   }
+
+  /* live gameplay behind the menu (like the original) — drop the banner
+     backdrop and let the running 3D canvas show through a legibility scrim */
+  #title { background:transparent !important; }
+  #title::before {
+    background:
+      linear-gradient(90deg, rgba(5,4,9,.88) 0%, rgba(5,4,9,.55) 42%, rgba(5,4,9,.12) 100%),
+      linear-gradient(0deg, rgba(5,4,9,.74), rgba(5,4,9,.06) 46%, rgba(5,4,9,.5)) !important;
+    filter:none !important; transform:none !important; }
+  /* the logo is transparent now — no rounded tile / box frame, just a soft glow */
+  .miniLogo { border-radius:0; box-shadow:none; filter:drop-shadow(0 0 7px rgba(255,48,76,.55)); }
+  #brandMark { border-radius:0; box-shadow:none; filter:drop-shadow(0 6px 14px rgba(0,0,0,.6)) drop-shadow(0 0 14px rgba(255,48,76,.3)); }
 </style>
 </head>
 <body>
