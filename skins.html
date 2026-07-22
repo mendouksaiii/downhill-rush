@@ -6,7 +6,6 @@
 <meta name="theme-color" content="#1a1040">
 <title>REDLINE RIDER — Skin Shop</title>
 <link rel="icon" href="media/redline-rider-rr.png">
-<link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -46,7 +45,7 @@
 <div id="hdr">
   <img src="media/redline-rider-rr.png" alt="" style="height:44px;width:44px;margin:0 auto 10px;display:block;filter:drop-shadow(0 0 10px rgba(255,48,76,.5))" onerror="this.onerror=null;this.src='media/redline-rider-logo-1x1.png'">
   <h1>SKIN SHOP</h1>
-  <div class="sub">DESIGN PREVIEW · V3 · NOT IN GAME YET</div>
+  <div class="sub">ALL 21 RIDERS · 15 BIKES · LIVE IN GAME</div>
 </div>
 <div id="tabs">
   <button id="tabRiders" class="on">RIDERS</button>
@@ -56,8 +55,8 @@
 
 <script type="importmap">
 { "imports": {
-  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  "three": "/vendor/three/three.module.js",
+  "three/addons/": "/vendor/three/addons/"
 } }
 </script>
 <script type="module">
