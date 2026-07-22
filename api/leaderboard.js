@@ -8,7 +8,16 @@ const META_KEY = `${KEY}:meta`;
 const AIR_KEY = 'dr:lb:air';
 const AIR_META_KEY = `${AIR_KEY}:meta`;
 const CAP = 100;   // keep the top this many
-const SHOW = 25;   // return this many for display
+const SHOW = 25;   // default page size (home mini-board, post-run refresh)
+
+// The leaderboard screen asks for a deeper slice (75). Clamped to CAP because
+// that is all the sorted set retains, and floored at 1 so a junk ?limit= can
+// never turn into a negative ZRANGE stop index (which would select the wrong rows).
+function showCount(req) {
+  const raw = parseInt((req.query && req.query.limit) || '', 10);
+  if (!Number.isFinite(raw)) return SHOW;
+  return Math.max(1, Math.min(CAP, raw));
+}
 
 async function redis(commands) {
   const r = await fetch(`${URL}/pipeline`, {
@@ -82,9 +91,10 @@ module.exports = async (req, res) => {
       const k = isAir ? AIR_KEY : KEY;
       const mk = isAir ? AIR_META_KEY : META_KEY;
       const me = String((req.query && req.query.me) || '').trim().slice(0, 14).toLowerCase();
+      const show = showCount(req);
       const cmds = [
         ['ZCARD', k],
-        ['ZRANGE', k, '0', String(SHOW - 1), 'REV', 'WITHSCORES'],
+        ['ZRANGE', k, '0', String(show - 1), 'REV', 'WITHSCORES'],
       ];
       if (me) { cmds.push(['ZREVRANK', k, me], ['ZSCORE', k, me]); }
       const r = await redis(cmds);

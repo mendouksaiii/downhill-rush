@@ -849,6 +849,113 @@
   @media (max-width:780px){
     #showcase { position:absolute; inset:0; height:auto; margin:0; }
   }
+
+  /* ================= SUB-SCREEN LAYOUT ================= */
+  /* the screens are full-page views, not the old narrow sidebar panels */
+  .scr:not([data-scr="home"]) { padding:78px clamp(16px,4vw,54px) 48px; }
+  .scr:not([data-scr="home"]) > * { width:min(1320px,100%); margin-left:auto; margin-right:auto; }
+  .scrHead { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:18px; }
+  .scrHead h2 { font:900 clamp(26px,4.4vw,44px)'Orbitron',sans-serif; letter-spacing:.1em; color:var(--rr-white); }
+  .scrMeta { margin-left:auto; font:700 10px 'Orbitron',sans-serif; letter-spacing:.22em; color:var(--rr-ghost);
+    display:flex; align-items:center; gap:8px; }
+  .scrMeta b { color:var(--rr-white); }
+  .scrIntro { max-width:70ch; margin-bottom:22px; color:#c3bce4; font-size:15px; line-height:1.5; }
+  .scrSub { margin:26px 0 12px; font:800 10px 'Orbitron',sans-serif; letter-spacing:.28em; color:var(--rr-red); }
+  .scrSub:first-of-type { margin-top:8px; }
+  .scrFoot { margin-top:20px; max-width:78ch; color:#8e86bb; font-size:13px; line-height:1.5; }
+  .scrCta { margin-top:26px; display:flex; gap:12px; flex-wrap:wrap; }
+  .twoCol { display:grid; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); gap:clamp(14px,2.2vw,28px);
+    align-items:start; }
+
+  /* ---- your standing strip ---- */
+  .youStrip { display:grid; grid-template-columns:minmax(190px,1.3fr) repeat(4,minmax(0,1fr));
+    gap:1px; background:rgba(255,48,76,.22); border:1px solid rgba(255,48,76,.3);
+    border-left:3px solid var(--rr-red); width:min(1320px,100%); }
+  .youStrip > div { background:rgba(10,7,20,.9); padding:14px 18px; }
+  .youStrip span { display:block; font:700 8px 'Orbitron',sans-serif; letter-spacing:.24em; color:var(--rr-ghost); }
+  .youStrip b { display:block; margin-top:6px; font:900 clamp(16px,1.7vw,21px)'Orbitron',sans-serif;
+    color:var(--rr-white); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .ysMain b { color:var(--rr-red); text-shadow:0 0 16px rgba(255,48,76,.45); }
+  .ysMain i { display:block; margin-top:4px; font-style:normal; font:700 10px 'Orbitron',sans-serif;
+    letter-spacing:.18em; color:var(--rr-ghost); }
+
+  /* ---- the two board columns ---- */
+  .boardGrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(360px,1fr));
+    gap:clamp(14px,2.2vw,26px); margin-top:20px; align-items:start; }
+  .boardCol { background:rgba(9,7,18,.72); border:1px solid rgba(244,246,255,.1); }
+  .bcHead { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+    padding:14px 18px; border-bottom:1px solid rgba(255,48,76,.24); }
+  .bcHead h3 { font:800 13px 'Orbitron',sans-serif; letter-spacing:.2em; color:var(--rr-red); }
+  .bcHead span { margin-left:auto; font:700 8px 'Orbitron',sans-serif; letter-spacing:.2em; color:var(--rr-ghost); }
+  /* the deep list scrolls inside its own column so the page never grows unbounded */
+  .lbList.lbFull { max-height:min(62vh,660px); overflow-y:auto; padding:6px 12px 10px; }
+  .lbList.lbFull li { grid-template-columns:38px 1fr auto; padding:7px 6px; font-size:13.5px; }
+  .lbList.lbFull li .r { font:700 12px 'Orbitron',sans-serif; }
+  .lbList.lbFull li.p1 .r::after,
+  .lbList.lbFull li.p2 .r::after,
+  .lbList.lbFull li.p3 .r::after { content:''; }
+
+  /* ---- generic info / mode cards ---- */
+  .infoGrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; margin-top:22px; }
+  .infoCard { padding:16px 18px; background:rgba(9,7,18,.72); border:1px solid rgba(244,246,255,.1);
+    border-top:2px solid rgba(255,48,76,.5); }
+  .infoCard.tight { margin-top:14px; }
+  .infoCard b { display:block; font:800 10px 'Orbitron',sans-serif; letter-spacing:.2em; color:var(--rr-white); }
+  .infoCard span { display:block; margin-top:7px; color:#a9a2d0; font-size:13.5px; line-height:1.45; }
+  .modeCard { padding:20px 22px; background:rgba(9,7,18,.72); border:1px solid rgba(244,246,255,.1);
+    border-left:3px solid var(--rr-red); }
+  .modeCard.alt { border-left-color:#00e5ff; }
+  .modeCard b { display:block; font:900 20px 'Orbitron',sans-serif; letter-spacing:.14em; color:var(--rr-white); }
+  .modeCard span { display:block; margin-top:8px; color:#a9a2d0; font-size:13.5px; line-height:1.5; }
+
+  /* contracts mirrored from the home rail get room to breathe here */
+  #contractsMirror .cListView { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:14px; list-style:none; }
+  #contractsMirror .cListView li { padding:16px 18px; background:rgba(9,7,18,.72);
+    border:1px solid rgba(244,246,255,.1); border-left:3px solid var(--rr-red); }
+
+  /* settings rows stay readable at full width */
+  .scr[data-scr="settings"] .setList { display:grid; gap:1px; background:rgba(244,246,255,.09);
+    border:1px solid rgba(244,246,255,.1); }
+  .scr[data-scr="settings"] .setRow { background:rgba(9,7,18,.86); padding:16px 18px; }
+
+  @media (max-width:780px){
+    .scr:not([data-scr="home"]) { padding:74px 14px 40px; }
+    .scrHead h2 { font-size:26px; }
+    .scrMeta { margin-left:0; width:100%; }
+    /* 1 wide cell + 2x2 stats — otherwise the 5th cell leaves a dead gap */
+    .youStrip { grid-template-columns:1fr 1fr; }
+    .ysMain { grid-column:1 / -1; }
+    .lbList.lbFull { max-height:none; }
+  }
+
+  /* ---- alignment: the generic `> *` centring rule must not centre prose ----
+     .scr > * gets auto side margins to hold the 1320px column, which centres any
+     child that is narrower than that. Prose and the core-loop strip should stay
+     flush with the page gutter instead. */
+  .scr:not([data-scr="home"]) > .scrIntro,
+  .scr:not([data-scr="home"]) > .scrFoot { margin-left:0; margin-right:auto; }
+  .scr:not([data-scr="home"]) > #mechanicStrip { width:min(1320px,100%); margin:0 auto; }
+
+  /* #profileBtn carries `width:100%` at ID specificity for the home rail;
+     inside settings it is a normal row button. */
+  .scr[data-scr="settings"] #profileBtn { width:auto; margin-top:0; text-align:center;
+    border-radius:0; padding:12px 22px; }
+
+  /* ---- contracts mirrored out of the home rail ----
+     the source styles are scoped `#cList li .cTxt`, so the copy inherits none of
+     them; restate them for the mirror at the screen's larger scale. */
+  #contractsMirror .cListView li { position:relative; overflow:hidden; padding:18px 20px 20px; }
+  #contractsMirror .cListView li .cTxt { display:block; color:var(--rr-white); font-size:15px;
+    letter-spacing:1px; line-height:1.3; }
+  #contractsMirror .cListView li .cProg { display:block; margin-top:10px;
+    font:700 13px 'JetBrains Mono',monospace; letter-spacing:1px; color:var(--rr-cyan); }
+  #contractsMirror .cListView li .cBar { position:absolute; left:0; bottom:0; height:3px;
+    background:var(--rr-cyan); }
+  #contractsMirror .cListView li.cDone { border-left-color:var(--rr-red); }
+  #contractsMirror .cListView li.cDone .cTxt { color:var(--rr-ghost); text-decoration:line-through; }
+  #contractsMirror .cListView li.cDone .cProg { color:var(--rr-red); }
+  #contractsMirror .cListView li.cDone .cBar { background:var(--rr-red); width:100%!important; }
 </style>
 </head>
 <body>
@@ -1038,55 +1145,137 @@ setTimeout(()=>{const b=document.getElementById('boot');
 
   <!-- ============ SCREEN: LEADERBOARDS ============ -->
   <div class="scr" data-scr="board">
-    <div class="scrHead"><button class="backBtn navBtn" data-go="home">&laquo; BACK</button><h2>LEADERBOARDS</h2></div>
-    <aside id="lbPanel" aria-label="Leaderboards">
-      <div class="lbHead" id="lbTitle">LEADERBOARDS &middot; LIVE<span id="lbLive"></span></div>
-      <div class="lbSubHead">TOP RIDERS</div>
-      <ol id="lbListTime" class="lbList"><li class="lbNote">loading...</li></ol>
-      <div class="lbSubHead" style="margin-top:14px; border-top:1px solid rgba(255,255,255,.08); padding-top:10px;">MOST AIRTIME</div>
-      <ol id="lbListAir" class="lbList"><li class="lbNote">loading...</li></ol>
-      <ol id="lbList" hidden></ol>
-    </aside>
+    <div class="scrHead"><button class="backBtn navBtn" data-go="home">&laquo; BACK</button><h2>LEADERBOARDS</h2>
+      <div class="scrMeta"><span id="lbLive"></span><b id="lbCount">--</b> RIDERS &middot; SEASON 01</div>
+    </div>
+    <div class="youStrip" aria-label="Your standing">
+      <div class="ysMain"><span>YOUR STANDING</span><b id="ysRank">UNRANKED</b><i id="ysName">--</i></div>
+      <div class="ysStat"><span>POINTS</span><b id="ysPts">--</b></div>
+      <div class="ysStat"><span>BEST DISTANCE</span><b id="ysDist">--</b></div>
+      <div class="ysStat"><span>AIRTIME</span><b id="ysAir">--</b></div>
+      <div class="ysStat"><span>STYLE</span><b id="ysScore">--</b></div>
+    </div>
+    <div class="boardGrid">
+      <section class="boardCol">
+        <header class="bcHead"><h3 id="lbTitle">TOP RIDERS</h3><span>BY POINTS &middot; TOP 75</span></header>
+        <ol id="lbListTime" class="lbList lbFull"><li class="lbNote">loading...</li></ol>
+      </section>
+      <section class="boardCol">
+        <header class="bcHead"><h3>MOST AIRTIME</h3><span>TOTAL HANG TIME &middot; TOP 75</span></header>
+        <ol id="lbListAir" class="lbList lbFull"><li class="lbNote">loading...</li></ol>
+      </section>
+    </div>
+    <p class="scrFoot">Points = distance + airtime &times;15 + style &divide;5. Distance carries the most weight, so
+      a long clean run outranks a short flashy one. Only your best run counts.</p>
+    <ol id="lbList" hidden></ol>
   </div>
 
   <!-- ============ SCREEN: CONTRACTS ============ -->
   <div class="scr" data-scr="contracts">
-    <div class="scrHead"><button class="backBtn navBtn" data-go="home">&laquo; BACK</button><h2>DESCENT CONTRACTS</h2></div>
-    <div class="setList"><div class="setRow"><div><b>TODAY'S OBJECTIVES</b><span>Clear all three for a bonus set. Progress carries across runs.</span></div></div></div>
+    <div class="scrHead"><button class="backBtn navBtn" data-go="home">&laquo; BACK</button><h2>DESCENT CONTRACTS</h2>
+      <div class="scrMeta">RESETS DAILY &middot; <b id="contractDay">DAY --</b></div>
+    </div>
+    <div class="scrIntro">Three objectives every day. Progress carries across runs, so chip away at them
+      while you ride &mdash; clear all three for a bonus set.</div>
     <div id="contractsMirror"></div>
+    <div class="infoGrid">
+      <div class="infoCard"><b>HOW THEY SCORE</b><span>Contracts pay coins, not points. Your leaderboard
+        standing only moves when you beat your own best run.</span></div>
+      <div class="infoCard"><b>THEY STACK</b><span>Objectives track in the background on every descent.
+        You never have to pick one &mdash; just ride.</span></div>
+      <div class="infoCard"><b>SPEND IT</b><span>Coins buy riders and bikes in the market. Skins are
+        cosmetic and never change how the bike handles.</span></div>
+    </div>
+    <div class="scrCta"><button class="ghostBtn" data-go="home">BACK TO MENU</button></div>
   </div>
 
   <!-- ============ SCREEN: HOW TO PLAY ============ -->
   <div class="scr" data-scr="howto">
-    <div class="scrHead"><button class="backBtn navBtn" data-go="home">&laquo; BACK</button><h2>HOW TO PLAY</h2></div>
+    <div class="scrHead"><button class="backBtn navBtn" data-go="home">&laquo; BACK</button><h2>HOW TO PLAY</h2>
+      <div class="scrMeta">ENDLESS DOWNHILL &middot; SURVIVE THE EYE</div>
+    </div>
+    <div class="scrIntro">You are always moving downhill. Speed builds on its own when you ride clean &mdash;
+      your job is to stay alive long enough to let it.</div>
+
+    <h4 class="scrSub">THE CORE LOOP</h4>
     <div id="mechanicStrip" aria-label="Core loop">
       <div class="mItem"><b>01</b><strong>Clean line</strong><span>Stay clear and let momentum climb.</span></div>
       <div class="mItem"><b>02</b><strong>Gas risk</strong><span>Spend stored gas for a controlled surge.</span></div>
       <div class="mItem"><b>03</b><strong>Style feed</strong><span>Perfect landings make the eye wake up.</span></div>
       <div class="mItem"><b>04</b><strong>Overseer</strong><span>Traps and attacks answer your run.</span></div>
     </div>
-    <div class="ctlGrid">
-      <div class="ctlRow"><span class="keys"><kbd>&larr;</kbd><kbd>&rarr;</kbd></span><span>steer</span></div>
-      <div class="ctlRow"><span class="keys"><kbd>&uarr;</kbd></span><span>accelerate / spend gas</span></div>
-      <div class="ctlRow"><span class="keys"><kbd>SPACE</kbd></span><span>jump / pedal</span></div>
-      <div class="ctlRow"><span class="keys"><kbd>A</kbd></span><span>land the ring</span></div>
-      <div class="ctlRow"><span class="keys"><kbd>W</kbd><kbd>S</kbd></span><span>air flips</span></div>
-      <div class="ctlRow"><span class="keys"><kbd>TAP</kbd></span><span>mobile: drag to steer &middot; JUMP button</span></div>
+
+    <div class="twoCol">
+      <section>
+        <h4 class="scrSub">KEYBOARD</h4>
+        <div class="ctlGrid">
+          <div class="ctlRow"><span class="keys"><kbd>&larr;</kbd><kbd>&rarr;</kbd></span><span>steer</span></div>
+          <div class="ctlRow"><span class="keys"><kbd>&uarr;</kbd></span><span>accelerate / spend gas</span></div>
+          <div class="ctlRow"><span class="keys"><kbd>SPACE</kbd></span><span>jump / pedal</span></div>
+          <div class="ctlRow"><span class="keys"><kbd>A</kbd></span><span>land the ring</span></div>
+          <div class="ctlRow"><span class="keys"><kbd>W</kbd><kbd>S</kbd></span><span>air flips</span></div>
+          <div class="ctlRow"><span class="keys"><kbd>ESC</kbd></span><span>pause</span></div>
+        </div>
+      </section>
+      <section>
+        <h4 class="scrSub">TOUCH</h4>
+        <div class="ctlGrid">
+          <div class="ctlRow"><span class="keys"><kbd>DRAG</kbd></span><span>steer left / right</span></div>
+          <div class="ctlRow"><span class="keys"><kbd>JUMP</kbd></span><span>thumb button, bottom right</span></div>
+          <div class="ctlRow"><span class="keys"><kbd>TAP</kbd></span><span>time the landing ring</span></div>
+          <div class="ctlRow"><span class="keys"><kbd>HOLD</kbd></span><span>accelerate / spend gas</span></div>
+        </div>
+        <div class="infoCard tight"><b>LANDING IS THE SKILL</b><span>A ring closes as you fall. Hit it at the
+          right moment for a perfect landing, keep your speed and grow the combo. Miss and you stumble.</span></div>
+      </section>
     </div>
-    <button id="tutorialBtn" class="ghostBtn wide">OPEN FULL TUTORIAL</button>
+
+    <h4 class="scrSub">THE TWO MODES</h4>
+    <div class="twoCol">
+      <div class="modeCard"><b>DESCENT</b><span>Endless procedural mountain. Build speed, survive, and post
+        the longest clean run you can. This is the mode that feeds the leaderboard.</span></div>
+      <div class="modeCard alt"><b>ASCENT</b><span>Authored climbs with checkpoints and a summit. Fixed maps,
+        so it is about learning the route rather than reacting. Does not affect your rank.</span></div>
+    </div>
+
+    <div class="scrCta"><button id="tutorialBtn" class="ghostBtn wide">OPEN FULL TUTORIAL</button></div>
   </div>
 
   <!-- ============ SCREEN: SETTINGS ============ -->
   <div class="scr" data-scr="settings">
-    <div class="scrHead"><button class="backBtn navBtn" data-go="home">&laquo; BACK</button><h2>SETTINGS</h2></div>
-    <div class="setList">
-      <div class="setRow"><div><b>DAILY DESCENT</b><span>Everyone rides the same mountain today</span></div>
-        <button id="dailyBtn" class="ghostBtn" aria-pressed="false">OFF</button></div>
-      <div class="setRow"><div><b>SOUND</b><span>Music and effects</span></div>
-        <button id="soundBtn" class="ghostBtn" aria-pressed="true">ON</button></div>
-      <div class="setRow"><div><b>RIDER PROFILE</b><span>Coins, skins and stats</span></div>
-        <button id="profileBtn" class="ghostBtn">OPEN</button></div>
+    <div class="scrHead"><button class="backBtn navBtn" data-go="home">&laquo; BACK</button><h2>SETTINGS</h2>
+      <div class="scrMeta">RIDER &middot; <b id="setName">--</b></div>
     </div>
+    <div class="twoCol">
+      <section>
+        <h4 class="scrSub">GAMEPLAY</h4>
+        <div class="setList">
+          <div class="setRow"><div><b>DAILY DESCENT</b><span>Everyone rides the same mountain today</span></div>
+            <button id="dailyBtn" class="ghostBtn" aria-pressed="false">OFF</button></div>
+          <div class="setRow"><div><b>TUTORIAL</b><span>Replay the walkthrough on your next run</span></div>
+            <button id="resetTutBtn" class="ghostBtn">REPLAY</button></div>
+        </div>
+        <h4 class="scrSub">AUDIO</h4>
+        <div class="setList">
+          <div class="setRow"><div><b>SOUND</b><span>Music and effects</span></div>
+            <button id="soundBtn" class="ghostBtn" aria-pressed="true">ON</button></div>
+        </div>
+      </section>
+      <section>
+        <h4 class="scrSub">RIDER</h4>
+        <div class="setList">
+          <div class="setRow"><div><b>RIDER PROFILE</b><span>Coins, skins and career stats</span></div>
+            <button id="profileBtn" class="ghostBtn">OPEN</button></div>
+          <div class="setRow"><div><b>MARKET</b><span>Riders and bikes</span></div>
+            <button id="setMarketBtn" class="ghostBtn">OPEN</button></div>
+          <div class="setRow"><div><b>LEADERBOARDS</b><span>Where you stand this season</span></div>
+            <button class="ghostBtn" data-go="board">VIEW</button></div>
+        </div>
+        <div class="infoCard tight"><b>YOUR PROGRESS IS SAVED TO YOUR RIDER ID</b><span>Coins and skins follow
+          your rider name. Add an email on the home screen to keep them if you switch device.</span></div>
+      </section>
+    </div>
+    <div class="scrCta"><button class="ghostBtn" data-go="home">BACK TO MENU</button></div>
   </div>
 
   <footer id="homeFoot">
@@ -2769,6 +2958,7 @@ function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').t
 function fmtT(t){ return t>=60 ? Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0')
   : t.toFixed(1)+'s'; }
 let lbHasData=false;
+const LB_SHOW=75;   // the leaderboard screen shows the top 75 (API caps at 100)
 function refreshAccountGate(){
   const typed=sanitizeName(nameInput.value);
   const isReturning=!!playerName && typed.toLowerCase()===playerName.toLowerCase();
@@ -2895,8 +3085,8 @@ async function fetchLB(){
     const q=playerName?('&me='+encodeURIComponent(playerName)):'';
     const t=Date.now();
     const [rTime, rAir] = await Promise.all([
-      fetch(LB_API+'?board=time&t='+t+q,{cache:'no-store'}),
-      fetch(LB_API+'?board=air&t='+t+q,{cache:'no-store'})
+      fetch(LB_API+'?board=time&limit='+LB_SHOW+'&t='+t+q,{cache:'no-store'}),
+      fetch(LB_API+'?board=air&limit='+LB_SHOW+'&t='+t+q,{cache:'no-store'})
     ]);
     if(!rTime.ok || !rAir.ok) throw 0;
     const [dTime, dAir] = await Promise.all([rTime.json(), rAir.json()]);
@@ -2904,6 +3094,7 @@ async function fetchLB(){
     renderLB(dTime.top, dTime.me, 'time');
     renderLB(dAir.top, dAir.me, 'air');
     renderMiniBoard(dTime.top);
+    renderStanding(dTime.me, dAir.me, dTime.count);
     { const el=$('hudRiders'); if(el) el.textContent=(dTime.count||0).toLocaleString(); }
     lbHasData=true;
     renderProfile();
@@ -2993,6 +3184,9 @@ function showScreen(name){
   for(const sc of document.querySelectorAll('#title .scr')) sc.classList.toggle('on', sc.dataset.scr===name);
   const t=$('title'); if(t) t.scrollTop=0;
   if(name==='contracts') mirrorContracts();
+  if(name==='board') fetchLB();
+  // not sourced from the leaderboard, so it is right even when the API is down
+  if(name==='settings'){ const el=$('setName'); if(el) el.textContent=playerName||'--'; }
 }
 for(const b of document.querySelectorAll('#title [data-go]')){
   b.addEventListener('pointerdown',e=>e.stopPropagation());
@@ -3002,10 +3196,22 @@ for(const b of document.querySelectorAll('#title [data-go]')){
 function mirrorContracts(){
   const src=$('cList'), dst=$('contractsMirror');
   if(src&&dst) dst.innerHTML='<ul id="cListMirror" class="cListView">'+src.innerHTML+'</ul>';
+  // the day label comes from the contracts renderer, so it is correct offline too
+  const day=$('contractDay'), cd=$('cDay');
+  if(day&&cd&&cd.textContent) day.textContent=cd.textContent;
 }
 /* RIDE NOW + CUSTOMIZE shortcuts reuse the real handlers */
 $('rideNow').addEventListener('pointerdown',e=>e.stopPropagation());
 $('rideNow').addEventListener('click',e=>{ e.stopPropagation(); startRun(); });
+/* settings shortcuts */
+{ const mk=$('setMarketBtn');
+  if(mk){ mk.addEventListener('pointerdown',e=>e.stopPropagation());
+    mk.addEventListener('click',async e=>{ e.stopPropagation(); await Economy.flush(); location.href='market.html'; }); } }
+{ const rt=$('resetTutBtn');
+  if(rt){ rt.addEventListener('pointerdown',e=>e.stopPropagation());
+    rt.addEventListener('click',e=>{ e.stopPropagation();
+      try{ localStorage.removeItem(TUTORIAL_KEY); }catch(err){}
+      rt.textContent='WILL REPLAY'; setTimeout(()=>{ rt.textContent='REPLAY'; }, 1600); }); } }
 $('loMarket').addEventListener('pointerdown',e=>e.stopPropagation());
 $('loMarket').addEventListener('click',async e=>{ e.stopPropagation(); await Economy.flush(); location.href='market.html'; });
 /* sound toggle mirrors the HUD mute button */
@@ -3170,6 +3376,22 @@ let showcaseBuild=null;
 })();
 
 /* keep the mini board in sync whenever the full board renders */
+/* the leaderboard screen's "your standing" strip. airtime comes off the air
+   board because that zset is keyed on hang time, not points. */
+function renderStanding(me, airMe, count){
+  const set=(id,v)=>{ const el=$(id); if(el) el.textContent=v; };
+  set('lbCount', (count||0).toLocaleString());
+  set('ysRank', me&&me.rank ? '#'+me.rank : 'UNRANKED');
+  set('ysName', playerName || 'no rider id');
+  set('ysPts',  me&&me.pts!=null ? (+me.pts).toLocaleString() : '--');
+  set('ysDist', me&&me.dist ? Math.floor(me.dist)+' m' : '--');
+  set('ysAir',  airMe&&airMe.hang ? fmtT(airMe.hang) : (me&&me.hang ? fmtT(me.hang) : '--'));
+  set('ysScore',me&&me.score ? Math.floor(me.score).toLocaleString() : '--');
+  set('setName', playerName || '--');
+  // mirror the day label the contracts renderer already computed
+  const day=$('contractDay'), src=$('cDay');
+  if(day&&src&&src.textContent) day.textContent=src.textContent;
+}
 function renderMiniBoard(top){
   const el=$('miniBoard'); if(!el) return;
   if(!top||!top.length){ el.innerHTML='<li class="lbNote">no runs yet</li>'; return; }
