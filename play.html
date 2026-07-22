@@ -818,15 +818,23 @@
     #sidePanels { display:none; }
   }
   @media (max-width: 780px){
-    #titleShell { position:static; display:block; padding:84px 14px 110px; height:auto; }
+    /* phones stack: hero + menu, then the garage as its own band, then the
+       loadout footer — nothing absolute, nothing overlapping */
+    #titleShell { position:static; display:block; padding:84px 14px 24px; height:auto; }
     [data-scr="home"] { overflow-y:auto; height:100%; }
-    #showcase { height:230px; margin-top:12px; }
     .hudStats .stat:not(.coins) { display:none; }
     .playerCard .pcBar { width:88px; }
-    #loadoutBar { flex-wrap:wrap; gap:8px; }
+    #loadoutBar { position:static; flex-wrap:wrap; gap:8px; margin-top:4px;
+      padding-bottom:calc(14px + env(safe-area-inset-bottom)); }
     .loActions { display:none; }
     .rideNow { width:100%; clip-path:none; }
     #titleTop { display:none; }
+  }
+  /* touch devices already get jump charges on the JUMP button — the tall
+     segmented gauge duplicates it and crowds a phone screen */
+  @media (pointer:coarse){
+    #jumpbar { display:none; }
+    #speedbar { left:8px; } #gasbar { left:18px; }
   }
 
   /* ================= HOME GARAGE BACKGROUND ================= */
@@ -847,7 +855,10 @@
   #titleShell { pointer-events:none; }
   #heroCopy, #sidePanels, .mainMenu, #signup { pointer-events:auto; }
   @media (max-width:780px){
-    #showcase { position:absolute; inset:0; height:auto; margin:0; }
+    /* on phones the garage gets its own in-flow band below the menu — as a
+       full-bleed background it hid the rider behind the buttons */
+    #showcase { position:static; inset:auto; height:min(46vh,380px); margin:16px 0 0;
+      border:1px solid rgba(255,48,76,.22); border-left:none; border-right:none; }
   }
 
   /* ================= SUB-SCREEN LAYOUT ================= */
@@ -4985,22 +4996,30 @@ function frame(){
     if(now>=slowmoUntil) showDeath();
   }
   const dt=now<hitstopUntil ? 0 : rawDt*timeScale;     // hitstop freeze
+  // The garage home screen fully covers the gameplay scene (opaque background),
+  // so while the menu is up the title-state attract sim + render are invisible
+  // work: chunk builds, particles, and a full scene draw per frame under an
+  // opaque overlay. Skip them — the garage has its own loop. Death/pause keep
+  // rendering because the world IS visible behind those overlays.
+  const menuUp = state==='title' && !titleEl.classList.contains('hidden');
   if(!paused){
     gameT+=dt;
-    if(dt>0){
+    if(dt>0 && !menuUp){
       if(state==='riding'||state==='title') update(dt);
       if(state==='crashed'||state==='dead') updatePieces(dt);
       updateParticles(dt);
     }
-    updateCamera(dt);
-    updateMood();
-    updateOverseerManifestation(dt);
-    updateOverseerAudio();
+    if(!menuUp){
+      updateCamera(dt);
+      updateMood();
+      updateOverseerManifestation(dt);
+      updateOverseerAudio();
+      drawFX();
+    }
     refreshHUD(dt);
-    drawFX();
     if(state==='dead') tickDeathScore(now);
   }
-  if(composer) composer.render(); else renderer.render(scene,camera);
+  if(!menuUp){ if(composer) composer.render(); else renderer.render(scene,camera); }
 }
 renderer.setAnimationLoop(frame);
 
