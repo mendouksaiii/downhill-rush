@@ -141,7 +141,10 @@
       radial-gradient(120% 85% at 50% -12%, rgba(255,36,60,.16), transparent 55%),
       radial-gradient(90% 60% at 50% 118%, rgba(0,229,255,.09), transparent 60%),
       radial-gradient(ellipse at 50% 60%, rgba(26,16,64,.30), rgba(8,5,22,.82)); }
-  .overlay.hidden { display:none; }
+  /* !important: overlays carry ID-level display rules (e.g. #title is a grid/block
+     layout for the main menu), and an ID selector outranks .overlay.hidden — which
+     silently pins the overlay open and makes the game unreachable. `hidden` must win. */
+  .overlay.hidden { display:none !important; }
   #title { overflow-y:auto; justify-content:space-between; padding:0; gap:10px; }
   /* entrance choreography: heavy staggered fade-up (replays each time the title shows) */
   #homeTop, #menuCol>*, #sideCol, #homeFoot { animation:riseIn .7s cubic-bezier(.32,.72,0,1) both; }
@@ -1233,6 +1236,12 @@ const POWER_TIERS = {
   gold:{label:'GOLD', weight:0.08, speedFactor:1.55, shield:1.6, steady:6.0, scale:1.18, tone:920}
 };
 const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+// Touch-primary but NOT UA-mobile: iPadOS reports a Macintosh UA, and Android
+// tablets vary. `coarse` means touch is the primary pointer, so a touchscreen
+// laptop with a mouse stays `fine` and is unaffected. Used for touch CONTROLS
+// only — quality gating still keys off isMobile so desktop GPUs keep full fx.
+const isTouchPrimary = isMobile
+  || (navigator.maxTouchPoints > 0 && matchMedia('(pointer:coarse)').matches);
 
 /* ============================== RNG / NOISE ============================ */
 function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0;
@@ -4684,7 +4693,7 @@ function refreshHUD(dt){
   const jumpProgress=THREE.MathUtils.clamp(((game.jumpCharges||0)+(game.jumpChargeT||0)/JUMP_RECHARGE_T)/JUMP_CHARGE_MAX,0,1);
   if(jumpFill) jumpFill.style.height=(jumpProgress*100)+'%';
   if(jumpCharges) jumpCharges.textContent=Math.max(0,Math.floor(game.jumpCharges||0));
-  { const jbOn=isMobile && state==='riding';
+  { const jbOn=isTouchPrimary && state==='riding';
     if(jbOn!==jumpBtnShown){ jumpBtnShown=jbOn; jumpBtn.classList.toggle('on',jbOn); }
     if(jbOn){
       jumpBtnN.textContent=Math.max(0,Math.floor(game.jumpCharges||0));
