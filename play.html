@@ -2977,7 +2977,10 @@ function refreshAccountGate(){
   // returning on a NEW device: the account's saved email is the key back in
   const emailTyped=(emailInput.value||'').trim().toLowerCase();
   const emailMatches=accountStatus==='claimed-email' && !!accountEmailOnFile && emailTyped===accountEmailOnFile;
-  const emailOk=isReturning || validEmail(emailInput.value) || accountStatus==='returning-open';
+  // email is OPTIONAL: an empty field must pass. Only a typed-but-malformed
+  // email blocks. (Requiring validEmail on '' locked every new player out --
+  // fresh devices have no saved identity, so nobody could ever start.)
+  const emailOk=isReturning || !emailTyped || validEmail(emailInput.value) || accountStatus==='returning-open';
   const nameAllowed=isReturning || accountStatus==='available' || accountStatus==='unknown-offline'
     || accountStatus==='returning-open' || emailMatches;
   const canStart=nameValid && emailOk && nameAllowed;
@@ -3015,8 +3018,9 @@ function refreshAccountGate(){
   } else if(accountStatus==='taken'){
     accountHint.textContent='that username already has leaderboard history';
     accountHint.classList.add('bad');
-  } else if(!validEmail(emailInput.value)){
-    accountHint.textContent='new riders need an email plus an unused name';
+  } else if(emailTyped && !validEmail(emailInput.value)){
+    accountHint.textContent='that email does not look right - fix it or leave it empty';
+    accountHint.classList.add('bad');
   } else if(accountStatus==='checking'){
     accountHint.textContent='checking username...';
   } else if(accountStatus==='unknown-offline'){
@@ -3038,7 +3042,9 @@ async function checkUsernameAvailability(){
     // durable account first: a returning player on a NEW device signs back in
     // with the email their account was saved with (email = the weak key; there
     // are no passwords, same trust model as the rest of the game)
-    const ar=await fetch('/api/account?name='+encodeURIComponent(name)+'&t='+Date.now(),{cache:'no-store'});
+    // timeout: a stalled cold start must not pin the gate at 'checking' forever
+    // (a thrown timeout lands in the catch -> 'unknown-offline', which allows play)
+    const ar=await fetch('/api/account?name='+encodeURIComponent(name)+'&t='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(6000)});
     if(!ar.ok) throw 0;
     const acct=(await ar.json()).account;
     if(seq!==accountCheckSeq) return;
@@ -3047,7 +3053,7 @@ async function checkUsernameAvailability(){
       accountStatus=accountEmailOnFile?'claimed-email':'returning-open';
       refreshAccountGate(); return;
     }
-    const r=await fetch(LB_API+'?me='+encodeURIComponent(name)+'&t='+Date.now(),{cache:'no-store'});
+    const r=await fetch(LB_API+'?me='+encodeURIComponent(name)+'&t='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(6000)});
     if(!r.ok) throw 0;
     const d=await r.json();
     if(seq!==accountCheckSeq) return;
