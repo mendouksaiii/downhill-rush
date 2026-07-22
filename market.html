@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#1a1040">
 <title>REDLINE RIDER — Marketplace</title>
 <link rel="icon" href="media/redline-rider-rr.png">
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { width:100%; height:100%; overflow:hidden; background:#1a1040;
@@ -70,6 +70,56 @@
     padding:0 0 calc(8px + env(safe-area-inset-bottom)); }
   #flash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:50;
     transition:opacity .4s ease-out; }
+
+  /* ================= MARKETPLACE UI REFRESH ================= */
+  html,body { background:#08060f; }
+  #top { padding:calc(12px + env(safe-area-inset-top)) 18px 8px; }
+  #back { font:700 10px 'Orbitron',sans-serif; letter-spacing:.18em; color:#cfc8ee;
+    background:rgba(12,8,22,.82); border:1px solid rgba(255,48,76,.34); border-radius:0;
+    padding:10px 16px; transition:border-color .2s, background .2s; }
+  #back:hover { border-color:#ff304c; background:rgba(40,10,22,.9); }
+  #ttl { display:flex; align-items:center; font:900 clamp(15px,2.6vw,21px) 'Orbitron',sans-serif;
+    letter-spacing:.22em; background:none; -webkit-text-fill-color:currentColor; color:#f4f6ff; }
+  #coins { font:800 15px 'Orbitron',sans-serif; letter-spacing:.06em; color:#ffd76e;
+    background:rgba(12,8,22,.85); border:1px solid rgba(255,215,110,.4); border-radius:0;
+    padding:9px 16px; }
+  #tabs button { font:800 11px 'Orbitron',sans-serif; letter-spacing:.2em; border-radius:0;
+    color:#9a92c9; background:rgba(12,8,22,.8); border:1px solid rgba(244,246,255,.12);
+    padding:9px 24px; transition:.2s; }
+  #tabs button.on { color:#fff; background:linear-gradient(135deg,#ff304c,#9b0e25);
+    border-color:#ff304c; box-shadow:0 0 20px rgba(255,48,76,.45); }
+
+  /* info block -> proper spec card */
+  #info { padding:0 22px 8px; max-width:min(430px,86vw); }
+  #iname { font:900 clamp(24px,5vw,38px) 'Orbitron',sans-serif; letter-spacing:.04em; color:#fff;
+    text-shadow:0 2px 18px rgba(0,0,0,.8); }
+  #itier { display:inline-block; margin-top:7px; padding:4px 12px; font:800 9px 'Orbitron',sans-serif;
+    letter-spacing:.24em; border:1px solid currentColor; }
+  #iflavor { margin-top:9px; font-size:14.5px; font-style:italic; color:#c3bce4;
+    text-shadow:0 2px 10px rgba(0,0,0,.75); }
+  #actionWrap { padding:12px 22px 6px; max-width:min(430px,86vw); }
+  #action { width:100%; border-radius:0; padding:15px 0; font:900 15px 'Orbitron',sans-serif;
+    letter-spacing:.2em; color:#fff; background:linear-gradient(135deg,#ff304c,#9b0e25);
+    box-shadow:0 0 26px rgba(255,48,76,.45); transition:transform .18s, box-shadow .18s; }
+  #action:hover { transform:translateY(-2px); box-shadow:0 0 40px rgba(255,48,76,.7); }
+  #action.own { color:#04222a; background:linear-gradient(135deg,#ffd76e,#ffb52e); box-shadow:0 0 26px rgba(255,215,110,.45); }
+  #action.equipped { color:#39f7c1; background:rgba(10,7,20,.9); border:1px solid #39f7c1; box-shadow:none; }
+  #action.poor { color:#ff5d7a; background:rgba(40,8,18,.9); border:1px solid #ff2e56; box-shadow:none; }
+
+  /* rail cards: sharper, clearer rarity + state */
+  #rail { padding:12px 40vw 16px; gap:9px; }
+  .card { flex:0 0 124px; border-radius:0; padding:10px 11px 9px;
+    background:linear-gradient(180deg, rgba(16,10,28,.9), rgba(9,6,18,.92));
+    border:1px solid rgba(244,246,255,.13);
+    transition:transform .18s cubic-bezier(.32,.72,0,1), border-color .18s, box-shadow .18s; }
+  .card:hover { transform:translateY(-4px); border-color:rgba(255,48,76,.5); }
+  .card.sel { border-color:#ff304c; box-shadow:0 0 20px rgba(255,48,76,.4); transform:translateY(-7px); }
+  .card .stripe { height:3px; border-radius:0; margin-bottom:8px; }
+  .card .cn { font:800 11px 'Orbitron',sans-serif; letter-spacing:.06em; }
+  .card .cp { font:700 11px 'Orbitron',sans-serif; letter-spacing:.04em; margin-top:4px; }
+  .card .eq { border-radius:0; font:800 8px 'Orbitron',sans-serif; letter-spacing:.1em;
+    top:-6px; right:-3px; padding:3px 7px; }
+  #note { font:700 8px 'Orbitron',sans-serif; letter-spacing:.24em; color:#5c5580; }
 </style>
 </head>
 <body>
@@ -117,7 +167,7 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.15;
 
 const scene=new THREE.Scene();
-scene.fog=new THREE.Fog(0x3a2158, 20, 80);
+scene.fog=new THREE.Fog(0x08060f, 11, 40);
 const camera=new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 400);
 camera.position.set(1.5, 2.1, -4.1);
 camera.lookAt(0, 1.5, 0);
@@ -144,21 +194,23 @@ const skyMat=new THREE.ShaderMaterial({ side:THREE.BackSide, depthWrite:false, f
     gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
   fragmentShader:`varying vec3 vDir; void main(){
     float h=normalize(vDir).y;
-    vec3 col=mix(vec3(1.0,0.47,0.278),vec3(1.0,0.18,0.533),smoothstep(0.0,0.16,h));
-    col=mix(col,vec3(0.102,0.063,0.251),smoothstep(0.08,0.6,h));
-    if(h<0.0) col=mix(col,vec3(0.16,0.1,0.26),smoothstep(0.0,-0.3,h));
+    vec3 col=mix(vec3(0.36,0.055,0.09),vec3(0.11,0.03,0.07),smoothstep(0.0,0.30,h));
+    col=mix(col,vec3(0.022,0.016,0.045),smoothstep(0.05,0.55,h));
+    if(h<0.0) col=mix(col,vec3(0.03,0.02,0.05),smoothstep(0.0,-0.3,h));
     gl_FragColor=vec4(col,1.0); }`});
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(200,24,12), skyMat));
 const sun=new THREE.Mesh(new THREE.CircleGeometry(18,26),
-  new THREE.MeshBasicMaterial({color:0xffd76e, fog:false}));
+  new THREE.MeshBasicMaterial({color:0x8f1220, fog:false}));
 sun.position.set(-14,11,90); scene.add(sun);
 
-scene.add(new THREE.HemisphereLight(0x5a4d9e, 0x1a1040, 0.8));
-const key=new THREE.DirectionalLight(0xffc9a0, 1.8); key.position.set(-5,10,-12); scene.add(key);
-const rim=new THREE.DirectionalLight(0xff2e88, 1.0); rim.position.set(5,5,14); scene.add(rim);
+scene.add(new THREE.HemisphereLight(0x8899dd, 0x090610, .55));
+const key=new THREE.DirectionalLight(0xfff2e8, 3.1); key.position.set(-5,10,-12); scene.add(key);
+const fill=new THREE.DirectionalLight(0xbfd0ff, 1.15); fill.position.set(7,5,-6); scene.add(fill);
+const rim=new THREE.DirectionalLight(0xff304c, 3.4); rim.position.set(5,4.5,14); scene.add(rim);
+const back=new THREE.DirectionalLight(0xffffff, 1.5); back.position.set(0,7,-14); scene.add(back);
 
 const floor=new THREE.Mesh(new THREE.CircleGeometry(90,48),
-  new THREE.MeshStandardMaterial({color:0x2c2454, roughness:.95}));
+  new THREE.MeshStandardMaterial({color:0x0d0916, roughness:.86, metalness:.18}));
 floor.rotation.x=-Math.PI/2; scene.add(floor);
 
 // pedestal + rings
