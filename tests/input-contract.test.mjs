@@ -375,7 +375,10 @@ test('returning local players can ride without adding email', () => {
   const refresh = functionBody('refreshAccountGate');
 
   assert.match(refresh, /const isReturning=!!playerName/);
-  assert.match(refresh, /isReturning \|\| validEmail\(emailInput\.value\)/);
+  // empty email must pass (it is optional); typed-but-malformed still blocks.
+  // The old `isReturning || validEmail(...)` form locked out every new player:
+  // validEmail('') is false and fresh devices have no saved identity.
+  assert.match(refresh, /isReturning \|\| !emailTyped \|\| validEmail\(emailInput\.value\)/);
   assert.match(refresh, /emailHint\.textContent=isReturning/);
   assert.match(html, /profileBtn\.hidden=!playerName/);
   assert.match(refresh, /profileBtn\.classList\.toggle\('hidden',!playerName\)/);
