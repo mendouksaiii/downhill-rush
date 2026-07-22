@@ -6,7 +6,6 @@
 <meta name="theme-color" content="#1a1040">
 <title>REDLINE RIDER — Marketplace</title>
 <link rel="icon" href="media/redline-rider-rr.png">
-<link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -94,13 +93,13 @@
   </div>
   <div id="actionWrap"><button id="action">EQUIP</button></div>
   <div id="rail"></div>
-  <div id="note">COINS EARNED BY RIDING · PROGRESS SAVED ON THIS DEVICE</div>
+  <div id="note">COINS EARNED BY RIDING · PROGRESS SAVED TO YOUR RIDER ID</div>
 </div>
 
 <script type="importmap">
 { "imports": {
-  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  "three": "/vendor/three/three.module.js",
+  "three/addons/": "/vendor/three/addons/"
 } }
 </script>
 <script type="module">

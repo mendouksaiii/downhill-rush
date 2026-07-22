@@ -15,22 +15,24 @@
 //   LIVE      (network only)  — /api/*.
 //
 // Bump CACHE on any change to this policy or the precache list.
-const CACHE = 'redline-v4';
+const CACHE = 'redline-v5';
 const PRECACHE = [
   './',
-  './index.html',
   './play.html',
   './market.html',
+  './skins.html',
   './economy.js',
   './skins-data.js',
   './manifest.webmanifest',
   './overseer-tuning.json',
   './overseer-core.mjs',
   './maps/ascent-01-verdant.json',
+  './media/redline-rider-rr.png',
   './media/redline-rider-logo-1x1.png',
   './media/redline-rider-banner-1500x500.png',
   './vendor/three/three.module.js',
   './vendor/three/addons/utils/BufferGeometryUtils.js',
+  './vendor/three/addons/environments/RoomEnvironment.js',
   './vendor/three/addons/postprocessing/EffectComposer.js',
   './vendor/three/addons/postprocessing/RenderPass.js',
   './vendor/three/addons/postprocessing/UnrealBloomPass.js',
