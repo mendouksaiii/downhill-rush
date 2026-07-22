@@ -825,6 +825,27 @@
     .rideNow { width:100%; clip-path:none; }
     #titleTop { display:none; }
   }
+
+  /* ================= HOME GARAGE BACKGROUND ================= */
+  /* the garage IS the background now - hide the live gameplay behind the menu */
+  #title::before { background:#06040b !important; filter:none !important; transform:none !important; }
+  #title::after { opacity:.05; }
+  #showcase { position:absolute; inset:0; z-index:0; min-width:0; pointer-events:none; }
+  /* showcase left the grid flow -> keep the menu and panels in their columns
+     so the centre stays clear for the garage */
+  #heroCopy { grid-column:1; }
+  #sidePanels { grid-column:3; }
+  #showcaseCv { width:100%; height:100%; display:block; }
+  #showcaseFloor { display:none; }
+  /* menu + panels ride above the garage */
+  #heroCopy, #sidePanels { position:relative; z-index:2; }
+  #hudTop, #loadoutBar { z-index:6; }
+  /* middle grid column is now just breathing room over the garage */
+  #titleShell { pointer-events:none; }
+  #heroCopy, #sidePanels, .mainMenu, #signup { pointer-events:auto; }
+  @media (max-width:780px){
+    #showcase { position:absolute; inset:0; height:auto; margin:0; }
+  }
 </style>
 </head>
 <body>
@@ -2717,7 +2738,8 @@ async function checkBuild(){
   }catch(err){}
 }
 function maybeApplyUpdate(){
-  if(!buildUpdatePending || state!=='title') return;
+  let st=null; try{ st=state; }catch(err){ return; }   // module still initialising
+  if(!buildUpdatePending || st!=='title') return;
   // loop guard: at most one auto-reload per minute
   let last=0; try{ last=+sessionStorage.getItem('dr_build_reload')||0; }catch(err){}
   if(Date.now()-last<60000) return;
@@ -3007,50 +3029,132 @@ function refreshHome(){
   if(showcaseBuild) showcaseBuild(eq);
 }
 
-/* ---- centre showcase: the EQUIPPED rider + bike, slowly rotating ---- */
+/* ---- HOME GARAGE: equipped rider + bike on a rotating exhibition slab ---- */
 let showcaseBuild=null;
-(function initShowcase(){
+(function initGarage(){
   const cv=$('showcaseCv'); if(!cv) return;
   let rn;
-  try{ rn=new THREE.WebGLRenderer({canvas:cv, alpha:true, antialias:!isMobile}); }
-  catch(err){ return; }                       // no 2nd GL context available -> skip gracefully
+  try{ rn=new THREE.WebGLRenderer({canvas:cv, antialias:!isMobile, powerPreference:'high-performance'}); }
+  catch(err){ return; }
   rn.setPixelRatio(Math.min(devicePixelRatio, isMobile?1.5:2));
+  rn.shadowMap.enabled=!isMobile; rn.shadowMap.type=THREE.PCFSoftShadowMap;
+  rn.toneMapping=THREE.ACESFilmicToneMapping; rn.toneMappingExposure=1.12;
+
   const sc=new THREE.Scene();
-  const cam=new THREE.PerspectiveCamera(38,1,0.1,100);
-  cam.position.set(3.4,2.15,4.6); cam.lookAt(-0.35,0.95,0);
-  sc.add(new THREE.HemisphereLight(0x8a7ad0,0x140b20,1.15));
-  const key=new THREE.DirectionalLight(0xffd0c0,2.4); key.position.set(-4,6,5); sc.add(key);
-  const rim=new THREE.DirectionalLight(0xff304c,2.2); rim.position.set(5,3,-4); sc.add(rim);
-  const spin=new THREE.Group(); sc.add(spin);
-  let cur='';
+  sc.background=new THREE.Color(0x06040b);            // opaque: hides the gameplay canvas
+  sc.fog=new THREE.FogExp2(0x06040b, 0.052);
+  const cam=new THREE.PerspectiveCamera(40,1,0.1,140);
+
+  /* --- garage shell --- */
+  const floor=new THREE.Mesh(new THREE.CircleGeometry(46,56),
+    new THREE.MeshStandardMaterial({color:0x0b0814, roughness:.72, metalness:.35}));
+  floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; sc.add(floor);
+  for(let i=1;i<=4;i++){                                // concentric floor guides
+    const g=new THREE.Mesh(new THREE.RingGeometry(3.4+i*2.6, 3.5+i*2.6, 64),
+      new THREE.MeshBasicMaterial({color:0xff304c, transparent:true, opacity:.06+ (4-i)*0.012, side:THREE.DoubleSide}));
+    g.rotation.x=-Math.PI/2; g.position.y=0.01; sc.add(g);
+  }
+  /* --- exhibition slab --- */
+  const slab=new THREE.Group(); sc.add(slab);
+  const deck=new THREE.Mesh(new THREE.CylinderGeometry(2.5,2.75,0.38,56),
+    new THREE.MeshStandardMaterial({color:0x141020, roughness:.42, metalness:.72}));
+  deck.position.y=0.19; deck.receiveShadow=true; slab.add(deck);
+  const lip=new THREE.Mesh(new THREE.TorusGeometry(2.52,0.045,10,80),
+    new THREE.MeshBasicMaterial({color:0xff304c}));
+  lip.rotation.x=Math.PI/2; lip.position.y=0.39; slab.add(lip);
+  const halo=new THREE.Mesh(new THREE.RingGeometry(2.55,3.5,72),
+    new THREE.MeshBasicMaterial({color:0xff304c, transparent:true, opacity:.16, side:THREE.DoubleSide,
+      blending:THREE.AdditiveBlending, depthWrite:false}));
+  halo.rotation.x=-Math.PI/2; halo.position.y=0.045; slab.add(halo);
+
+  /* --- lighting: showroom key + brand rim --- */
+  sc.add(new THREE.HemisphereLight(0x93a4dd, 0x0a0714, .62));
+  const key=new THREE.DirectionalLight(0xfff3ea, 3.0); key.position.set(-5.5,9,6.5);
+  key.castShadow=!isMobile;
+  if(key.shadow){ key.shadow.mapSize.set(1024,1024); key.shadow.camera.near=1; key.shadow.camera.far=30;
+    key.shadow.camera.left=-7; key.shadow.camera.right=7; key.shadow.camera.top=7; key.shadow.camera.bottom=-7; }
+  sc.add(key);
+  const fill=new THREE.DirectionalLight(0xbcd0ff,1.05); fill.position.set(7,4.5,-4); sc.add(fill);
+  const rimL=new THREE.PointLight(0xff304c, 26, 16, 2); rimL.position.set(3.4,1.5,-3.2); sc.add(rimL);
+  const rimR=new THREE.PointLight(0x00e5ff, 12, 14, 2); rimR.position.set(-3.8,1.3,-2.6); sc.add(rimR);
+  const under=new THREE.PointLight(0xff304c, 10, 7, 2); under.position.set(0,0.15,0); sc.add(under);
+
+  /* --- the loadout --- */
+  const spin=new THREE.Group(); spin.position.y=0.38; slab.add(spin);
+  const riderG=new THREE.Group(); spin.add(riderG);
+  let skinAnim=null, cur='';
   showcaseBuild=function(eq){
     const sig=eq.riders+'/'+eq.bikes; if(sig===cur) return; cur=sig;
-    for(const c of [...spin.children]){ spin.remove(c);
-      c.traverse&&c.traverse(o=>{ if(o.isMesh){ o.geometry?.dispose?.(); } }); }
+    for(const g of [spin,riderG]) for(const c of [...g.children]){
+      if(c===riderG) continue;
+      g.remove(c); c.traverse&&c.traverse(o=>{ if(o.isMesh) o.geometry?.dispose?.(); });
+    }
+    skinAnim=null;
     try{
       const bd=BIKES.find(x=>x.id===eq.bikes)||BIKES[0];
-      spin.add(buildBike(bd));
+      const bg=buildBike(bd); bg.position.set(0.5,0,0); spin.add(bg);
       const rd=RIDERS.find(x=>x.id===eq.riders)||RIDERS[0];
-      const rg=new THREE.Group(); rd.build(rg); rg.position.set(-1.15,0,0.15); rg.scale.setScalar(0.92);
-      spin.add(rg);
+      const out=rd.build(riderG);
+      if(typeof out==='function') skinAnim=out;
+      riderG.position.set(-1.25,0,0.22); riderG.scale.setScalar(0.94);
+      spin.traverse(o=>{ if(o.isMesh){ o.castShadow=!isMobile; } });
     }catch(err){}
   };
+
+  /* --- SEVEN looping idle patterns so the rider never just stands there --- */
+  const BASE={x:-1.25,y:0,z:0.22};
+  const PAT=[
+    // 0 breathe
+    (r,u)=>{ r.position.y=BASE.y+Math.sin(u*2.2)*0.022; r.scale.y=0.94*(1+Math.sin(u*2.2)*0.014); },
+    // 1 weight shift
+    (r,u)=>{ r.rotation.z=Math.sin(u*1.3)*0.07; r.position.x=BASE.x+Math.sin(u*1.3)*0.07; },
+    // 2 look around
+    (r,u)=>{ r.rotation.y=Math.sin(u*1.0)*0.62; },
+    // 3 nod
+    (r,u)=>{ r.rotation.x=Math.sin(u*2.8)*0.10; r.position.y=BASE.y+Math.abs(Math.sin(u*2.8))*0.012; },
+    // 4 hop
+    (r,u)=>{ const k=Math.max(0,Math.sin(u*2.6)); r.position.y=BASE.y+k*0.26; r.scale.y=0.94*(1-k*0.07); },
+    // 5 lean in / inspect the bike
+    (r,u)=>{ const k=(Math.sin(u*1.15)+1)/2; r.rotation.x=k*0.19; r.position.z=BASE.z+k*0.16; r.rotation.y=k*0.3; },
+    // 6 hero turn to camera
+    (r,u)=>{ const k=(Math.sin(u*0.8)+1)/2; r.rotation.y=-0.5*k; r.position.y=BASE.y+k*0.05; r.rotation.z=-k*0.04; },
+  ];
+  const HOLD=3.2; let pat=0, patT=0;
+  function resetRider(){
+    riderG.position.set(BASE.x,BASE.y,BASE.z);
+    riderG.rotation.set(0,0,0); riderG.scale.setScalar(0.94);
+  }
+
   function size(){
-    const w=cv.clientWidth||360, h=cv.clientHeight||360;
-    if(cv.width!==w*rn.getPixelRatio()||cv.height!==h*rn.getPixelRatio()){
+    const w=cv.clientWidth||640, h=cv.clientHeight||480;
+    const pr=rn.getPixelRatio();
+    if(cv.width!==Math.floor(w*pr)||cv.height!==Math.floor(h*pr)){
       rn.setSize(w,h,false); cam.aspect=w/Math.max(1,h); cam.updateProjectionMatrix();
     }
   }
-  let last=performance.now();
+  let last=performance.now(), t=0;
   function loop(now){
     requestAnimationFrame(loop);
-    const on = typeof state!=='undefined' && state==='title'
+    let st=null; try{ st=state; }catch(err){ st=null; }   // TDZ-safe: module top-level awaits
+    const on = st==='title'
       && document.querySelector('.scr[data-scr="home"]')?.classList.contains('on');
-    if(!on) { last=now; return; }
-    const dt=Math.min(0.05,(now-last)/1000); last=now;
+    if(!on){ last=now; return; }
+    const dt=Math.min(0.05,(now-last)/1000); last=now; t+=dt;
     size();
-    spin.rotation.y += dt*0.55;
-    spin.position.y = Math.sin(now/1400)*0.045;
+    /* camera: slow drift so the garage feels handheld, framed on the slab */
+    const w=cv.clientWidth||1, h=cv.clientHeight||1, wide=w/Math.max(1,h)>1.15;
+    const rad=wide?7.6:9.4, hgt=wide?2.5:3.1;
+    cam.position.set(Math.sin(t*0.06)*0.7+0.4, hgt+Math.sin(t*0.4)*0.07, rad);
+    cam.lookAt(-0.15,1.05,0);
+    /* slab + contents turn */
+    slab.rotation.y += dt*0.30;
+    lip.material.color.setHSL(0.98, .85, .52+Math.sin(t*1.6)*0.07);
+    halo.material.opacity = .13+Math.sin(t*1.2)*0.05;
+    /* rider idle cycle */
+    patT+=dt;
+    if(patT>HOLD){ patT=0; pat=(pat+1)%PAT.length; resetRider(); }
+    PAT[pat](riderG, t);
+    if(skinAnim){ try{ skinAnim(t); }catch(err){} }
     rn.render(sc,cam);
   }
   requestAnimationFrame(loop);          // defer: never run during module init
