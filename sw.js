@@ -46,12 +46,18 @@ const PRECACHE = [
   './vendor/rapier3d/rapier.es.js',
 ];
 
+// Music streams: the <audio> element issues Range requests, and Cache.put()
+// REJECTS a 206 partial response. Caching these would throw on every seek and
+// bloat storage by ~16MB, so they always go straight to the network.
+const isMusic = (url) => url.pathname.startsWith('/media/music/');
+
 // Immutable by construction — safe to serve from cache indefinitely.
 const isImmutable = (url) =>
-  url.pathname.startsWith('/vendor/') ||
-  url.pathname.startsWith('/media/') ||
-  url.hostname.includes('gstatic') ||
-  url.hostname.includes('fonts.googleapis');
+  !isMusic(url) && (
+    url.pathname.startsWith('/vendor/') ||
+    url.pathname.startsWith('/media/') ||
+    url.hostname.includes('gstatic') ||
+    url.hostname.includes('fonts.googleapis'));
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
@@ -75,6 +81,9 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
+  // Music: pass through untouched so Range/206 works and nothing is stored.
+  if (isMusic(url)) return;
+
   // Cache-first ONLY for immutable assets.
   if (isImmutable(url)) {
     e.respondWith(caches.match(req).then((m) => m || fetch(req).then((r) => {
@@ -88,8 +97,9 @@ self.addEventListener('fetch', (e) => {
   // network-first so a deploy always wins, cache only as the offline fallback.
   e.respondWith(
     fetch(req).then((r) => {
-      if (r.ok && url.origin === location.origin) {
-        const clone = r.clone(); caches.open(CACHE).then((c) => c.put(req, clone));
+      // status 206 is "ok" but Cache.put() rejects it — never store partials
+      if (r.ok && r.status !== 206 && url.origin === location.origin) {
+        const clone = r.clone(); caches.open(CACHE).then((c) => c.put(req, clone)).catch(() => {});
       }
       return r;
     }).catch(() => caches.match(req).then((m) =>

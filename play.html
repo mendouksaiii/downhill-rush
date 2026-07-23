@@ -3232,9 +3232,83 @@ $('rideNow').addEventListener('click',e=>{ e.stopPropagation(); startRun(); });
 $('loMarket').addEventListener('pointerdown',e=>e.stopPropagation());
 $('loMarket').addEventListener('click',async e=>{ e.stopPropagation(); await Economy.flush(); location.href='market.html'; });
 /* sound toggle mirrors the HUD mute button */
+/* ============================== MUSIC ==============================
+   Streamed score. Deliberately HTMLAudioElement and NOT decodeAudioData:
+   these are 2-6 minute tracks, and decoding them into AudioBuffers would
+   cost hundreds of MB of RAM on a phone. preload='none' means only the
+   track actually playing is ever fetched (~2-4MB each).             */
+const MUSIC_SETS={
+  menu:['menu-1-biker-theme','menu-2-dead-air-trophy'],
+  run :['run-1-chain-oil-run','run-2-blackout-corridor',
+        'run-3-blackout-corridor-alt','run-4-dead-air-trophy-alt'],
+};
+const MUSIC_VOL=0.42;                 // sits under the SFX bus
+let musicEl=null, musicSet='', musicQueue=[], musicIdx=0, musicFade=null, musicOn=false;
+function musicShuffle(a){ const c=a.slice();
+  for(let i=c.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [c[i],c[j]]=[c[j],c[i]]; } return c; }
+function musicFadeTo(to,ms,after){
+  if(!musicEl) return;
+  clearInterval(musicFade);
+  const from=musicEl.volume, t0=performance.now();
+  musicFade=setInterval(()=>{
+    const k=Math.min(1,(performance.now()-t0)/Math.max(1,ms));
+    musicEl.volume=Math.max(0,Math.min(1, from+(to-from)*k));
+    if(k>=1){ clearInterval(musicFade); musicFade=null; if(after) after(); }
+  },25);
+}
+function musicPlayCurrent(){
+  if(!musicEl || !musicQueue.length) return;
+  musicEl.src='./media/music/'+musicQueue[musicIdx%musicQueue.length]+'.mp3';
+  musicEl.volume=0;
+  const p=musicEl.play();
+  // ONLY autoplay refusal disarms. Swapping src aborts the previous play()
+  // with an AbortError, which is normal on every track/playlist change --
+  // treating that as a refusal would silently kill the whole music system.
+  if(p&&p.catch) p.catch(err=>{ if(!err || err.name==='NotAllowedError') musicOn=false; });
+  musicFadeTo(muted?0:MUSIC_VOL, 900);
+}
+function musicInit(){
+  if(musicEl) return;
+  musicEl=new Audio(); musicEl.preload='none'; musicEl.loop=false;
+  musicEl.addEventListener('ended',()=>{ musicIdx++; musicPlayCurrent(); });
+  // a dead file must not kill the playlist — skip to the next one
+  musicEl.addEventListener('error',()=>{ if(!musicQueue.length) return;
+    musicIdx++; setTimeout(musicPlayCurrent,400); });
+  // only stop waiting for a gesture once sound is genuinely coming out
+  musicEl.addEventListener('playing', musicDropArmListeners);
+}
+const MUSIC_ARM_EVENTS=['pointerdown','keydown','touchstart'];
+function musicDropArmListeners(){
+  for(const ev of MUSIC_ARM_EVENTS) removeEventListener(ev, musicArm);
+}
+function musicUse(which){
+  if(musicSet===which) return;
+  musicSet=which;
+  musicQueue=musicShuffle(MUSIC_SETS[which]||[]);
+  musicIdx=0;
+  if(!musicOn) return;                        // queued; starts on first gesture
+  if(musicEl && musicEl.src) musicFadeTo(0,320,musicPlayCurrent); else musicPlayCurrent();
+}
+/* Called on load and again on the first user gesture. Browsers only grant
+   autoplay to a document that has its own user activation, and the click on
+   the landing page does NOT carry across the navigation — so the load-time
+   attempt succeeds only where the browser already trusts this origin, and
+   otherwise the first tap on the home screen starts it. */
+function musicArm(){
+  if(musicOn) return;
+  musicInit();
+  musicOn=true;
+  if(!musicQueue.length){ musicSet='menu'; musicQueue=musicShuffle(MUSIC_SETS.menu); musicIdx=0; }
+  musicPlayCurrent();
+}
+// NOT {once:true}: a gesture whose play() still gets refused must not burn the
+// listener, or the score can never start. They are removed on 'playing'.
+for(const ev of MUSIC_ARM_EVENTS) addEventListener(ev, musicArm, {passive:true});
+
 function setMuted(v){
   muted=v;
   if(typeof masterG!=='undefined' && masterG) masterG.gain.value=muted?0:0.75;
+  if(musicEl){ musicFadeTo(muted?0:MUSIC_VOL, 260); if(muted) musicEl.pause(); else if(musicOn) musicEl.play().catch(()=>{}); }
   const m=$('mute'); if(m) m.textContent=muted?'\u{1F507}':'\u{1F50A}';
   const b=$('soundBtn');
   if(b){ b.textContent=muted?'OFF':'ON'; b.setAttribute('aria-pressed', muted?'false':'true'); }
@@ -3753,6 +3827,7 @@ function resetRun(startState){
   comboFlame.style.transform='scale(1)';
   clearParticles();
   state=startState;
+  musicUse(startState==='riding' ? 'run' : 'menu');   // crossfades menu <-> run score
   manageChunks(game.z, game.speed);
   game.y=terrainH(game.x,game.z); game.prevGY=game.y;
   physTeleport(game.x, game.y, game.z);
@@ -4254,13 +4329,15 @@ function updateJumpCharges(dt,god){
   if(g.jumpCharges>=JUMP_CHARGE_MAX) g.jumpChargeT=0;
 }
 $('mute').addEventListener('pointerdown',e=>{ e.stopPropagation(); });
-$('mute').addEventListener('click',e=>{
-  e.stopPropagation(); muted=!muted;
-  $('mute').textContent=muted?'🔇':'🔊';
-  if(masterG) masterG.gain.value=muted?0:0.75;
-});
+// route through setMuted so the settings toggle and the music follow along
+$('mute').addEventListener('click',e=>{ e.stopPropagation(); setMuted(!muted); });
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden && state==='riding'){ paused=true; pausedEl.classList.remove('hidden'); }
+  // don't keep streaming audio for a backgrounded tab
+  if(musicEl && musicOn){
+    if(document.hidden) musicEl.pause();
+    else if(!muted) musicEl.play().catch(()=>{});
+  }
 });
 
 /* ============================== OBSTACLE CHECKS ======================== */
@@ -5047,6 +5124,10 @@ function hideBoot(){
 resetRun('title');
 hideBoot();
 refreshHome();
+// Try to have the menu score already playing as the home screen appears. If the
+// browser refuses (no user activation in THIS document yet) musicArm disarms
+// itself and the first tap/keypress starts it instead.
+musicArm();
 if(!tutorialSeen()) setTimeout(()=>{ if(state==='title'&&!tutorialOpen) openTutorial(false); }, 350);
 // installable / offline PWA — register after load so it never blocks first paint
 if('serviceWorker' in navigator && location.protocol!=='file:')
@@ -5060,6 +5141,8 @@ const DEBUG_OK=location.hostname==='localhost'||location.hostname==='127.0.0.1'
   ||new URLSearchParams(location.search).has('debug');
 if(DEBUG_OK)
 window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk, OT,
+  music:{ get set(){return musicSet}, get armed(){return musicOn}, get idx(){return musicIdx},
+          get queue(){return musicQueue}, get el(){return musicEl} },
   sunMesh, sunEyeSlit, sunEyeSlitMat, overseerEyeWorldPosition,
   eyeDebug(v){ eyeDebugM=v===undefined?-1:v; updateOverseerManifestation(0); },
   liveAttackDebug(type){

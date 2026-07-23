@@ -621,6 +621,11 @@ if (renderer) {
   });
   frame();
 }
+/* Hand off "the player asked for this" to play.html. User activation does not
+   survive a navigation, so the game still needs its own gesture on browsers
+   that enforce it — this just lets it try immediately rather than waiting. */
+for(const a of document.querySelectorAll('a[href="play.html"]'))
+  a.addEventListener('click',()=>{ try{ sessionStorage.setItem('dr_wants_music','1'); }catch(e){} });
 </script>
 </body>
 </html>
