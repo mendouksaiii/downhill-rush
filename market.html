@@ -157,6 +157,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { TIER, mat, BIKES, buildBike, RIDERS } from './skins-data.js';
 import { Economy } from './economy.js';
+import { UISfx } from './ui-sfx.js';
 
 const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 const canvas=document.getElementById('stage');
@@ -270,7 +271,8 @@ function buildRail(){
         (st==='locked'?fmtC(skin.price):(st==='equipped'?'EQUIPPED':'OWNED'))+'</div>'+
       (st==='equipped'?'<div class="eq">✓</div>':'');
     c.querySelector('.cn').textContent=skin.name;
-    c.addEventListener('click',()=>{ select(i); c.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); });
+    c.addEventListener('click',()=>{ UISfx.select(); select(i); c.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); });
+    c.addEventListener('pointerover',()=>UISfx.tick());
     rail.appendChild(c);
   });
 }
@@ -295,24 +297,27 @@ function select(i){
 }
 actionBtn.addEventListener('click',()=>{
   const skin=selSkin(), st=cardState(skin);
-  if(st==='equipped') return;
+  if(st==='equipped'){ UISfx.tick(); return; }
   if(st==='owned'){
+    UISfx.equip();
     Economy.equip(state.tab, skin.id);
     buildRail(); refreshInfo(); ringPulse=1;
     return;
   }
   if(Economy.buy(state.tab, skin.id, skin.price)){   // funds check + deduct + own + auto-equip
+    UISfx.buy();
     const f=$('flash'); f.style.transition='none'; f.style.opacity=.25;
     requestAnimationFrame(()=>{ f.style.transition='opacity .4s ease-out'; f.style.opacity=0; });
     ringPulse=1.6;
     buildRail(); refreshInfo();
   } else {
+    UISfx.deny();                                     // can't afford it
     actionBtn.classList.remove('shake'); void actionBtn.offsetWidth;
     actionBtn.classList.add('shake');
   }
 });
-$('tabRiders').addEventListener('click',()=>setTab('riders'));
-$('tabBikes').addEventListener('click',()=>setTab('bikes'));
+$('tabRiders').addEventListener('click',()=>{ UISfx.select(); setTab('riders'); });
+$('tabBikes').addEventListener('click',()=>{ UISfx.select(); setTab('bikes'); });
 function setTab(t){
   if(state.tab===t) return;
   state.tab=t; state.sel=Math.max(0,catalog().findIndex(s=>s.id===Economy.equipped()[t]));
@@ -339,7 +344,7 @@ addEventListener('wheel',e=>{ rail.scrollLeft+=e.deltaY; },{passive:true});
 // flush the purchase/equip to the server BEFORE returning to the game, so the
 // game's boot signIn reads the up-to-date account (not a stale one that would
 // clobber a just-bought skin back to rookie)
-$('back').addEventListener('click',async e=>{ e.preventDefault();
+$('back').addEventListener('click',async e=>{ e.preventDefault(); UISfx.back();
   const b=$('back'); b.style.pointerEvents='none';
   try{ await Economy.flush(); }catch(err){}
   location.href='play.html';

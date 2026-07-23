@@ -2746,6 +2746,98 @@ const sfx={
     noiseHit(masterG,t,0.12,0.5,'highpass',3000); },
 };
 
+/* ---- the rest of the board: UI + the gameplay moments that were silent ----
+   All synthesised through the existing bus, so this adds zero download and
+   inherits mute/volume for free. UI hits are deliberately quiet (0.05-0.2) so
+   they sit under the score rather than competing with it. */
+let sfxLastTick=0;
+Object.assign(sfx,{
+  /* --- menus --- */
+  tick(){ if(!AC)return;                       // hover / focus move, rate-limited
+    const now=performance.now(); if(now-sfxLastTick<45) return; sfxLastTick=now;
+    blip(masterG,'sine',1250,1250,AC.currentTime,0.028,0.05); },
+  select(){ if(!AC)return; const t=AC.currentTime;
+    blip(masterG,'triangle',660,990,t,0.06,0.16);
+    noiseHit(masterG,t,0.04,0.10,'highpass',4200); },
+  back(){ if(!AC)return; const t=AC.currentTime;
+    blip(masterG,'triangle',560,340,t,0.08,0.13); },
+  toggle(on){ if(!AC)return; const t=AC.currentTime;
+    blip(masterG,'square',on?420:820,on?840:400,t,0.06,0.10); },
+  deny(){ if(!AC)return; const t=AC.currentTime;      // disabled / can't afford
+    blip(masterG,'square',200,150,t,0.07,0.16);
+    blip(masterG,'square',180,130,t+0.09,0.09,0.14); },
+  open(){ if(!AC)return; const t=AC.currentTime;
+    blip(masterG,'sine',380,760,t,0.11,0.11); },
+  close(){ if(!AC)return; const t=AC.currentTime;
+    blip(masterG,'sine',700,330,t,0.10,0.10); },
+  coin(){ if(!AC)return; const t=AC.currentTime;
+    blip(masterG,'triangle',920,1380,t,0.07,0.17);
+    blip(masterG,'triangle',1380,1840,t+0.06,0.09,0.12); },
+  /* PLAY NOW: air being pulled in, then a low thump as the run drops in */
+  launch(){ if(!AC)return; const t=AC.currentTime;
+    const len=AC.sampleRate*0.42, b=AC.createBuffer(1,len,AC.sampleRate), d=b.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(i/len,1.7);
+    const src=AC.createBufferSource(); src.buffer=b;
+    const f=AC.createBiquadFilter(); f.type='bandpass'; f.Q.value=1.1;
+    f.frequency.setValueAtTime(300,t); f.frequency.exponentialRampToValueAtTime(3600,t+0.4);
+    const g=AC.createGain(); g.gain.value=0.34;
+    src.connect(f).connect(g).connect(masterG); src.start(t);
+    blip(masterG,'sine',180,60,t+0.34,0.34,0.4); },
+
+  /* --- gameplay moments that had no sound --- */
+  jump(){ if(!AC)return; const t=AC.currentTime;
+    blip(masterG,'sine',300,560,t,0.11,0.30);
+    noiseHit(masterG,t,0.07,0.16,'highpass',2000); },
+  jumpEmpty(){ if(!AC)return; blip(masterG,'sine',110,80,AC.currentTime,0.08,0.20); },
+  land(){ if(!AC)return; const t=AC.currentTime;      // ordinary ground contact
+    noiseHit(masterG,t,0.10,0.22,'lowpass',700);
+    blip(masterG,'sine',150,90,t,0.09,0.16); },
+  comboUp(n){ if(!AC)return; const t=AC.currentTime;  // climbs with the chain
+    const f=440*Math.pow(1.09, Math.min(14,n||1));
+    blip(masterG,'triangle',f,f*1.5,t,0.07,0.17); },
+  comboLost(){ if(!AC)return; const t=AC.currentTime;
+    blip(masterG,'triangle',560,220,t,0.20,0.20);
+    blip(masterG,'sine',280,110,t+0.05,0.18,0.12); },
+  nearMiss(){ if(!AC)return; const t=AC.currentTime;  // the swish of a close pass
+    const len=AC.sampleRate*0.16, b=AC.createBuffer(1,len,AC.sampleRate), d=b.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.sin(Math.PI*i/len);
+    const src=AC.createBufferSource(); src.buffer=b;
+    const f=AC.createBiquadFilter(); f.type='bandpass'; f.Q.value=3.4;
+    f.frequency.setValueAtTime(2600,t); f.frequency.exponentialRampToValueAtTime(700,t+0.15);
+    const g=AC.createGain(); g.gain.value=0.26;
+    src.connect(f).connect(g).connect(masterG); src.start(t); },
+  gas(){ if(!AC)return; const t=AC.currentTime;
+    const o=AC.createOscillator(), g=AC.createGain(), f=AC.createBiquadFilter();
+    o.type='sawtooth'; o.frequency.setValueAtTime(90,t);
+    o.frequency.exponentialRampToValueAtTime(320,t+0.3);
+    f.type='lowpass'; f.Q.value=5;
+    f.frequency.setValueAtTime(400,t); f.frequency.exponentialRampToValueAtTime(2600,t+0.3);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.22,t+0.1);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.42);
+    o.connect(f).connect(g).connect(masterG); o.start(t); o.stop(t+0.5); },
+  checkpoint(){ if(!AC)return; const t=AC.currentTime;
+    blip(masterG,'triangle',660,660,t,0.10,0.20);
+    blip(masterG,'triangle',990,990,t+0.10,0.16,0.20); },
+  summit(){ if(!AC)return; const t=AC.currentTime;    // you actually finished something
+    [523.2,659.2,784,1046.4].forEach((f,i)=>
+      blip(masterG,'triangle',f,f,t+i*0.11,0.30,0.22)); },
+  rank(){ if(!AC)return; const t=AC.currentTime;      // rank reveal on the death panel
+    blip(masterG,'sine',880,1320,t,0.16,0.14);
+    blip(masterG,'sine',1320,1760,t+0.10,0.22,0.10); },
+  pause(on){ if(!AC)return; const t=AC.currentTime;
+    blip(masterG,'sine',on?600:300,on?300:600,t,0.12,0.14); },
+});
+
+/* The AudioContext was only ever created from the gameplay input path, so the
+   whole home screen was silent. Unlock on the first gesture anywhere — same
+   trigger the music uses. */
+function audioUnlock(){
+  initAudio();
+  if(AC && AC.state==='suspended') AC.resume();
+}
+for(const ev of ['pointerdown','keydown','touchstart'])
+  addEventListener(ev, audioUnlock, {passive:true});
+
 /* ============================== HUD ==================================== */
 const $=id=>document.getElementById(id);
 const scoreEl=$('score'), comboBox=$('comboBox'), comboMult=comboBox.querySelector('.mult'),
@@ -3134,6 +3226,7 @@ function submitRun(time,score,dist,hang=0){
       fetchLB();
       if(d.rank && state==='dead'){
         const el=$('dRank'); el.textContent='WORLD RANK #'+d.rank; el.classList.remove('hidden');
+        sfx.rank();
       }
     }).catch(()=>{});
 }
@@ -3175,19 +3268,23 @@ function renderProfile(){
   $('pDist').textContent=profileMe?Math.floor(profileMe.dist||0)+' m':'--';
   $('pScore').textContent=profileMe?Math.floor(profileMe.score||0):'--';
 }
-$('startBtn').addEventListener('click',e=>{ e.stopPropagation(); startRun(); });
-$('tutorialBtn').addEventListener('click',e=>{ e.stopPropagation(); openTutorial(false); });
-$('shopBtn').addEventListener('click',async e=>{ e.stopPropagation(); await Economy.flush(); location.href='market.html'; });
+$('startBtn').addEventListener('click',e=>{ e.stopPropagation();
+  if(startBtn.disabled){ sfx.deny(); return; }
+  sfx.launch(); startRun(); });
+$('tutorialBtn').addEventListener('click',e=>{ e.stopPropagation(); sfx.open(); openTutorial(false); });
+$('shopBtn').addEventListener('click',async e=>{ e.stopPropagation(); sfx.select();
+  await Economy.flush(); location.href='market.html'; });
 $('shopBtn').addEventListener('pointerdown',e=>e.stopPropagation());
 $('dailyBtn').addEventListener('click',e=>{ e.stopPropagation();
-  if(rideMode==='ascent') return;
+  if(rideMode==='ascent'){ sfx.deny(); return; }
+  sfx.toggle(!dailyMode);
   dailyMode=!dailyMode;
   const b=$('dailyBtn');
   b.textContent=dailyMode?'ON':'OFF';
   b.setAttribute('aria-pressed', dailyMode?'true':'false');
 });
-$('modeDescent').addEventListener('click',e=>{ e.stopPropagation(); setRideMode('descent'); });
-$('modeAscent').addEventListener('click',e=>{ e.stopPropagation(); setRideMode('ascent'); });
+$('modeDescent').addEventListener('click',e=>{ e.stopPropagation(); sfx.select(); setRideMode('descent'); });
+$('modeAscent').addEventListener('click',e=>{ e.stopPropagation(); sfx.select(); setRideMode('ascent'); });
 $('againBtn').addEventListener('click',e=>{ e.stopPropagation(); beginRide(); });
 $('homeBtn').addEventListener('click',e=>{ e.stopPropagation(); goHome(); });
 $('summitAgainBtn').addEventListener('click',e=>{ e.stopPropagation(); beginRide(); });
@@ -3207,8 +3304,16 @@ function showScreen(name){
 }
 for(const b of document.querySelectorAll('#title [data-go]')){
   b.addEventListener('pointerdown',e=>e.stopPropagation());
-  b.addEventListener('click',e=>{ e.stopPropagation(); showScreen(b.dataset.go); });
+  b.addEventListener('click',e=>{ e.stopPropagation();
+    (b.dataset.go==='home' ? sfx.back : sfx.select)();
+    showScreen(b.dataset.go); });
 }
+/* one delegated hover/focus tick for every menu control, rather than a listener
+   per button — new buttons get it for free */
+for(const ev of ['pointerover','focusin']) document.getElementById('title').addEventListener(ev,e=>{
+  const el=e.target.closest && e.target.closest('button, .menuItem, .ghostBtn, .modeBtn');
+  if(el && !el.disabled) sfx.tick();
+});
 /* the contracts panel lives on the home screen; mirror it into its own screen */
 function mirrorContracts(){
   const src=$('cList'), dst=$('contractsMirror');
@@ -3219,18 +3324,22 @@ function mirrorContracts(){
 }
 /* RIDE NOW + CUSTOMIZE shortcuts reuse the real handlers */
 $('rideNow').addEventListener('pointerdown',e=>e.stopPropagation());
-$('rideNow').addEventListener('click',e=>{ e.stopPropagation(); startRun(); });
+$('rideNow').addEventListener('click',e=>{ e.stopPropagation();
+  if(startBtn.disabled){ sfx.deny(); return; }
+  sfx.launch(); startRun(); });
 /* settings shortcuts */
 { const mk=$('setMarketBtn');
   if(mk){ mk.addEventListener('pointerdown',e=>e.stopPropagation());
-    mk.addEventListener('click',async e=>{ e.stopPropagation(); await Economy.flush(); location.href='market.html'; }); } }
+    mk.addEventListener('click',async e=>{ e.stopPropagation(); sfx.select();
+      await Economy.flush(); location.href='market.html'; }); } }
 { const rt=$('resetTutBtn');
   if(rt){ rt.addEventListener('pointerdown',e=>e.stopPropagation());
     rt.addEventListener('click',e=>{ e.stopPropagation();
       try{ localStorage.removeItem(TUTORIAL_KEY); }catch(err){}
       rt.textContent='WILL REPLAY'; setTimeout(()=>{ rt.textContent='REPLAY'; }, 1600); }); } }
 $('loMarket').addEventListener('pointerdown',e=>e.stopPropagation());
-$('loMarket').addEventListener('click',async e=>{ e.stopPropagation(); await Economy.flush(); location.href='market.html'; });
+$('loMarket').addEventListener('click',async e=>{ e.stopPropagation(); sfx.select();
+  await Economy.flush(); location.href='market.html'; });
 /* sound toggle mirrors the HUD mute button */
 /* ============================== MUSIC ==============================
    Streamed score. Deliberately HTMLAudioElement and NOT decodeAudioData:
@@ -3314,7 +3423,8 @@ function setMuted(v){
   if(b){ b.textContent=muted?'OFF':'ON'; b.setAttribute('aria-pressed', muted?'false':'true'); }
 }
 $('soundBtn').addEventListener('pointerdown',e=>e.stopPropagation());
-$('soundBtn').addEventListener('click',e=>{ e.stopPropagation(); setMuted(!muted); });
+$('soundBtn').addEventListener('click',e=>{ e.stopPropagation();
+  setMuted(!muted); if(!muted) sfx.toggle(true); });
 
 /* ---- bind live player data into the top bar + loadout bar ---- */
 function refreshHome(){
@@ -3491,15 +3601,16 @@ function renderMiniBoard(top){
     '<span>'+String(e.name||'').replace(/[<>&]/g,'')+'</span>'+
     '<span class="t">'+((e.pts!=null)?(+e.pts).toLocaleString()+' pts':fmtT(e.time))+'</span></li>').join('');
 }
-tutPrev.addEventListener('click',e=>{ e.stopPropagation(); prevTutorial(); });
-tutSkip.addEventListener('click',e=>{ e.stopPropagation(); closeTutorial(true); tutorialStartAfter=false; });
-tutNext.addEventListener('click',e=>{ e.stopPropagation(); nextTutorial(); });
+tutPrev.addEventListener('click',e=>{ e.stopPropagation(); sfx.back(); prevTutorial(); });
+tutSkip.addEventListener('click',e=>{ e.stopPropagation(); sfx.close(); closeTutorial(true); tutorialStartAfter=false; });
+tutNext.addEventListener('click',e=>{ e.stopPropagation(); sfx.select(); nextTutorial(); });
 nameInput.addEventListener('pointerdown',e=>e.stopPropagation());
 emailInput.addEventListener('pointerdown',e=>e.stopPropagation());
 nameInput.addEventListener('input',queueUsernameCheck);
 emailInput.addEventListener('input',()=>{ playerEmail=emailInput.value.trim(); refreshAccountGate(); renderProfile(); });
-profileBtn.addEventListener('click',e=>{ e.stopPropagation(); renderProfile(); profilePanel.classList.remove('hidden'); fetchLB(); });
-$('profileClose').addEventListener('click',e=>{ e.stopPropagation(); profilePanel.classList.add('hidden'); });
+profileBtn.addEventListener('click',e=>{ e.stopPropagation(); sfx.open();
+  renderProfile(); profilePanel.classList.remove('hidden'); fetchLB(); });
+$('profileClose').addEventListener('click',e=>{ e.stopPropagation(); sfx.close(); profilePanel.classList.add('hidden'); });
 $('profileSignOut').addEventListener('click',e=>{
   e.stopPropagation();
   playerName=''; playerEmail=''; profileMe=null; nameInput.value=''; emailInput.value='';
@@ -3678,6 +3789,7 @@ function startAscentGauntletEvent(event,index){
   return true;
 }
 function completeAscent(){
+  sfx.summit();
   if(state!=='riding' || rideMode!=='ascent' || !ascentMap) return;
   state='summited'; timeScale=1;
   if(!ascentProgress.summited.includes(ascentMap.id)) ascentProgress.summited.push(ascentMap.id);
@@ -3697,6 +3809,7 @@ function updateAscentCampaign(){
   for(const candidate of ascentMap.altitudeBands) if(alt>=candidate.from && alt<candidate.to){ band=candidate; break; }
   game.ascentBand=band?.zone||''; game.ascentPressure=band?.pressure||0;
   while(ascentCheckpointIndex<ascentMap.checkpointAlts.length && alt>=ascentMap.checkpointAlts[ascentCheckpointIndex]){
+    sfx.checkpoint();
     const at=ascentMap.checkpointAlts[ascentCheckpointIndex++];
     if((ascentProgress.checkpoints[ascentMap.id]||0)<at){
       ascentProgress.checkpoints[ascentMap.id]=at; saveAscentProgress();
@@ -3860,6 +3973,7 @@ function stepDownCombo(label='COMBO DOWN'){
   if(g.combo<=0) return;
   const old=g.combo;
   g.combo=Math.floor(g.combo*0.5);
+  sfx.comboLost();
   popup(g.combo>0?`${label} ×${g.combo}`:'COMBO LOST','gray',34);
   if(old!==g.combo) updateComboHUD();
 }
@@ -4010,6 +4124,7 @@ function resolveLanding(kind){
   if(kind==='perfect'){
     game.speed=Math.min(game.speed*1.15, MAX_SPEED);
     game.combo++; game.topCombo=Math.max(game.topCombo,game.combo);
+    sfx.comboUp(game.combo);
     const pts=Math.round(100*mult());
     game.score+=pts;
     overseerEvent({type:'landing', quality:'perfect'});
@@ -4077,6 +4192,9 @@ function onLandContact(){
   }
   
   squashT=0; dipT=0; dipAmp=impact;
+  // tyres meeting dirt. perfect/good/fault land their own cue on top of this,
+  // so keep it quiet and skip the featherweight touchdowns entirely
+  if(!god && impact>0.35) sfx.land();
   spawnParticles(Math.round(8+impact*14), g.x, g.y+0.1, g.z, 4.5, 0, 2.2, g.speed*0.25);
   if(AC) masterFilt.frequency.setTargetAtTime(19000, AC.currentTime, 0.035);
   if(Math.abs(g.y-gy)<0.6) g.y=gy;      // snap to terrain unless standing on an obstacle
@@ -4134,7 +4252,7 @@ function routeUI(){
   initAudio(); if(AC && AC.state==='suspended') AC.resume();
   const now=performance.now();
   if(tutorialOpen) return true;
-  if(paused){ paused=false; pausedEl.classList.add('hidden'); return true; }
+  if(paused){ paused=false; pausedEl.classList.add('hidden'); sfx.pause(false); return true; }
   if(state==='title') return true;   // title starts via RIDE button / Enter / Space
   if(state==='dead'){ if(now>=canRestartAt) resetRun('riding'); return true; }
   return state!=='riding';
@@ -4183,7 +4301,7 @@ function doJump(){
   if(state!=='riding' || g.airborne) return;
   if(g.jumpCharges<=0){
     popup('JUMP EMPTY','gray',18);
-    if(AC) blip(masterG,'sine',110,80,AC.currentTime,0.08,0.2);
+    sfx.jumpEmpty();
     return;
   }
   g.jumpCharges--;
@@ -4191,7 +4309,7 @@ function doJump(){
   spawnParticles(6, g.x, g.y, g.z, 3, 0, 2.4, g.speed*0.15);
   // 50/50 blend: base launch uses physics angle but amplitude uses arcade ramp
   doLaunch(jumpImpulseForSpeed(g.speed));
-  if(AC) blip(masterG,'sine',280,520,AC.currentTime,0.1,0.3);
+  sfx.jump();
 }
 
 /* ============================== INPUT ================================== */
@@ -4332,7 +4450,7 @@ $('mute').addEventListener('pointerdown',e=>{ e.stopPropagation(); });
 // route through setMuted so the settings toggle and the music follow along
 $('mute').addEventListener('click',e=>{ e.stopPropagation(); setMuted(!muted); });
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden && state==='riding'){ paused=true; pausedEl.classList.remove('hidden'); }
+  if(document.hidden && state==='riding'){ paused=true; pausedEl.classList.remove('hidden'); sfx.pause(true); }
   // don't keep streaming audio for a backgrounded tab
   if(musicEl && musicOn){
     if(document.hidden) musicEl.pause();
@@ -4362,6 +4480,7 @@ function checkObstacles(){
         o.passed=true;
         if(Math.abs(dx)<o.r+1.5 && Math.abs(dx)>=o.r+0.35 && alt<o.h+0.5){
           // near miss!
+          sfx.nearMiss();
           if(gameT-game.nearChainT<2) game.nearChain++; else game.nearChain=1;
           game.nearChainT=gameT;
           game.score+=50*mult();
@@ -4575,6 +4694,7 @@ function endPower(){
   game.power=null;
 }
 function applyPower(type,tierId='white'){
+  sfx.gas();
   const g=game;
   const tier=POWER_TIERS[tierId]||POWER_TIERS.white;
   overseerEvent({type:'pickup', power:type, tier:tierId});
@@ -5143,6 +5263,7 @@ if(DEBUG_OK)
 window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk, OT,
   music:{ get set(){return musicSet}, get armed(){return musicOn}, get idx(){return musicIdx},
           get queue(){return musicQueue}, get el(){return musicEl} },
+  sfx,
   sunMesh, sunEyeSlit, sunEyeSlitMat, overseerEyeWorldPosition,
   eyeDebug(v){ eyeDebugM=v===undefined?-1:v; updateOverseerManifestation(0); },
   liveAttackDebug(type){
