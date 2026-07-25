@@ -980,6 +980,51 @@
     .lbList.lbFull { max-height:none; }
   }
 
+  /* ================= ACHIEVEMENTS ================= */
+  .achBar { width:min(1320px,100%); height:5px; margin:16px auto 0; background:rgba(244,246,255,.1); }
+  .achBar i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--rr-red),var(--rr-gold));
+    box-shadow:0 0 12px rgba(255,48,76,.6); transition:width .6s cubic-bezier(.32,.72,0,1); }
+  .achFilters { display:flex; gap:8px; flex-wrap:wrap; margin-top:18px; }
+  .achF { font:800 9.5px 'Orbitron',sans-serif; letter-spacing:.18em; color:var(--rr-ghost);
+    background:rgba(12,9,22,.8); border:1px solid rgba(244,246,255,.12); padding:8px 15px; cursor:pointer;
+    transition:.18s; }
+  .achF:hover { border-color:rgba(255,48,76,.45); color:var(--rr-white); }
+  .achF.on { color:#fff; background:linear-gradient(135deg,var(--rr-red),#9b0e25); border-color:var(--rr-red); }
+  .achList { list-style:none; margin-top:16px; display:grid; gap:10px;
+    grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); }
+  .achItem { position:relative; padding:14px 16px 13px; background:rgba(9,7,18,.72);
+    border:1px solid rgba(244,246,255,.1); border-left:3px solid rgba(244,246,255,.16); }
+  .achItem.got { border-left-color:var(--rr-gold); background:rgba(24,18,10,.6); }
+  .aiTop { display:flex; align-items:baseline; gap:10px; }
+  .aiName { font:800 12.5px 'Orbitron',sans-serif; letter-spacing:.08em; color:var(--rr-white); }
+  .achItem.got .aiName { color:var(--rr-gold); }
+  .aiCoins { margin-left:auto; font:800 11px 'Orbitron',sans-serif; color:var(--rr-gold); white-space:nowrap; }
+  .aiDesc { display:block; margin-top:6px; font-size:13px; color:#a9a2d0; line-height:1.35; }
+  .aiBar { height:3px; margin-top:10px; background:rgba(244,246,255,.1); overflow:hidden; }
+  .aiBar i { display:block; height:100%; background:var(--rr-cyan); box-shadow:0 0 8px rgba(0,229,255,.6); }
+  .achItem.got .aiBar i { background:var(--rr-gold); box-shadow:0 0 8px rgba(255,215,110,.6); }
+  .aiProg { display:block; margin-top:6px; font:700 9px 'JetBrains Mono',monospace; letter-spacing:.1em;
+    color:var(--rr-ghost); }
+  .achItem.got .aiProg { color:var(--rr-gold); }
+
+  /* unlock toast */
+  .achToast { position:fixed; left:50%; bottom:96px; z-index:60; display:flex; align-items:center; gap:12px;
+    padding:12px 18px 12px 14px; background:rgba(10,7,20,.96); border:1px solid var(--rr-gold);
+    border-left:3px solid var(--rr-gold); box-shadow:0 12px 40px -12px rgba(0,0,0,.9), 0 0 26px rgba(255,215,110,.3);
+    transform:translate(-50%,18px); opacity:0; transition:opacity .32s, transform .32s cubic-bezier(.32,.72,0,1);
+    pointer-events:none; max-width:min(420px,92vw); }
+  .achToast.in { opacity:1; transform:translate(-50%,0); }
+  .achToast .atIcon { font-size:22px; color:var(--rr-gold); text-shadow:0 0 12px rgba(255,215,110,.8); }
+  .achToast .atKick { display:block; font:800 8px 'Orbitron',sans-serif; letter-spacing:.24em; color:var(--rr-ghost); }
+  .achToast .atName { display:block; margin-top:3px; font:800 13px 'Orbitron',sans-serif; letter-spacing:.06em;
+    color:var(--rr-white); }
+  .achToast .atCoins { display:block; margin-top:2px; font:800 11px 'Orbitron',sans-serif; color:var(--rr-gold); }
+  @media (prefers-reduced-motion:reduce){ .achToast { transition:opacity .2s; transform:translate(-50%,0); } }
+  @media (max-width:780px){
+    .achList { grid-template-columns:1fr; }
+    .achToast { bottom:calc(84px + env(safe-area-inset-bottom)); }
+  }
+
   /* ---- alignment: the generic `> *` centring rule must not centre prose ----
      .scr > * gets auto side margins to hold the 1320px column, which centres any
      child that is narrower than that. Prose and the core-loop strip should stay
@@ -1134,6 +1179,7 @@ setTimeout(()=>{const b=document.getElementById('boot');
           <button id="startBtn" class="menuItem primary"><span class="mi">PLAY</span><span class="ch">&raquo;</span></button>
           <button class="menuItem navBtn" data-go="board"><span class="mi">LEADERBOARDS</span><span class="ch">&raquo;</span></button>
           <button class="menuItem navBtn" data-go="contracts"><span class="mi">CONTRACTS</span><span class="ch">&raquo;</span></button>
+          <button class="menuItem navBtn" data-go="achv"><span class="mi">ACHIEVEMENTS</span><span class="ch">&raquo;</span></button>
           <button id="shopBtn" class="menuItem"><span class="mi">MARKET</span><span class="ch">&raquo;</span></button>
           <button class="menuItem navBtn" data-go="howto"><span class="mi">HOW TO PLAY</span><span class="ch">&raquo;</span></button>
           <button class="menuItem navBtn" data-go="settings"><span class="mi">SETTINGS</span><span class="ch">&raquo;</span></button>
@@ -1236,6 +1282,31 @@ setTimeout(()=>{const b=document.getElementById('boot');
     <ol id="lbList" hidden></ol>
   </div>
 
+  <!-- ============ SCREEN: ACHIEVEMENTS ============ -->
+  <div class="scr" data-scr="achv">
+    <div class="scrHead"><button class="backBtn navBtn" data-go="home">&laquo; BACK</button><h2>ACHIEVEMENTS</h2>
+      <div class="scrMeta"><b id="achDone">0 / 150</b> &middot; <span id="achPct">0%</span></div>
+    </div>
+    <div class="youStrip" aria-label="Achievement progress">
+      <div class="ysMain"><span>COMPLETION</span><b id="achPct2">0%</b><i id="achDone2">0 of 150 unlocked</i></div>
+      <div class="ysStat"><span>COINS EARNED</span><b id="achCoins">0</b></div>
+      <div class="ysStat"><span>COINS AVAILABLE</span><b id="achCoinsMax">0</b></div>
+      <div class="ysStat"><span>DESCENT</span><b id="achDescent">0</b></div>
+      <div class="ysStat"><span>ASCENT</span><b id="achAscent">0</b></div>
+    </div>
+    <div class="achBar"><i id="achBarFill"></i></div>
+    <div class="achFilters" role="group" aria-label="Filter achievements">
+      <button class="achF on" data-filter="all">ALL</button>
+      <button class="achF" data-filter="todo">IN PROGRESS</button>
+      <button class="achF" data-filter="done">UNLOCKED</button>
+      <button class="achF" data-filter="descent">DESCENT</button>
+      <button class="achF" data-filter="ascent">ASCENT</button>
+    </div>
+    <ul id="achList" class="achList" data-filter="all"></ul>
+    <p class="scrFoot">Unlocks pay coins straight into your balance. RR token rewards arrive when the
+      token launches &mdash; every achievement is built to carry one.</p>
+  </div>
+
   <!-- ============ SCREEN: CONTRACTS ============ -->
   <div class="scr" data-scr="contracts">
     <div class="scrHead"><button class="backBtn navBtn" data-go="home">&laquo; BACK</button><h2>DESCENT CONTRACTS</h2>
@@ -1336,6 +1407,8 @@ setTimeout(()=>{const b=document.getElementById('boot');
             <button id="setMarketBtn" class="ghostBtn">OPEN</button></div>
           <div class="setRow"><div><b>LEADERBOARDS</b><span>Where you stand this season</span></div>
             <button class="ghostBtn" data-go="board">VIEW</button></div>
+          <div class="setRow"><div><b>ACHIEVEMENTS</b><span>150 to unlock &middot; each one pays coins</span></div>
+            <button class="ghostBtn" data-go="achv">VIEW</button></div>
         </div>
         <div class="infoCard tight"><b>YOUR PROGRESS IS SAVED TO YOUR RIDER ID</b><span>Coins and skins follow
           your rider name. Add an email on the home screen to keep them if you switch device.</span></div>
@@ -1431,6 +1504,7 @@ import {
 } from './overseer-core.mjs';
 import { Economy } from './economy.js';
 import { RIDER_GAME, bikeGame, RIDERS, BIKES, buildBike } from './skins-data.js';
+import { ACHIEVEMENTS, isEarned as achIsEarned, TOTAL_COINS as ACH_TOTAL_COINS } from './achievements-data.js';
 
 const ASCENT_MAP_FILES=['./maps/ascent-01-verdant.json'];
 function validAscentMap(m){
@@ -3367,6 +3441,7 @@ function showScreen(name){
   const t=$('title'); if(t) t.scrollTop=0;
   if(name==='contracts') mirrorContracts();
   if(name==='board') fetchLB();
+  if(name==='achv') renderAchievements();
   // not sourced from the leaderboard, so it is right even when the API is down
   if(name==='settings'){ const el=$('setName'); if(el) el.textContent=playerName||'--'; }
 }
@@ -3395,6 +3470,13 @@ $('rideNow').addEventListener('pointerdown',e=>e.stopPropagation());
 $('rideNow').addEventListener('click',e=>{ e.stopPropagation();
   if(startBtn.disabled){ sfx.deny(); return; }
   sfx.launch(); startRun(); });
+/* achievement filter chips */
+for(const b of document.querySelectorAll('.achF')){
+  b.addEventListener('pointerdown',e=>e.stopPropagation());
+  b.addEventListener('click',e=>{ e.stopPropagation(); sfx.select();
+    for(const o of document.querySelectorAll('.achF')) o.classList.toggle('on', o===b);
+    const l=$('achList'); if(l){ l.dataset.filter=b.dataset.filter; renderAchievements(); l.scrollTop=0; } });
+}
 /* settings shortcuts */
 { const mk=$('setMarketBtn');
   if(mk){ mk.addEventListener('pointerdown',e=>e.stopPropagation());
@@ -3868,6 +3950,9 @@ function completeAscent(){
   if(!ascentProgress.summited.includes(ascentMap.id)) ascentProgress.summited.push(ascentMap.id);
   ascentProgress.checkpoints[ascentMap.id]=0;
   saveAscentProgress();
+  { const c=Economy.awardRun({dist:ascentAltitude(), combo:game.topCombo});
+    add('coinsEarned',c); }
+  recordRun({summited:true});
   $('summitStats').textContent=ascentMap.name+' / '+ascentMap.summitAlt+' M / '+fmtT(game.runT);
   $('summit').classList.remove('hidden');
   $('ascentHud').classList.remove('on');
@@ -3883,6 +3968,7 @@ function updateAscentCampaign(){
   game.ascentBand=band?.zone||''; game.ascentPressure=band?.pressure||0;
   while(ascentCheckpointIndex<ascentMap.checkpointAlts.length && alt>=ascentMap.checkpointAlts[ascentCheckpointIndex]){
     sfx.checkpoint();
+    game.cpBanked=(game.cpBanked||0)+1;      // achievements: checkpoints this run
     const at=ascentMap.checkpointAlts[ascentCheckpointIndex++];
     if((ascentProgress.checkpoints[ascentMap.id]||0)<at){
       ascentProgress.checkpoints[ascentMap.id]=at; saveAscentProgress();
@@ -3930,6 +4016,158 @@ let missionSet=(function loadContracts(){
   return {day, ids:rollMissions(hashSeed(day,7)), done:[false,false,false], cleared:0, bonus:false};
 })();
 function saveContracts(){ try{ localStorage.setItem(CONTRACT_KEY, JSON.stringify(missionSet)); }catch(e){} }
+
+/* ========================= ACHIEVEMENTS =========================
+   Lifetime stats drive every achievement; the catalogue lives in
+   achievements-data.js. Unlocks pay coins through Economy.grant(), which the
+   server merges with Math.max, so a grant survives the next account sync. */
+const STATS_KEY='dr_stats_v1', ACH_KEY='dr_ach_v1';
+const BLANK_STATS={
+  distBest:0, altBest:0, comboBest:0, hangBest:0, scoreBest:0,
+  perfectRun:0, flipRun:0, nearRun:0, dodgeRun:0, speedBest:0, timeBest:0,
+  summitFastT:0,
+  runs:0, runsDescent:0, runsAscent:0, distTotal:0, altTotal:0,
+  hangTotal:0, perfectTotal:0, flipTotal:0, nearTotal:0, dodgeTotal:0,
+  scoreTotal:0, coinsEarned:0, summits:0, checkpoints:0, cleanRuns:0, days:0,
+  _lastDay:0,
+};
+let stats=(function(){
+  try{ const r=JSON.parse(localStorage.getItem(STATS_KEY)||'null');
+    if(r && typeof r==='object') return {...BLANK_STATS, ...r}; }catch(e){}
+  return {...BLANK_STATS};
+})();
+let achEarned=(function(){
+  try{ const r=JSON.parse(localStorage.getItem(ACH_KEY)||'null');
+    if(Array.isArray(r)) return new Set(r); }catch(e){}
+  return new Set();
+})();
+function saveStats(){ try{ localStorage.setItem(STATS_KEY, JSON.stringify(stats)); }catch(e){} }
+function saveAch(){ try{ localStorage.setItem(ACH_KEY, JSON.stringify([...achEarned])); }catch(e){} }
+
+const up=(k,v)=>{ if(v>stats[k]) stats[k]=v; };          // best-so-far
+const add=(k,v)=>{ stats[k]=(stats[k]||0)+(v||0); };     // running total
+
+/* Fold one finished run into the lifetime stats, then check for unlocks.
+   Called from BOTH endings: showDeath (crash) and completeAscent (summit). */
+function recordRun({summited=false}={}){
+  const g=game, ascent=rideMode==='ascent';
+  const dist=ascent?ascentAltitude():Math.max(0,g.z-g.dist0);
+  stats.runs++; ascent?stats.runsAscent++:stats.runsDescent++;
+  if(ascent){ up('altBest',Math.floor(dist)); add('altTotal',Math.floor(dist)); }
+  else      { up('distBest',Math.floor(dist)); add('distTotal',Math.floor(dist)); }
+  up('comboBest',g.topCombo||0);
+  up('hangBest',g.hangT||0);       add('hangTotal',g.hangT||0);
+  up('scoreBest',Math.floor(g.score||0)); add('scoreTotal',Math.floor(g.score||0));
+  up('perfectRun',g.mPerfect||0);  add('perfectTotal',g.mPerfect||0);
+  up('flipRun',g.mFlip||0);        add('flipTotal',g.mFlip||0);
+  up('nearRun',g.mNear||0);        add('nearTotal',g.mNear||0);
+  up('dodgeRun',g.mDodge||0);      add('dodgeTotal',g.mDodge||0);
+  up('speedBest',Math.floor(g.speedPeak||0));
+  up('timeBest',Math.floor(g.runT||0));
+  add('checkpoints',g.cpBanked||0);
+  // a "clean" run is a real run finished without stumbling, not a 2s bail
+  if((g.stumbleN||0)===0 && (g.runT||0)>=15) stats.cleanRuns++;
+  if(summited){
+    stats.summits++;
+    const t=Math.floor(g.runT||0);
+    if(t>0 && (stats.summitFastT===0 || t<stats.summitFastT)) stats.summitFastT=t;
+  }
+  const day=utcDay();
+  if(day!==stats._lastDay){ stats._lastDay=day; stats.days++; }
+  saveStats();
+  checkAchievements();
+}
+
+/* Grant every newly satisfied achievement. Guarded by the earned set, so a
+   coin payout can never fire twice for the same id. */
+function checkAchievements(){
+  const won=[];
+  // Loop to a fixed point: paying out an unlock raises coinsEarned, which can
+  // itself satisfy a coin achievement. Settling in one call means the player
+  // sees every cascading unlock now, instead of one more after the next run.
+  for(let pass=0; pass<8; pass++){
+    const batch=ACHIEVEMENTS.filter(a=>!achEarned.has(a.id) && achIsEarned(a,stats));
+    if(!batch.length) break;
+    for(const a of batch) achEarned.add(a.id);   // claim BEFORE paying: no double-grant
+    const coins=batch.reduce((n,a)=>n+a.coins,0);
+    Economy.grant(coins);
+    add('coinsEarned',coins);
+    won.push(...batch);
+  }
+  if(!won.length) return;
+  saveAch(); saveStats();
+  achToast(won);
+  renderAchievements();
+  refreshHome();
+  return won;
+}
+
+/* Unlock toasts, queued so a multi-unlock run doesn't stack them on screen. */
+let achQueue=[], achShowing=false;
+function achToast(list){ achQueue.push(...list); if(!achShowing) achNextToast(); }
+function achNextToast(){
+  const a=achQueue.shift();
+  if(!a){ achShowing=false; return; }
+  achShowing=true;
+  const el=document.createElement('div');
+  el.className='achToast';
+  el.innerHTML='<div class="atIcon">◈</div><div class="atBody">'
+    +'<span class="atKick">ACHIEVEMENT UNLOCKED</span>'
+    +'<b class="atName"></b><span class="atCoins"></span></div>';
+  el.querySelector('.atName').textContent=a.name;
+  el.querySelector('.atCoins').textContent='+'+a.coins.toLocaleString()+' ◈';
+  document.body.appendChild(el);
+  sfx.coin?.();
+  requestAnimationFrame(()=>el.classList.add('in'));
+  setTimeout(()=>{ el.classList.remove('in');
+    setTimeout(()=>{ el.remove(); achNextToast(); }, 420); }, 2600);
+}
+
+/* ---- achievements screen ---- */
+function renderAchievements(){
+  const list=$('achList'); if(!list) return;
+  const done=ACHIEVEMENTS.filter(a=>achEarned.has(a.id)).length;
+  const earnedCoins=ACHIEVEMENTS.filter(a=>achEarned.has(a.id)).reduce((n,a)=>n+a.coins,0);
+  const set=(id,v)=>{ const el=$(id); if(el) el.textContent=v; };
+  const pctAll=Math.round(done/ACHIEVEMENTS.length*100);
+  set('achDone', done+' / '+ACHIEVEMENTS.length);
+  set('achPct', pctAll+'%');
+  set('achPct2', pctAll+'%');
+  set('achDone2', done+' of '+ACHIEVEMENTS.length+' unlocked');
+  set('achCoins', earnedCoins.toLocaleString());
+  set('achCoinsMax', ACH_TOTAL_COINS.toLocaleString());
+  const cnt=m=>ACHIEVEMENTS.filter(a=>a.mode===m).length;
+  const got=m=>ACHIEVEMENTS.filter(a=>a.mode===m&&achEarned.has(a.id)).length;
+  set('achDescent', got('descent')+'/'+cnt('descent'));
+  set('achAscent',  got('ascent')+'/'+cnt('ascent'));
+  const bar=$('achBarFill'); if(bar) bar.style.width=(done/ACHIEVEMENTS.length*100)+'%';
+  const filter=list.dataset.filter||'all';
+  const shown=ACHIEVEMENTS.filter(a=>filter==='all'?true:
+    filter==='done'?achEarned.has(a.id):
+    filter==='todo'?!achEarned.has(a.id):a.mode===filter);
+  list.innerHTML='';
+  for(const a of shown){
+    const got=achEarned.has(a.id);
+    const v=+(stats[a.stat])||0;
+    // progress reads forward for totals, and backward for "under X" times
+    const pct=got?100:(a.cmp==='lte'?0:Math.min(100, Math.round(v/a.goal*100)));
+    const li=document.createElement('li');
+    li.className='achItem'+(got?' got':'');
+    li.innerHTML='<div class="aiTop"><b class="aiName"></b><span class="aiCoins"></span></div>'
+      +'<span class="aiDesc"></span>'
+      +'<div class="aiBar"><i></i></div>'
+      +'<span class="aiProg"></span>';
+    li.querySelector('.aiName').textContent=a.name;
+    li.querySelector('.aiCoins').textContent=(got?'✓ ':'')+a.coins.toLocaleString()+' ◈';
+    li.querySelector('.aiDesc').textContent=a.desc;
+    li.querySelector('.aiBar i').style.width=pct+'%';
+    li.querySelector('.aiProg').textContent=got?'UNLOCKED'
+      :(a.cmp==='lte'?(v>0?('best '+fmtT(v)):'not yet')
+        :Math.min(v,a.goal).toLocaleString()+' / '+a.goal.toLocaleString());
+    list.appendChild(li);
+  }
+  if(!shown.length) list.innerHTML='<li class="lbNote">nothing here yet</li>';
+}
 const cListEl=document.getElementById('cList'), cDayEl=document.getElementById('cDay');
 function missionValue(def){ return def.live ? def.live(game) : (game[def.stat]||0); }
 function renderContracts(){
@@ -4006,6 +4244,7 @@ function resetRun(startState){
     cleanT:0, gas:0, jumpCharges:JUMP_CHARGE_MAX, jumpChargeT:0,
     trickFlip:0, trickSpin:0, graceUntil:0, stumbleN:0,
     mPerfect:0, mFlip:0, mNear:0, mDodge:0,
+    speedPeak:0, cpBanked:0,        // achievement tracking, reset per run
   });
   gameT=0; timeScale=1; shake=0; overseerDarkT=0;
   dispScore=0; hitstopUntil=0; squashT=9; dipT=9; dipAmp=0;
@@ -4143,6 +4382,8 @@ function showDeath(){
   const runDistance=rideMode==='ascent'?ascentAltitude():game.z-game.dist0;
   const coinsEarned=Economy.awardRun({dist:runDistance, combo:game.topCombo});
   $('dCoins').textContent='+'+coinsEarned.toLocaleString()+' ◈';
+  add('coinsEarned',coinsEarned);          // before recordRun, so it counts this run
+  recordRun({summited:false});
   $('dRank').classList.add('hidden');
   if(overseer){
     const summary=overseer.finishRun({
@@ -5227,6 +5468,9 @@ function refreshHUD(dt){
   if(game.power) pFill.style.width=Math.max(0,game.power.t/(game.power.maxT||POWER_DUR)*100)+'%';
   speedFill.style.background=sp<0.45?'#2effa4':(sp<0.75?'#ffd76e':'#ff2e56');
   renderAscentHUD();
+  // peak speed for achievements — deliberately OUTSIDE the audio block below,
+  // which only runs once an AudioContext exists
+  if(state==='riding' && game.speed>(game.speedPeak||0)) game.speedPeak=game.speed;
   if(AC){
     windFilt.frequency.value=300+game.speed*24;
     // refreshHUD runs every frame incl. the menu, where game.speed is still
@@ -5350,6 +5594,9 @@ window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk, OT,
           get drone(){return droneGain?droneGain.gain.value:null},
           get synth(){return layerGains.kick?Object.fromEntries(Object.entries(layerGains).map(([k,g])=>[k,+g.gain.value.toFixed(2)])):null} },
   sfx,
+  get stats(){ return {...stats} },
+  get achEarned(){ return [...achEarned] },
+  achAll:ACHIEVEMENTS, checkAchievements, recordRun,
   sunMesh, sunEyeSlit, sunEyeSlitMat, overseerEyeWorldPosition,
   eyeDebug(v){ eyeDebugM=v===undefined?-1:v; updateOverseerManifestation(0); },
   liveAttackDebug(type){

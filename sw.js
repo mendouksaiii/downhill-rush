@@ -15,7 +15,7 @@
 //   LIVE      (network only)  — /api/*.
 //
 // Bump CACHE on any change to this policy or the precache list.
-const CACHE = 'redline-v6';   // bumped: ui-sfx.js added to PRECACHE
+const CACHE = 'redline-v7';   // bumped: achievements-data.js added to PRECACHE
 const PRECACHE = [
   './',
   './play.html',
@@ -24,6 +24,7 @@ const PRECACHE = [
   './economy.js',
   './skins-data.js',
   './ui-sfx.js',
+  './achievements-data.js',
   './manifest.webmanifest',
   './overseer-tuning.json',
   './overseer-core.mjs',
