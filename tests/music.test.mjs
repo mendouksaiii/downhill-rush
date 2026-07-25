@@ -17,9 +17,19 @@ function trackNames() {
   return [...block.slice(0, end).matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]);
 }
 
+// helper: the two playlists as arrays, in source order
+function playlists() {
+  const block = html.slice(html.indexOf('const MUSIC_SETS={'));
+  const body = block.slice(0, block.indexOf('};'));
+  const grab = (key) => {
+    const m = body.match(new RegExp(`${key}\\s*:\\s*\\[([^\\]]*)\\]`));
+    return m ? [...m[1].matchAll(/'([a-z0-9-]+)'/g)].map((x) => x[1]) : [];
+  };
+  return { menu: grab('menu'), run: grab('run') };
+}
+
 test('every referenced track exists on disk', () => {
-  const names = trackNames();
-  assert.equal(names.length, 6, `expected 6 tracks, found ${names.length}: ${names}`);
+  const names = [...new Set(trackNames())];   // dedupe: the menu now reuses run files
   for (const n of names) {
     const url = new URL(`../media/music/${n}.mp3`, import.meta.url);
     assert.ok(existsSync(url), `missing media/music/${n}.mp3`);
@@ -27,13 +37,15 @@ test('every referenced track exists on disk', () => {
   }
 });
 
-test('menu and run playlists are separate and non-empty', () => {
-  const names = trackNames();
-  const menu = names.filter((n) => n.startsWith('menu-'));
-  const run = names.filter((n) => n.startsWith('run-'));
-  assert.equal(menu.length, 2, 'expected 2 menu tracks');
-  assert.equal(run.length, 4, 'expected 4 gameplay tracks');
-  assert.equal(new Set(names).size, names.length, 'duplicate track in the playlists');
+test('homepage plays the gameplay songs; gameplay set is intact', () => {
+  const { menu, run } = playlists();
+  // homepage = the three gameplay songs (by request); no repeat WITHIN the set
+  assert.equal(menu.length, 3, 'expected 3 homepage tracks');
+  assert.equal(new Set(menu).size, menu.length, 'a homepage track is listed twice');
+  assert.equal(run.length, 4, 'gameplay set must stay 4 tracks');
+  assert.equal(new Set(run).size, run.length, 'a gameplay track is listed twice');
+  // the sharing is deliberate: every homepage track also rides in gameplay
+  for (const t of menu) assert.ok(run.includes(t), `homepage track ${t} is not a gameplay track`);
 });
 
 test('a src swap must not disarm the player', () => {

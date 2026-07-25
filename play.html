@@ -2810,12 +2810,16 @@ Object.assign(sfx,{
   /* --- menus --- */
   tick(){ if(!AC)return;                       // hover / focus move, rate-limited
     const now=performance.now(); if(now-sfxLastTick<45) return; sfxLastTick=now;
-    blip(masterG,'sine',1250,1250,AC.currentTime,0.028,0.05); },
-  select(){ if(!AC)return; const t=AC.currentTime;
-    blip(masterG,'triangle',660,990,t,0.06,0.16);
-    noiseHit(masterG,t,0.04,0.10,'highpass',4200); },
-  back(){ if(!AC)return; const t=AC.currentTime;
-    blip(masterG,'triangle',560,340,t,0.08,0.13); },
+    blip(masterG,'sine',1300,1300,AC.currentTime,0.03,0.10); },
+  /* nav sounds are gained to sit ON TOP of the 0.42 music, not under it —
+     a menu tap has to be heard over the soundtrack */
+  select(){ if(!AC)return; const t=AC.currentTime;   // forward: bright step up
+    blip(masterG,'triangle',680,1020,t,0.07,0.34);
+    blip(masterG,'square',1360,1360,t+0.05,0.05,0.15);
+    noiseHit(masterG,t,0.04,0.16,'highpass',5000); },
+  back(){ if(!AC)return; const t=AC.currentTime;      // back: warm step down
+    blip(masterG,'triangle',620,360,t,0.10,0.30);
+    noiseHit(masterG,t,0.03,0.12,'highpass',3600); },
   toggle(on){ if(!AC)return; const t=AC.currentTime;
     blip(masterG,'square',on?420:820,on?840:400,t,0.06,0.10); },
   deny(){ if(!AC)return; const t=AC.currentTime;      // disabled / can't afford
@@ -3407,7 +3411,9 @@ $('loMarket').addEventListener('click',async e=>{ e.stopPropagation(); sfx.selec
    cost hundreds of MB of RAM on a phone. preload='none' means only the
    track actually playing is ever fetched (~2-4MB each).             */
 const MUSIC_SETS={
-  menu:['menu-1-biker-theme','menu-2-dead-air-trophy'],
+  // homepage plays the three gameplay songs (chain oil / blackout / dead air);
+  // the run set below is left untouched so gameplay audio is unchanged
+  menu:['run-1-chain-oil-run','run-2-blackout-corridor','run-4-dead-air-trophy-alt'],
   run :['run-1-chain-oil-run','run-2-blackout-corridor',
         'run-3-blackout-corridor-alt','run-4-dead-air-trophy-alt'],
 };
