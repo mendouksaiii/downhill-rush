@@ -2748,6 +2748,10 @@ const BASS=[55,0,55,0, 65.4,0,55,0, 49,0,49,0, 58.3,0,65.4,0];
 const ARP=[220,329.6,440,523.2,659.2,523.2,440,329.6];
 function schedule(){
   if(!AC || AC.state!=='running') return;
+  // The mp3 soundtrack replaced this procedural score. Once it's armed (i.e.
+  // after the first gesture, on every screen), stay silent -- otherwise the
+  // synth kick/bass layered UNDER the music, most audibly on the home screen.
+  if(musicOn){ for(const k in layerGains) layerGains[k].gain.value=0; return; }
   const tier=Math.min(game.combo,5);
   layerGains.kick.gain.value=0.85; layerGains.hat.gain.value=tier>=1?0.16:0;
   layerGains.snare.gain.value=tier>=2?0.3:0; layerGains.bass.gain.value=tier>=1?0.5:0;
@@ -5225,7 +5229,11 @@ function refreshHUD(dt){
   renderAscentHUD();
   if(AC){
     windFilt.frequency.value=300+game.speed*24;
-    windGain.gain.value=Math.min(0.34, game.speed*0.004+(game.airborne?0.06:0));
+    // refreshHUD runs every frame incl. the menu, where game.speed is still
+    // START_SPEED -- so only voice the wind while actually riding, or it hums
+    // under the home-screen music
+    windGain.gain.value = state==='riding'
+      ? Math.min(0.34, game.speed*0.004+(game.airborne?0.06:0)) : 0;
     if(game.combo>=1){
       const beat=(AC.currentTime%(S16*4))/(S16*4);   // pulse on each kick
       comboFlame.style.transform='scale('+(1+0.22*Math.pow(1-beat,3)).toFixed(3)+')';
@@ -5287,6 +5295,11 @@ function frame(){
       updateOverseerManifestation(dt);
       updateOverseerAudio();
       drawFX();
+    } else if(AC){
+      // menu is up: updateOverseerAudio() is skipped here, so zero the drone
+      // directly or its last swell bleeds under the home-screen music
+      // (wind is handled in refreshHUD, gated on the riding state)
+      if(droneGain) droneGain.gain.value=0;
     }
     refreshHUD(dt);
     if(state==='dead') tickDeathScore(now);
@@ -5332,6 +5345,10 @@ if(DEBUG_OK)
 window.DR={ game, terrainH, chunks, rampsByChunk, pitsByChunk, wallsByChunk, OT,
   music:{ get set(){return musicSet}, get armed(){return musicOn}, get idx(){return musicIdx},
           get queue(){return musicQueue}, get el(){return musicEl} },
+  // in-world audio layers, for debugging bleed into the menu
+  audio:{ get wind(){return windGain?windGain.gain.value:null},
+          get drone(){return droneGain?droneGain.gain.value:null},
+          get synth(){return layerGains.kick?Object.fromEntries(Object.entries(layerGains).map(([k,g])=>[k,+g.gain.value.toFixed(2)])):null} },
   sfx,
   sunMesh, sunEyeSlit, sunEyeSlitMat, overseerEyeWorldPosition,
   eyeDebug(v){ eyeDebugM=v===undefined?-1:v; updateOverseerManifestation(0); },
