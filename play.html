@@ -854,11 +854,51 @@
   /* middle grid column is now just breathing room over the garage */
   #titleShell { pointer-events:none; }
   #heroCopy, #sidePanels, .mainMenu, #signup { pointer-events:auto; }
+  /* mobile glass tab bar — the menu the vertical list used to hold.
+     Hidden on desktop (display:none); the mobile block below flips it on. */
+  #mTabs { display:none; position:absolute; left:0; right:0; bottom:0; z-index:7;
+    justify-content:space-around; align-items:center; gap:2px;
+    padding:8px 6px calc(7px + env(safe-area-inset-bottom));
+    background:rgba(6,4,12,.82); border-top:1px solid rgba(244,246,255,.1);
+    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+  .mTab { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+    background:none; border:0; padding:4px 0; cursor:pointer;
+    font:700 8px 'Orbitron',sans-serif; letter-spacing:.13em; color:var(--rr-ghost);
+    transition:color .15s, transform .1s; }
+  .mTab svg { width:22px; height:22px; }
+  .mTab.on { color:var(--rr-red); }
+  .mTab.on svg { filter:drop-shadow(0 0 7px rgba(255,48,76,.6)); }
+  .mTab:active { transform:scale(.93); }
+
   @media (max-width:780px){
-    /* on phones the garage gets its own in-flow band below the menu — as a
-       full-bleed background it hid the rider behind the buttons */
-    #showcase { position:static; inset:auto; height:min(46vh,380px); margin:16px 0 0;
-      border:1px solid rgba(255,48,76,.22); border-left:none; border-right:none; }
+    /* ===== CONCEPT 3 · IMMERSIVE home ===== */
+    /* the garage is a full-bleed living backdrop; the menu becomes a tab bar */
+    #showcase { position:absolute; inset:0; height:auto; margin:0; border:none; z-index:0; }
+    [data-scr="home"] { position:relative; height:100%; overflow:hidden; }
+    #titleShell { position:absolute; inset:0; display:flex; flex-direction:column;
+      justify-content:flex-end; padding:0; pointer-events:none; }
+
+    /* hero copy sits as a bottom overlay, legible over the scene */
+    #heroCopy { pointer-events:auto; position:relative; z-index:2; text-align:center;
+      display:flex; flex-direction:column; align-items:center; gap:13px;
+      padding:24px 20px calc(92px + env(safe-area-inset-bottom));
+      background:linear-gradient(180deg, transparent, rgba(6,4,12,.5) 34%, rgba(6,4,12,.94)); }
+    #heroCopy .eyebrow, #heroCopy .heroLine, #modeDetail { display:none; }
+    #title h1 { margin:0; font-size:3rem; }
+    #title h1 .rr { letter-spacing:12px; margin-top:6px; }
+    #title .tag { margin:0; font-size:.8rem; letter-spacing:.26em; }
+    #modeSelect { width:min(320px,86vw); }
+    /* release PLAY from the vertical list and drop the rest into the tab bar */
+    .mainMenu { display:contents; }
+    .mainMenu .navBtn, #shopBtn { display:none; }
+    #startBtn { order:2; width:min(340px,90vw); justify-content:center; }
+    /* returning riders get the clean view; new riders keep the name gate */
+    #signup { order:1; width:min(360px,92vw); margin:0; }
+    #title.hasRider #signup { display:none; }
+    /* nothing else competes with the garage */
+    #sidePanels, #loadoutBar { display:none; }
+    #hudTop { background:linear-gradient(180deg, rgba(5,4,9,.9), transparent); }
+    #mTabs { display:flex; }
   }
 
   /* ================= SUB-SCREEN LAYOUT ================= */
@@ -1152,6 +1192,21 @@ setTimeout(()=>{const b=document.getElementById('boot');
       </div>
       <button id="rideNow" class="rideNow">RIDE NOW <span class="ch">&raquo;</span></button>
     </footer>
+
+    <!-- MOBILE-ONLY glass tab bar (hidden on desktop). Reuses the data-go
+         router + market navigation; carries the menu the vertical list held. -->
+    <nav id="mTabs" aria-label="Menu">
+      <button class="mTab on" data-go="home" aria-label="Home">
+        <svg viewBox="0 0 24 24"><path d="M4 11l8-6 8 6M6 10v9h12v-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>HOME</span></button>
+      <button class="mTab" data-go="board" aria-label="Leaderboards">
+        <svg viewBox="0 0 24 24"><path d="M4 20V10M9 20V4M14 20v-8M19 20V7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>BOARD</span></button>
+      <button class="mTab" id="tabMarket" aria-label="Market">
+        <svg viewBox="0 0 24 24"><path d="M4 8h16l-1.4 11H5.4zM8 8V6a4 4 0 0 1 8 0v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>MARKET</span></button>
+      <button class="mTab" data-go="contracts" aria-label="Daily contracts">
+        <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>DAILY</span></button>
+      <button class="mTab" data-go="settings" aria-label="Profile and settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 20a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>YOU</span></button>
+    </nav>
   </div>
 
   <!-- ============ SCREEN: LEADERBOARDS ============ -->
@@ -3274,6 +3329,11 @@ $('startBtn').addEventListener('click',e=>{ e.stopPropagation();
 $('tutorialBtn').addEventListener('click',e=>{ e.stopPropagation(); sfx.open(); openTutorial(false); });
 $('shopBtn').addEventListener('click',async e=>{ e.stopPropagation(); sfx.select();
   await Economy.flush(); location.href='market.html'; });
+/* mobile tab bar Market tile mirrors the shop button */
+{ const tm=$('tabMarket'); if(tm){
+  tm.addEventListener('pointerdown',e=>e.stopPropagation());
+  tm.addEventListener('click',async e=>{ e.stopPropagation(); sfx.select();
+    await Economy.flush(); location.href='market.html'; }); } }
 $('shopBtn').addEventListener('pointerdown',e=>e.stopPropagation());
 $('dailyBtn').addEventListener('click',e=>{ e.stopPropagation();
   if(rideMode==='ascent'){ sfx.deny(); return; }
@@ -3443,6 +3503,9 @@ function refreshHome(){
     const el=$('pcBarFill'); if(el) el.style.width='6%';
   }
   if(showcaseBuild) showcaseBuild(eq);
+  // mobile immersive home hides the RIDER ID card once you have a name -- new
+  // players still see it so the account gate is never skipped
+  if(titleEl) titleEl.classList.toggle('hasRider', !!playerName);
 }
 
 /* ---- HOME GARAGE: equipped rider + bike on a rotating exhibition slab ---- */
