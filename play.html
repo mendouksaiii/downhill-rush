@@ -1738,6 +1738,24 @@ if(!isMobile){
 const hemiLight=new THREE.HemisphereLight(0x5a4d9e, 0x1a1040, 0.85); scene.add(hemiLight);
 const ambientLight=new THREE.AmbientLight(0x35296b, 0.7); scene.add(ambientLight);
 
+/* ---- rider fill ------------------------------------------------------------
+   The sun sits at +Z (down the mountain, in the sunset) while the chase camera
+   sits behind the rider, so the only side we ever see is the shadowed one. Lit
+   by the dim purple ambient alone every skin's albedo collapsed to the same
+   dark silhouette, which made bought skins effectively invisible in a run.
+
+   This is a POINT light parented to the bike rather than a layer-restricted
+   directional one: three.js gates lights with
+       visible = light.layers.test( camera.layers )
+   i.e. against the CAMERA, not against the objects being lit -- so a light on
+   its own layer is simply never collected. Inverse-square falloff is what keeps
+   the effect local instead: it reveals the rider and dies off within a few
+   metres, so terrain, trees and the sunset keep their art direction.
+   Unshadowed, and parented so it costs no per-frame work. */
+const riderFill=new THREE.PointLight(0xffe9d6, 11, 6.5, 2);
+riderFill.castShadow=false;
+riderFill.position.set(0.8, 2.5, -2.4);   // above and camera-side of the rider
+
 // Sky dome — palette-lerped via uniforms for the day/night cycle
 const skyU={
   uTop:{value:new THREE.Color(0x1a1040)},
@@ -2025,6 +2043,7 @@ function choosePowerTier(rng){
 const bikeRoot=new THREE.Group();     // world position
 const bikeTilt=new THREE.Group();     // pitch / roll
 bikeRoot.add(bikeTilt); scene.add(bikeRoot);
+bikeRoot.add(riderFill);   // declared above; attached here, after bikeRoot exists
 
 // two-tone vertical paint gradients baked into vertex colors — one flat material for
 // the whole bike + rider, no textures
