@@ -699,8 +699,16 @@
     align-items:stretch; gap:clamp(10px,2vw,28px); padding:0 clamp(12px,2.4vw,26px); }
 
   /* left menu column */
+  /* min-height:0 + scroll is the safety net: the menu grew to 7 items and
+     pushed the RIDER ID sign-in card past the bottom of the fixed-height
+     shell, where overflow:hidden on #title silently ate it. */
   #heroCopy { max-width:none; padding:0; display:flex; flex-direction:column; justify-content:center;
-    background:none; border:none; box-shadow:none; overflow:visible; }
+    background:none; border:none; box-shadow:none; min-height:0; overflow-y:auto; overflow-x:hidden;
+    scrollbar-width:thin; scrollbar-color:rgba(255,48,76,.5) transparent; }
+  #heroCopy::-webkit-scrollbar { width:5px; }
+  #heroCopy::-webkit-scrollbar-thumb { background:rgba(255,48,76,.5); }
+  /* short desktop windows: drop the descriptive line so the sign-in stays in view */
+  @media (max-height:900px){ #heroCopy .heroLine { display:none; } }
   #heroCopy::after { display:none; }
   #heroCopy .eyebrow { font-size:9px; letter-spacing:.24em; }
   #title h1 { margin-top:8px; font-size:clamp(2rem,4.2vw,3.4rem); line-height:.84; letter-spacing:.02em; }
@@ -708,9 +716,9 @@
   #title .tag { margin-top:8px; font-size:.72rem; letter-spacing:.28em; }
   #title .heroLine { margin-top:6px; font-size:.82rem; line-height:1.35; max-width:320px; opacity:.75; }
   #modeSelect { margin-top:14px; }
-  .mainMenu { margin-top:14px; display:flex; flex-direction:column; gap:7px; }
+  .mainMenu { margin-top:10px; display:flex; flex-direction:column; gap:6px; }
   .menuItem { position:relative; display:flex; align-items:center; justify-content:space-between;
-    width:100%; padding:12px 16px; cursor:pointer; overflow:hidden;
+    width:100%; padding:10px 16px; cursor:pointer; overflow:hidden;
     font:800 12px 'Orbitron',sans-serif; letter-spacing:.18em; color:var(--rr-white);
     background:linear-gradient(90deg, rgba(16,10,26,.88), rgba(10,7,18,.55));
     border:1px solid rgba(244,246,255,.12); border-left:3px solid rgba(255,48,76,.35);
@@ -861,11 +869,13 @@
     padding:8px 6px calc(7px + env(safe-area-inset-bottom));
     background:rgba(6,4,12,.82); border-top:1px solid rgba(244,246,255,.1);
     -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
-  .mTab { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
-    background:none; border:0; padding:4px 0; cursor:pointer;
-    font:700 8px 'Orbitron',sans-serif; letter-spacing:.13em; color:var(--rr-ghost);
+  /* six tabs at 390px -> ~65px each; trim the label tracking so nothing wraps */
+  .mTab { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:4px;
+    background:none; border:0; padding:4px 1px; cursor:pointer;
+    font:700 7.5px 'Orbitron',sans-serif; letter-spacing:.08em; color:var(--rr-ghost);
     transition:color .15s, transform .1s; }
-  .mTab svg { width:22px; height:22px; }
+  .mTab span { white-space:nowrap; }
+  .mTab svg { width:21px; height:21px; }
   .mTab.on { color:var(--rr-red); }
   .mTab.on svg { filter:drop-shadow(0 0 7px rgba(255,48,76,.6)); }
   .mTab:active { transform:scale(.93); }
@@ -1250,6 +1260,8 @@ setTimeout(()=>{const b=document.getElementById('boot');
         <svg viewBox="0 0 24 24"><path d="M4 8h16l-1.4 11H5.4zM8 8V6a4 4 0 0 1 8 0v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>MARKET</span></button>
       <button class="mTab" data-go="contracts" aria-label="Daily contracts">
         <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>DAILY</span></button>
+      <button class="mTab" data-go="achv" aria-label="Achievements">
+        <svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0zM7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3M10 14h4v3h-4zM8 20h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>AWARDS</span></button>
       <button class="mTab" data-go="settings" aria-label="Profile and settings">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 20a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>YOU</span></button>
     </nav>
@@ -3457,6 +3469,8 @@ for(const id of ['tutorial','tutorialCard','tutPrev','tutSkip','tutNext','againB
 /* ================= HOME SCREEN: router, live data, 3D showcase ================= */
 function showScreen(name){
   for(const sc of document.querySelectorAll('#title .scr')) sc.classList.toggle('on', sc.dataset.scr===name);
+  // keep the mobile tab bar in sync — it used to leave HOME lit on every screen
+  for(const tb of document.querySelectorAll('#mTabs .mTab')) tb.classList.toggle('on', tb.dataset.go===name);
   const t=$('title'); if(t) t.scrollTop=0;
   if(name==='contracts') mirrorContracts();
   if(name==='board') fetchLB();
