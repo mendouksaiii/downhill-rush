@@ -136,6 +136,30 @@ test('the catalogue module is precached and the cache version bumped', () => {
   assert.doesNotMatch(sw, /redline-v6'/, 'CACHE must be bumped when PRECACHE changes');
 });
 
+test('achievements are reachable on BOTH desktop and mobile', () => {
+  // the desktop menu row is hidden on phones (.mainMenu .navBtn -> display:none),
+  // so a menu entry alone leaves mobile players with no way in
+  assert.match(html, /class="menuItem navBtn" data-go="achv"/, 'missing desktop menu entry');
+  assert.match(html, /id="mTabs"[\s\S]{0,1600}data-go="achv"/, 'missing mobile tab-bar entry');
+});
+
+test('the home column cannot clip the sign-in card again', () => {
+  // adding a 7th menu item pushed #signup past the fixed-height shell, where
+  // #title's overflow:hidden silently ate it -- new players lost the name field
+  const from = html.indexOf('#heroCopy { max-width:none; padding:0; display:flex;');
+  assert.notEqual(from, -1, 'AAA-home #heroCopy rule not found');
+  const rule = html.slice(from, html.indexOf('}', from));
+  assert.match(rule, /min-height:0/, '#heroCopy needs min-height:0 to scroll instead of overflowing');
+  assert.match(rule, /overflow-y:auto/, '#heroCopy must scroll rather than clip the sign-in');
+});
+
+test('the mobile tab bar tracks the active screen', () => {
+  const from = html.indexOf('function showScreen(');
+  const body = html.slice(from, html.indexOf('\n}', from));
+  assert.match(body, /#mTabs \.mTab/, 'showScreen must sync the tab bar');
+  assert.match(body, /classList\.toggle\('on'/, 'active tab must be toggled');
+});
+
 test('total payout is balanced against the market', () => {
   // completing all 150 should be worth real money but not trivialise the shop
   assert.ok(TOTAL_COINS > 50_000, `total ${TOTAL_COINS} is too low to motivate`);
