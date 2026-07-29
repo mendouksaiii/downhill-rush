@@ -1,0 +1,17 @@
+{
+  "name": "redline-rider",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Endless downhill biking game. The game itself has no build step — this manifest exists only for the test tooling.",
+  "type": "module",
+  "scripts": {
+    "serve": "http-server . -p 5610 -c-1",
+    "test:unit": "node --test tests/*.test.mjs",
+    "test:e2e": "playwright test",
+    "test": "npm run test:unit && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "http-server": "^14.1.1"
+  }
+}
