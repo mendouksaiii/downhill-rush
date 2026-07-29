@@ -42,8 +42,40 @@ Leaderboard (`/api/leaderboard`) needs Vercel; locally it just shows "leaderboar
 
 `window.DR` exposes `game` (live state), `terrainH`, `step(dt)` (manual tick), `freeze()`, `mood(0..1)`, `degrade()`, `snapCam()`, `start()`. Use it from the console to test physics changes deterministically.
 
+## Tests
+
+Both suites run on every PR via `.github/workflows/test.yml`. Run them locally the same way:
+
+```
+npm install            # once — test tooling only, the game still has no build step
+npx playwright install chromium
+npm test               # unit + e2e
+npm run test:unit      # fast: source contracts, no browser
+npm run test:e2e       # boots the game and plays it
+```
+
+- **`tests/*.test.mjs`** — source contracts. They grep `play.html` for patterns that
+  previously regressed (CSS specificity, sfx wiring, stat keys). Fast, but they only
+  prove a line exists, not that the game works.
+- **`tests/e2e/smoke.spec.mjs`** — Playwright. Boots the real game and drives the real
+  UI on desktop + mobile viewports. This is the gate that catches "the button does
+  nothing" and "it's invisible" — the class of bug the unit tests structurally cannot.
+
+Every e2e case guards a bug that actually shipped (tagged `@regression-45`, `-48`,
+`-56`). **Each one has been mutation-checked**: reintroduce the original bug and the
+test fails. If you add a case, verify it fails against the broken code first —
+a green test that cannot go red is worse than no test.
+
+The e2e suite deliberately starts with **empty localStorage** unless a case is
+specifically about a returning player. Seeded profiles bypass the account gate, which
+is exactly how the new-player lockout (#48) hid for days.
+
 ## Verifying a change
 
-1. Play a full run: title → ride → jump (perfect/good/miss) → grab each gem color → crash → restart.
-2. Check DevTools console for errors and watch frame time (adaptive quality kicking in on desktop = you regressed perf).
-3. Test mobile path: device emulation or real phone — `isMobile` branches differ significantly.
+1. `npm test` — if it passes, the critical path still works.
+2. Play a full run by hand: title → ride → jump (perfect/good/miss) → grab each gem
+   color → crash → restart.
+3. Check DevTools console for errors and watch frame time (adaptive quality kicking in
+   on desktop = you regressed perf).
+4. Test mobile path: device emulation or real phone — `isMobile` branches differ
+   significantly.
