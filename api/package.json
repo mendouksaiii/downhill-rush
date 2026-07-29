@@ -1,0 +1,4 @@
+{
+  "//": "Scopes the serverless functions back to CommonJS. The root package.json declares \"type\": \"module\" for the ESM test tooling, which would otherwise make these api/*.js files ESM — and `module.exports` does not exist there, so every function crashes with FUNCTION_INVOCATION_FAILED. Node resolves module type from the NEAREST package.json, so this file keeps the API on CommonJS without touching the handlers.",
+  "type": "commonjs"
+}
