@@ -21,7 +21,13 @@ jobs:
       - name: Run evolution job
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GAME_URL: ${{ vars.GAME_URL || 'https://downhill-rush-steel.vercel.app' }}
+          # Deliberately no fallback here. This previously pinned the pre-rename
+          # Vercel domain, which silently overrode the script's own (correct)
+          # default and pointed telemetry at the wrong deploy. An unset repo
+          # variable resolves to '' — falsy — so scripts/evolve-overseer.mjs picks
+          # its default and the production URL lives in exactly one place.
+          # Set the GAME_URL repo variable to point a run at a preview deploy.
+          GAME_URL: ${{ vars.GAME_URL }}
         run: node scripts/evolve-overseer.mjs
 
       - name: Commit evolved tuning
