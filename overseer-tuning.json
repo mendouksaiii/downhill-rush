@@ -1,39 +1,39 @@
 {
-  "version": 2,
-  "updatedAt": "2026-07-29T21:59:52.808Z",
-  "rationale": "The current quickDeathRate is too low, indicating the Overseer is too soft. The dominant death cause is 'wall', so we need to reduce pressure on this vector. We also need to shift archetype bias toward variety since 'judge' dominates. Increase trapAggressionMul and baitChanceMul to lean in on aggression while keeping attackCooldownMul the same to maintain stability. Reduce 'judge' archetype bias and increase 'hunter' and 'trickster' to promote variety.",
+  "version": 3,
+  "updatedAt": "2026-07-30T09:03:39.541Z",
+  "rationale": "The current quickDeathRate is 0.037, which is below the target range, indicating the Overseer might be too soft. The median distance is high, suggesting the Overseer should lean in. The dominant death cause is 'wall' (>50%), so we reduce pressure on this vector by decreasing trapAggressionMul. We also shift archetype bias toward variety, as 'judge' dominates (>50%).",
   "stats": {
     "runs": 400,
     "deathCauses": {
+      "wall": 213,
+      "unknown": 41,
+      "inverted": 42,
       "obstacle": 39,
-      "pit": 66,
-      "wall": 215,
-      "unknown": 40,
-      "inverted": 40
+      "pit": 65
     },
     "archetypes": {
+      "trickster": 26,
       "judge": 318,
-      "hunter": 58,
-      "trickster": 24
+      "hunter": 56
     },
     "quickDeathRate": 0.037,
     "medianRunT": 21.5,
-    "medianDist": 493,
+    "medianDist": 492,
     "medianCombo": 0,
     "attacksHit": 13,
     "attacksDodged": 33,
     "attacksCountered": 2,
-    "avgTilt": 0.257,
-    "avgMercy": 0.412
+    "avgTilt": 0.261,
+    "avgMercy": 0.409
   },
   "params": {
-    "attackCooldownMul": 1,
-    "trapAggressionMul": 1.1,
+    "attackCooldownMul": 1.1,
+    "trapAggressionMul": 1,
     "baitChanceMul": 1.1,
-    "mercyBias": 0.05,
+    "mercyBias": 0,
     "archetypeBias": {
-      "judge": 0.3,
-      "hunter": 0.35,
+      "judge": 0.25,
+      "hunter": 0.4,
       "trickster": 0.35
     }
   }
