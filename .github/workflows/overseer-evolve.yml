@@ -31,9 +31,11 @@ jobs:
         run: node scripts/evolve-overseer.mjs
 
       - name: Commit evolved tuning
+        id: commit
         run: |
           if git diff --quiet overseer-tuning.json; then
             echo "no tuning change"
+            echo "committed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name "overseer-evolve[bot]"
@@ -41,3 +43,23 @@ jobs:
           git add overseer-tuning.json
           git commit -m "Overseer evolution: $(node -e "console.log(require('./overseer-tuning.json').rationale.slice(0,60))")"
           git push
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+
+      # A bot push to main does NOT trigger a Vercel build, so without this the
+      # evolved tuning sits on main, committed but never shipped, until the next
+      # human merge. A Deploy Hook fires the production build directly.
+      - name: Ship the evolved tuning to production
+        if: steps.commit.outputs.committed == 'true'
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::VERCEL_DEPLOY_HOOK is not set — tuning was committed but NOT deployed. Add a Vercel Deploy Hook as the VERCEL_DEPLOY_HOOK repo secret so each evolution ships automatically."
+            exit 0
+          fi
+          code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$HOOK")
+          echo "deploy hook -> HTTP $code"
+          case "$code" in
+            2*) echo "production deploy triggered";;
+            *) echo "::error::deploy hook returned $code"; exit 1;;
+          esac
