@@ -1,39 +1,39 @@
 {
-  "version": 7,
-  "updatedAt": "2026-08-03T10:06:56.493Z",
-  "rationale": "The current quickDeathRate is too low, indicating the Overseer is too soft. The dominant death cause is 'wall', which suggests a need to reduce pressure on this vector. The archetype distribution is also skewed, with 'judge' being overly dominant. To address these issues, we'll slightly increase the attackCooldownMul to give players more time to react, decrease trapAggressionMul to reduce the pressure from traps, and adjust the archetypeBias to promote more variety.",
+  "version": 8,
+  "updatedAt": "2026-08-04T09:10:05.983Z",
+  "rationale": "The current quickDeathRate is 0.04, which is below the threshold of 0.08, indicating the Overseer is too soft. The median distance is high, so we should lean in. The dominant death cause is 'wall' (>50%), so we reduce pressure on that vector. We also shift archetype bias toward variety.",
   "stats": {
     "runs": 400,
     "deathCauses": {
-      "pit": 68,
+      "wall": 209,
+      "pit": 67,
       "obstacle": 40,
-      "wall": 208,
       "unknown": 42,
       "inverted": 42
     },
     "archetypes": {
-      "judge": 318,
-      "hunter": 56,
-      "trickster": 26
+      "judge": 317,
+      "trickster": 27,
+      "hunter": 56
     },
     "quickDeathRate": 0.04,
     "medianRunT": 21.7,
-    "medianDist": 493,
+    "medianDist": 494,
     "medianCombo": 0,
     "attacksHit": 13,
     "attacksDodged": 33,
     "attacksCountered": 2,
-    "avgTilt": 0.262,
-    "avgMercy": 0.406
+    "avgTilt": 0.263,
+    "avgMercy": 0.404
   },
   "params": {
-    "attackCooldownMul": 1.1,
-    "trapAggressionMul": 0.8,
+    "attackCooldownMul": 1,
+    "trapAggressionMul": 0.9,
     "baitChanceMul": 0.9,
-    "mercyBias": 0,
+    "mercyBias": 0.05,
     "archetypeBias": {
-      "judge": 0.4,
-      "hunter": 0.4,
+      "judge": 0.3,
+      "hunter": 0.5,
       "trickster": 0.2
     }
   }
