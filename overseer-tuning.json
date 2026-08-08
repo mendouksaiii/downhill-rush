@@ -1,7 +1,7 @@
 {
-  "version": 11,
-  "updatedAt": "2026-08-07T07:43:11.568Z",
-  "rationale": "The current quickDeathRate is very low, indicating the Overseer might be too soft. The dominant death cause is 'wall', which suggests a need to reduce pressure on this vector. The archetype distribution is also skewed, with 'judge' being overly dominant. To address these issues, we'll slightly increase the trapAggressionMul to introduce more challenge and adjust the archetypeBias to promote variety.",
+  "version": 12,
+  "updatedAt": "2026-08-08T07:16:49.465Z",
+  "rationale": "Increase aggression slightly due to low quickDeathRate and high median distance, while promoting archetype variety and reducing wall death cause dominance",
   "stats": {
     "runs": 400,
     "deathCauses": {
@@ -27,13 +27,13 @@
     "avgMercy": 0.404
   },
   "params": {
-    "attackCooldownMul": 1.2,
-    "trapAggressionMul": 0.8,
+    "attackCooldownMul": 1.3,
+    "trapAggressionMul": 0.9,
     "baitChanceMul": 1.1,
-    "mercyBias": 0,
+    "mercyBias": 0.05,
     "archetypeBias": {
-      "judge": 0.3,
-      "hunter": 0.5,
+      "judge": 0.25,
+      "hunter": 0.55,
       "trickster": 0.2
     }
   }
